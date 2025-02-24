@@ -2,7 +2,9 @@ mod dataloading;
 mod macros;
 mod ui;
 
-use crate::dataloading::dataprovider::song_data_provider::{SongChange, SongDataEdit, SongDataProvider, SongDataSource};
+use crate::dataloading::dataprovider::song_data_provider::{
+    SongChange, SongDataEdit, SongDataProvider, SongDataSource,
+};
 use crate::dataloading::id3tagreader::read_song_info_from_filepath;
 use crate::dataloading::m3uloader::load_tag_data_from_m3u;
 use crate::dataloading::songinfo::SongInfo;
@@ -52,6 +54,7 @@ pub enum Message {
     SetFullscreen(bool),
 
     OpenPlaylist,
+    ReloadStatics,
     AddSong(SongInfo),
     FileDropped(PathBuf),
     SongChanged(SongChange),
@@ -66,10 +69,14 @@ impl DanceInterpreter {
     pub fn new() -> (Self, Task<Message>) {
         let mut tasks = Vec::new();
 
-        let icon = from_file_data(match dark_light::detect().unwrap_or(dark_light::Mode::Unspecified) {
-            dark_light::Mode::Dark => include_bytes!(res_file!("icon_dark.png")),
-            _ => include_bytes!(res_file!("icon_light.png")),
-        }, Some(ImageFormat::Png)).ok();
+        let icon = from_file_data(
+            match dark_light::detect().unwrap_or(dark_light::Mode::Unspecified) {
+                dark_light::Mode::Dark => include_bytes!(res_file!("icon_dark.png")),
+                _ => include_bytes!(res_file!("icon_light.png")),
+            },
+            Some(ImageFormat::Png),
+        )
+        .ok();
 
         let (config_window, cw_opened) = Self::open_window(window::Settings {
             platform_specific: Self::get_platform_specific(),
@@ -91,6 +98,12 @@ impl DanceInterpreter {
 
         tasks.push(cw_opened);
         tasks.push(sw_opened);
+
+        tasks.push(
+            iced::font::load(include_bytes!(res_file!("symbols.ttf"))).map(|_| Message::Noop),
+        );
+
+        tasks.push(Task::done(Message::ReloadStatics));
 
         (state, Task::batch(tasks))
     }
@@ -210,6 +223,26 @@ impl DanceInterpreter {
                 };
 
                 self.data_provider.set_vec(playlist);
+
+                ().into()
+            }
+
+            Message::ReloadStatics => {
+                let file_content = std::fs::read_to_string("./statics.txt");
+                let statics = file_content
+                    .map(|c| {
+                        c.trim()
+                            .lines()
+                            .filter_map(|l| {
+                                let trimmed = l.trim();
+                                (!trimmed.is_empty()).then_some(trimmed)
+                            })
+                            .map(|l| SongInfo::with_dance(l.to_owned()))
+                            .collect()
+                    })
+                    .unwrap_or_default();
+
+                self.data_provider.set_statics(statics);
 
                 ().into()
             }

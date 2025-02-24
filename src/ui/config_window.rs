@@ -2,11 +2,13 @@ use crate::dataloading::dataprovider::song_data_provider::{
     SongChange, SongDataEdit, SongDataSource,
 };
 use crate::dataloading::songinfo::SongInfo;
+use crate::ui::material_icon;
 use crate::ui::widget::dynamic_text_input::DynamicTextInput;
 use crate::{DanceInterpreter, Message, Window};
 use iced::advanced::Widget;
 use iced::alignment::Vertical;
 use iced::border::Radius;
+use iced::widget::scrollable::{Direction, Scrollbar};
 use iced::widget::{
     button, checkbox, column as col, row, scrollable, text, Button, Column, Row, Scrollable, Space,
 };
@@ -42,9 +44,35 @@ impl ConfigWindow {
         content.into()
     }
 
+    fn get_play_state(
+        &self,
+        dance_interpreter: &DanceInterpreter,
+        playlist_index: usize,
+    ) -> (bool, bool, bool) {
+        let mut is_current = false;
+        let mut is_next = false;
+        let is_played = dance_interpreter
+            .data_provider
+            .playlist_played
+            .get(playlist_index)
+            .copied()
+            .unwrap_or(false);
+
+        if let SongDataSource::Playlist(i) = dance_interpreter.data_provider.current {
+            is_current = playlist_index == i;
+            is_next = playlist_index == (i + 1);
+        }
+
+        if let Some(SongDataSource::Playlist(i)) = dance_interpreter.data_provider.next {
+            is_next = playlist_index == i;
+        }
+
+        (is_current, is_next, is_played)
+    }
+
     fn build_playlist_view(&self, dance_interpreter: &DanceInterpreter) -> Column<Message> {
         let trow: Row<_> = row![
-            text!("Status").width(Length::Shrink),
+            text!("#").width(Length::Fixed(24.0)),
             text!("Title").width(Length::Fill),
             text!("Artist").width(Length::Fill),
             text!("Dance").width(Length::Fill),
@@ -61,8 +89,21 @@ impl ConfigWindow {
             .iter()
             .enumerate()
         {
+            let (is_current, is_next, is_played) = self.get_play_state(dance_interpreter, i);
+            let icon: Element<Message> = if is_current {
+                material_icon("play_arrow")
+                    .width(Length::Fixed(24.0))
+                    .into()
+            } else if is_next {
+                material_icon("skip_next").width(Length::Fixed(24.0)).into()
+            } else if is_played {
+                material_icon("check").width(Length::Fixed(24.0)).into()
+            } else {
+                Space::new(Length::Fixed(24.0), Length::Shrink).into()
+            };
+
             let song_row = row![
-                text!("Status").width(Length::Shrink),
+                icon,
                 DynamicTextInput::<'_, Message>::new("Title", &song.title)
                     .width(Length::Fill)
                     .on_change(move |v| Message::SongDataEdit(i, SongDataEdit::Title(v))),
@@ -73,12 +114,13 @@ impl ConfigWindow {
                     .width(Length::Fill)
                     .on_change(move |v| Message::SongDataEdit(i, SongDataEdit::Dance(v))),
                 row![
-                    label_message_button_fill(
-                        "Present",
+                    Space::new(Length::Fill, Length::Shrink),
+                    material_icon_message_button(
+                        "smart_display",
                         Message::SongChanged(SongChange::PlaylistAbsolute(i))
                     ),
-                    label_message_button_fill(
-                        "Set as next",
+                    material_icon_message_button(
+                        "queue_play_next",
                         Message::SetNextSong(SongDataSource::Playlist(i))
                     ),
                 ]
@@ -102,7 +144,10 @@ impl ConfigWindow {
         col!(trow, playlist_scrollable).spacing(5)
     }
 
-    fn build_statics_view<'a>(&self, dance_interpreter: &'a DanceInterpreter) -> Row<'a, Message> {
+    fn build_statics_view<'a>(
+        &self,
+        dance_interpreter: &'a DanceInterpreter,
+    ) -> Scrollable<'a, Message> {
         let bold_font = Font {
             family: font::Family::SansSerif,
             weight: font::Weight::Bold,
@@ -110,7 +155,7 @@ impl ConfigWindow {
             style: font::Style::Normal,
         };
 
-        let blankb: Button<Message> =
+        let btn_blank: Button<Message> =
             button(text("Blank").align_y(Vertical::Center).font(bold_font))
                 .style(button::secondary)
                 .on_press(Message::SongChanged(SongChange::Blank));
@@ -120,15 +165,19 @@ impl ConfigWindow {
             .iter()
             .enumerate()
             .map(|(idx, s)| {
-                button(text(s.clone()).font(bold_font))
+                button(text(&s.dance).font(bold_font))
+                    .style(button::secondary)
                     .on_press(Message::SongChanged(SongChange::StaticAbsolute(idx)))
                     .into()
             })
             .collect();
 
-        statics.insert(0, blankb.into());
+        statics.insert(0, btn_blank.into());
 
-        row(statics).width(Length::Fill).align_y(Vertical::Bottom)
+        scrollable(row(statics).spacing(5))
+            .direction(Direction::Horizontal(Scrollbar::new()))
+            .spacing(5)
+            .width(Length::Fill)
     }
 
     fn build_menu_bar<'a>(
@@ -156,6 +205,7 @@ impl ConfigWindow {
                     menu_items!(
                         (label_message_button_fill("Import Playlistview", Message::Noop))
                         (label_message_button_fill("Export Playlistview", Message::Noop))
+                        (label_message_button_fill("Reload Statics", Message::ReloadStatics))
                         (label_message_button_fill("Add blank song", Message::AddSong(SongInfo::default())))
                     )
                 )
@@ -200,6 +250,14 @@ fn label_message_button(label: &str, message: Message) -> button::Button<Message
         .padding([4, 8])
         .style(button::secondary)
         .on_press(message)
+}
+
+fn material_icon_message_button(icon_id: &str, message: Message) -> button::Button<Message> {
+    button(material_icon(icon_id))
+        .padding([4, 8])
+        .style(button::secondary)
+        .on_press(message)
+        .width(Length::Shrink)
 }
 
 fn labeled_message_checkbox(

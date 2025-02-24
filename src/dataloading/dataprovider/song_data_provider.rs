@@ -27,26 +27,44 @@ pub enum SongDataEdit {
 
 #[derive(Default)]
 pub struct SongDataProvider {
-    pub source: SongDataSource,
     pub playlist_songs: Vec<SongInfo>,
-    pub statics: Vec<String>,
+    pub playlist_played: Vec<bool>,
+    
+    pub statics: Vec<SongInfo>,
+    
+    pub current: SongDataSource,
     pub next: Option<SongDataSource>,
 }
 
 impl SongDataProvider {
     pub fn set_vec(&mut self, vec: Vec<SongInfo>) {
         self.playlist_songs = vec;
+        self.playlist_played = vec![false; self.playlist_songs.len()];
 
         if !self.playlist_songs.is_empty() {
-            self.source = SongDataSource::Playlist(0);
+            self.current = SongDataSource::Playlist(0);
         } else {
-            self.source = SongDataSource::Blank;
+            self.current = SongDataSource::Blank;
+        }
+    }
+    
+    pub fn set_statics(&mut self, vec: Vec<SongInfo>) {
+        self.statics = vec;
+    }
+    
+    fn set_current_as_played(&mut self) {
+        let SongDataSource::Playlist(i) = self.current else {
+        return;
+        };
+        
+        if let Some(v) = self.playlist_played.get_mut(i) {
+            *v = true;
         }
     }
 
     pub fn get_current_song_info(&self) -> Option<&SongInfo> {
-        match self.source {
-            SongDataSource::Static(_) => None, //TODO: return static song info
+        match self.current {
+            SongDataSource::Static(i) => self.statics.get(i),
             SongDataSource::Playlist(i) => self.playlist_songs.get(i),
             SongDataSource::Other(ref song) => Some(song),
             SongDataSource::Blank => None,
@@ -55,15 +73,15 @@ impl SongDataProvider {
     pub fn get_next_song_info(&self) -> Option<&SongInfo> {
         if let Some(next) = self.next.as_ref() {
             return match next {
-                SongDataSource::Static(_) => None, //TODO: return static song info
+                SongDataSource::Static(i) => self.statics.get(*i),
                 SongDataSource::Playlist(i) => self.playlist_songs.get(*i),
                 SongDataSource::Other(ref song) => Some(song),
                 SongDataSource::Blank => None,
             }
         }
         
-        match self.source {
-            SongDataSource::Static(_) => None, //TODO: return static song info
+        match self.current {
+            SongDataSource::Static(_) => None,
             SongDataSource::Playlist(i) => self.playlist_songs.get(i + 1),
             SongDataSource::Other(ref song) => Some(song),
             SongDataSource::Blank => None,
@@ -71,24 +89,26 @@ impl SongDataProvider {
     }
 
     pub fn prev(&mut self) {
-        let SongDataSource::Playlist(current_index) = self.source else {
+        let SongDataSource::Playlist(current_index) = self.current else {
             return;
         };
 
         if current_index == 0 {
             return;
         }
-
-        self.source = SongDataSource::Playlist(current_index - 1);
+        
+        self.set_current_as_played();
+        self.current = SongDataSource::Playlist(current_index - 1);
     }
 
     pub fn next(&mut self) {
         if let Some(next) = self.next.take() {
-            self.source = next;
+            self.set_current_as_played();
+            self.current = next;
             return;
         }
         
-        let SongDataSource::Playlist(current_index) = self.source else {
+        let SongDataSource::Playlist(current_index) = self.current else {
             return;
         };
 
@@ -96,22 +116,25 @@ impl SongDataProvider {
             return;
         }
 
-        self.source = SongDataSource::Playlist(current_index + 1);
+        self.set_current_as_played();
+        self.current = SongDataSource::Playlist(current_index + 1);
     }
 
-    pub fn set_source(&mut self, n: SongDataSource) {
+    pub fn set_current(&mut self, n: SongDataSource) {
+        self.set_current_as_played();
+        
         match n {
             SongDataSource::Static(i) => {
                 if self.playlist_songs.get(i).is_some() {
-                    self.source = n;
+                    self.current = n;
                 }
             }
             SongDataSource::Playlist(i) => {
                 if self.playlist_songs.get(i).is_some() {
-                    self.source = n;
+                    self.current = n;
                 }
             }
-            _ => self.source = n,
+            _ => self.current = n,
         }
     }
     
@@ -121,18 +144,22 @@ impl SongDataProvider {
 
     pub fn append_song(&mut self, song: SongInfo) {
         self.playlist_songs.push(song);
+        self.playlist_played.push(false);
     }
 
     pub fn handle_song_change(&mut self, change: SongChange) {
         match change {
             SongChange::Blank => {
-                self.source = SongDataSource::Blank;
+                self.set_current_as_played();
+                self.current = SongDataSource::Blank;
             }
             SongChange::StaticAbsolute(index) => {
-                self.source = SongDataSource::Static(index);
+                self.set_current_as_played();
+                self.current = SongDataSource::Static(index);
             }
             SongChange::PlaylistAbsolute(index) => {
-                self.source = SongDataSource::Playlist(index);
+                self.set_current_as_played();
+                self.current = SongDataSource::Playlist(index);
             }
             SongChange::Previous => {
                 self.prev();
