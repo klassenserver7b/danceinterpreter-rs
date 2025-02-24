@@ -1,0 +1,16 @@
+Discofox
+Cha Cha Cha
+Rumba
+Jive
+Samba
+Salsa
+Langsamer Walzer
+Wiener Walzer
+Tango
+Quickstep
+Foxtrott
+Rock 'n' Roll
+Slowfox
+Quickstep / Foxtrott
+Samba / Salsa
+Jive / Rock 'n' Roll

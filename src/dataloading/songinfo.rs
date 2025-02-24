@@ -10,6 +10,13 @@ pub struct SongInfo {
 }
 
 impl SongInfo {
+    pub fn with_dance(dance: String) -> Self {
+        SongInfo {
+            dance,
+            ..Default::default()
+        }
+    }
+
     pub fn new(
         track_number: u32,
         title: String,
