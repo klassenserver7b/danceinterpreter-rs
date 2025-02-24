@@ -22,9 +22,9 @@ https://hughsie.github.io/oars/index.html
 -->
   <content_rating type="oars-1.0" />
   <releases>
-    <release version="0.1.0" date="2025-01-09">
+    <release version="0.2.1" date="2025-02-24">
       <description>
-        <p>First release of Rust Danceinterpreter</p>
+        <p>Second release of Rust Danceinterpreter</p>
       </description>
     </release>
   </releases>
