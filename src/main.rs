@@ -1,4 +1,3 @@
-use std::str::FromStr;
 mod dataloading;
 mod macros;
 mod ui;
@@ -324,11 +323,11 @@ impl DanceInterpreter {
                 Key::Named(Named::F5) => Some(Message::ReloadStatics),
                 _ => None,
             }),
-            on_key_press(|key: Key, modifiers: Modifiers| match (key.as_ref(), modifiers){
-                (Key::Character("n"), Modifiers::CTRL) => Some(Message::AddSong(SongInfo::default())),
-                (Key::Character("r"), Modifiers::CTRL) => Some(Message::ReloadStatics),
-                _ => None,
-            })
+            on_key_press(|key: Key, modifiers: Modifiers| match (key.as_ref(), modifiers) {
+                    (Key::Character("n"), Modifiers::CTRL) => Some(Message::AddSong(SongInfo::default())),
+                    (Key::Character("r"), Modifiers::CTRL) => Some(Message::ReloadStatics),
+                    _ => None,
+            }),
         ])
     }
 }

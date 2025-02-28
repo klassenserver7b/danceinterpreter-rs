@@ -120,6 +120,7 @@ impl SongDataProvider {
         self.current = SongDataSource::Playlist(current_index + 1);
     }
 
+    #[allow(dead_code)]
     pub fn set_current(&mut self, n: SongDataSource) {
         self.set_current_as_played();
 
@@ -148,14 +149,12 @@ impl SongDataProvider {
     }
 
     pub fn delete_song(&mut self, song: SongDataSource) {
-        
         if let SongDataSource::Playlist(i) = song {
             self.playlist_songs.remove(i);
             self.playlist_played.remove(i);
         } else if let SongDataSource::Static(i) = song {
             self.statics.remove(i);
         }
-        
     }
 
     pub fn handle_song_change(&mut self, change: SongChange) {
