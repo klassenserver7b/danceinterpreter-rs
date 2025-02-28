@@ -29,9 +29,9 @@ pub enum SongDataEdit {
 pub struct SongDataProvider {
     pub playlist_songs: Vec<SongInfo>,
     pub playlist_played: Vec<bool>,
-    
+
     pub statics: Vec<SongInfo>,
-    
+
     pub current: SongDataSource,
     pub next: Option<SongDataSource>,
 }
@@ -47,16 +47,16 @@ impl SongDataProvider {
             self.current = SongDataSource::Blank;
         }
     }
-    
+
     pub fn set_statics(&mut self, vec: Vec<SongInfo>) {
         self.statics = vec;
     }
-    
+
     fn set_current_as_played(&mut self) {
         let SongDataSource::Playlist(i) = self.current else {
-        return;
+            return;
         };
-        
+
         if let Some(v) = self.playlist_played.get_mut(i) {
             *v = true;
         }
@@ -77,9 +77,9 @@ impl SongDataProvider {
                 SongDataSource::Playlist(i) => self.playlist_songs.get(*i),
                 SongDataSource::Other(ref song) => Some(song),
                 SongDataSource::Blank => None,
-            }
+            };
         }
-        
+
         match self.current {
             SongDataSource::Static(_) => None,
             SongDataSource::Playlist(i) => self.playlist_songs.get(i + 1),
@@ -96,7 +96,7 @@ impl SongDataProvider {
         if current_index == 0 {
             return;
         }
-        
+
         self.set_current_as_played();
         self.current = SongDataSource::Playlist(current_index - 1);
     }
@@ -107,7 +107,7 @@ impl SongDataProvider {
             self.current = next;
             return;
         }
-        
+
         let SongDataSource::Playlist(current_index) = self.current else {
             return;
         };
@@ -122,7 +122,7 @@ impl SongDataProvider {
 
     pub fn set_current(&mut self, n: SongDataSource) {
         self.set_current_as_played();
-        
+
         match n {
             SongDataSource::Static(i) => {
                 if self.playlist_songs.get(i).is_some() {
@@ -137,7 +137,7 @@ impl SongDataProvider {
             _ => self.current = n,
         }
     }
-    
+
     pub fn set_next(&mut self, next: SongDataSource) {
         self.next = Some(next);
     }
@@ -145,6 +145,17 @@ impl SongDataProvider {
     pub fn append_song(&mut self, song: SongInfo) {
         self.playlist_songs.push(song);
         self.playlist_played.push(false);
+    }
+
+    pub fn delete_song(&mut self, song: SongDataSource) {
+        
+        if let SongDataSource::Playlist(i) = song {
+            self.playlist_songs.remove(i);
+            self.playlist_played.remove(i);
+        } else if let SongDataSource::Static(i) = song {
+            self.statics.remove(i);
+        }
+        
     }
 
     pub fn handle_song_change(&mut self, change: SongChange) {
@@ -169,7 +180,7 @@ impl SongDataProvider {
             }
         }
     }
-    
+
     pub fn handle_song_data_edit(&mut self, i: usize, edit: SongDataEdit) {
         if let Some(song) = self.playlist_songs.get_mut(i) {
             match edit {

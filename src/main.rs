@@ -1,3 +1,4 @@
+use std::str::FromStr;
 mod dataloading;
 mod macros;
 mod ui;
@@ -56,6 +57,7 @@ pub enum Message {
     OpenPlaylist,
     ReloadStatics,
     AddSong(SongInfo),
+    DeleteSong(SongDataSource),
     FileDropped(PathBuf),
     SongChanged(SongChange),
     SongDataEdit(usize, SongDataEdit),
@@ -272,6 +274,11 @@ impl DanceInterpreter {
                 ().into()
             }
 
+            Message::DeleteSong(song) => {
+                self.data_provider.delete_song(song);
+                ().into()
+            }
+
             Message::SetNextSong(i) => {
                 self.data_provider.set_next(i);
                 ().into()
@@ -314,8 +321,14 @@ impl DanceInterpreter {
                 Key::Named(Named::ArrowLeft) => Some(Message::SongChanged(SongChange::Previous)),
                 Key::Named(Named::End) => Some(Message::SongChanged(SongChange::StaticAbsolute(0))),
                 Key::Named(Named::F11) => Some(Message::ToggleFullscreen),
+                Key::Named(Named::F5) => Some(Message::ReloadStatics),
                 _ => None,
             }),
+            on_key_press(|key: Key, modifiers: Modifiers| match (key.as_ref(), modifiers){
+                (Key::Character("n"), Modifiers::CTRL) => Some(Message::AddSong(SongInfo::default())),
+                (Key::Character("r"), Modifiers::CTRL) => Some(Message::ReloadStatics),
+                _ => None,
+            })
         ])
     }
 }
