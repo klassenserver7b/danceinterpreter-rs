@@ -123,6 +123,10 @@ impl ConfigWindow {
                         "queue_play_next",
                         Message::SetNextSong(SongDataSource::Playlist(i))
                     ),
+                    material_icon_message_button(
+                        "delete",
+                        Message::DeleteSong(SongDataSource::Playlist(i))
+                    ),
                 ]
                 .spacing(5)
                 .width(Length::Fill),
@@ -194,7 +198,7 @@ impl ConfigWindow {
                 menu_tpl_1(
                     menu_items!(
                         (label_message_button_fill("Open Playlist File", Message::OpenPlaylist))
-                        (label_message_button_fill("Exit", Message::Noop))
+                        (label_message_button_fill("Exit", Message::WindowClosed(self.id.unwrap())))
                     )
                 )
                 .spacing(5.0)
@@ -203,8 +207,6 @@ impl ConfigWindow {
                 label_message_button_shrink("Edit", Message::Noop),
                 menu_tpl_1(
                     menu_items!(
-                        (label_message_button_fill("Import Playlistview", Message::Noop))
-                        (label_message_button_fill("Export Playlistview", Message::Noop))
                         (label_message_button_fill("Reload Statics", Message::ReloadStatics))
                         (label_message_button_fill("Add blank song", Message::AddSong(SongInfo::default())))
                     )
@@ -217,7 +219,6 @@ impl ConfigWindow {
                     menu_items!(
                         (labeled_message_checkbox("Show Thumbnails", dance_interpreter.song_window.enable_image, Message::EnableImage))
                         (labeled_message_checkbox("Show Next Dance", dance_interpreter.song_window.enable_next_dance, Message::EnableNextDance))
-                        (label_message_button_fill("Refresh", Message::Noop))
                     )
                 )
                 .spacing(5.0)

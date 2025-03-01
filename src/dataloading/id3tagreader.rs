@@ -24,7 +24,7 @@ pub fn read_song_info_from_filepath(file: impl AsRef<Path>) -> Result<SongInfo> 
         album_art.map(|img| Handle::from_bytes(img.data)),
     ))
 }
-
+#[allow(dead_code)]
 pub fn read_song_info_from_files(file_list: &[impl AsRef<Path>]) -> Vec<Result<SongInfo>> {
     file_list.iter().map(read_song_info_from_filepath).collect()
 }
