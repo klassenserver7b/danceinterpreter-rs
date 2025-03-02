@@ -45,7 +45,8 @@ impl SongWindow {
         let dance_size = self.size.height / 8.0;
         let title_size = self.size.height / 20.0;
         let artist_size = self.size.height / 25.0;
-        let next_dance_size = self.size.height / 20.0;
+        let next_dance_size = self.size.height / 25.0;
+        let next_dance_label_size = self.size.height / 30.0;
 
         let dance_spacing = self.size.height / 35.0;
         let song_spacing = self.size.height / 150.0;
@@ -96,13 +97,23 @@ impl SongWindow {
             if let Some(next_song_info) = state.data_provider.get_next_song_info() {
                 stack![
                     column_center,
-                    Text::new(&next_song_info.dance)
-                        .size(next_dance_size)
-                        .width(Length::Fill)
-                        .height(Length::Fill)
-                        .align_x(Horizontal::Right)
-                        .align_y(Vertical::Bottom)
-                        .shaping(Shaping::Advanced)
+                    row![
+                        horizontal_space(),
+                        column![
+                        Text::new("Nächster Tanz")
+                            .size(next_dance_label_size)
+                            .height(Length::Fill)
+                            .align_x(Horizontal::Right)
+                            .align_y(Vertical::Bottom)
+                            .shaping(Shaping::Advanced),
+                        Text::new(&next_song_info.dance)
+                            .size(next_dance_size)
+                            .align_x(Horizontal::Right)
+                            .align_y(Vertical::Bottom)
+                            .shaping(Shaping::Advanced)
+                    ]
+                    .width(Length::Shrink)
+                    .spacing(dance_spacing / 3.0)]
                 ]
             } else {
                 stack![column_center]

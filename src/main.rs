@@ -8,12 +8,13 @@ use crate::dataloading::dataprovider::song_data_provider::{
 use crate::dataloading::id3tagreader::read_song_info_from_filepath;
 use crate::dataloading::m3uloader::load_tag_data_from_m3u;
 use crate::dataloading::songinfo::SongInfo;
-use crate::ui::config_window::ConfigWindow;
+use crate::ui::config_window::{ConfigWindow, PLAYLIST_SCROLLABLE_ID};
 use crate::ui::song_window::SongWindow;
 use iced::advanced::graphics::image::image_rs::ImageFormat;
 use iced::keyboard::key::Named;
 use iced::keyboard::{on_key_press, Key, Modifiers};
-use iced::widget::horizontal_space;
+use iced::widget::scrollable::{AbsoluteOffset, RelativeOffset};
+use iced::widget::{horizontal_space, scrollable};
 use iced::window::icon::from_file_data;
 use iced::{exit, window, Element, Size, Subscription, Task, Theme};
 use rfd::FileDialog;
@@ -57,6 +58,9 @@ pub enum Message {
     ReloadStatics,
     AddSong(SongInfo),
     DeleteSong(SongDataSource),
+    ScrollBy(f32),
+    AddBlankSong(RelativeOffset),
+
     FileDropped(PathBuf),
     SongChanged(SongChange),
     SongDataEdit(usize, SongDataEdit),
@@ -273,6 +277,11 @@ impl DanceInterpreter {
                 ().into()
             }
 
+            Message::AddBlankSong(offset) => {
+                self.data_provider.append_song(SongInfo::default());
+                scrollable::snap_to(PLAYLIST_SCROLLABLE_ID.clone(), offset)
+            }
+
             Message::DeleteSong(song) => {
                 self.data_provider.delete_song(song);
                 ().into()
@@ -293,6 +302,10 @@ impl DanceInterpreter {
                 ().into()
             }
 
+            Message::ScrollBy(frac) => {
+                scrollable::scroll_by(PLAYLIST_SCROLLABLE_ID.clone(), AbsoluteOffset{x: 0.0, y: self.config_window.size.height / frac})
+            }
+
             _ => ().into(),
         }
     }
@@ -306,6 +319,7 @@ impl DanceInterpreter {
     }
 
     pub fn subscription(&self) -> Subscription<Message> {
+
         Subscription::batch([
             window::close_events().map(Message::WindowClosed),
             window::resize_events().map(Message::WindowResized),
@@ -321,13 +335,19 @@ impl DanceInterpreter {
                 Key::Named(Named::End) => Some(Message::SongChanged(SongChange::StaticAbsolute(0))),
                 Key::Named(Named::F11) => Some(Message::ToggleFullscreen),
                 Key::Named(Named::F5) => Some(Message::ReloadStatics),
+                Key::Named(Named::PageUp) => Some(Message::ScrollBy(-10.0)),
+                Key::Named(Named::PageDown) => Some(Message::ScrollBy(10.0)),
                 _ => None,
             }),
-            on_key_press(|key: Key, modifiers: Modifiers| match (key.as_ref(), modifiers) {
-                    (Key::Character("n"), Modifiers::CTRL) => Some(Message::AddSong(SongInfo::default())),
+            on_key_press(
+                |key: Key, modifiers: Modifiers| match (key.as_ref(), modifiers) {
+                    (Key::Character("n"), Modifiers::CTRL) => {
+                        Some(Message::AddBlankSong(RelativeOffset::END))
+                    }
                     (Key::Character("r"), Modifiers::CTRL) => Some(Message::ReloadStatics),
                     _ => None,
-            }),
+                },
+            ),
         ])
     }
 }
