@@ -1,14 +1,13 @@
 use crate::dataloading::dataprovider::song_data_provider::{
     SongChange, SongDataEdit, SongDataSource,
 };
-use crate::dataloading::songinfo::SongInfo;
 use crate::ui::material_icon;
 use crate::ui::widget::dynamic_text_input::DynamicTextInput;
 use crate::{DanceInterpreter, Message, Window};
 use iced::advanced::Widget;
 use iced::alignment::Vertical;
 use iced::border::Radius;
-use iced::widget::scrollable::{Direction, Scrollbar};
+use iced::widget::scrollable::{Direction, RelativeOffset, Scrollbar};
 use iced::widget::{
     button, checkbox, column as col, row, scrollable, text, Button, Column, Row, Scrollable, Space,
 };
@@ -17,12 +16,15 @@ use iced_aw::menu::Item;
 use iced_aw::style::{menu_bar::primary, Status};
 use iced_aw::widget::InnerBounds;
 use iced_aw::{menu, menu_bar, menu_items, quad, Menu, MenuBar};
+use std::sync::LazyLock;
 
 #[derive(Default)]
 pub struct ConfigWindow {
     pub id: Option<window::Id>,
     pub size: Size,
 }
+
+pub static PLAYLIST_SCROLLABLE_ID: LazyLock<scrollable::Id> = LazyLock::new(scrollable::Id::unique);
 
 impl Window for ConfigWindow {
     fn on_create(&mut self, id: window::Id) {
@@ -143,7 +145,8 @@ impl ConfigWindow {
         let playlist_scrollable: Scrollable<'_, Message> = scrollable(playlist_column)
             .width(Length::Fill)
             .height(Length::Fill)
-            .spacing(5);
+            .spacing(5)
+            .id(PLAYLIST_SCROLLABLE_ID.clone());
 
         col!(trow, playlist_scrollable).spacing(5)
     }
@@ -208,7 +211,7 @@ impl ConfigWindow {
                 menu_tpl_1(
                     menu_items!(
                         (label_message_button_fill("Reload Statics", Message::ReloadStatics))
-                        (label_message_button_fill("Add blank song", Message::AddSong(SongInfo::default())))
+                        (label_message_button_fill("Add blank song", Message::AddBlankSong(RelativeOffset::END)))
                     )
                 )
                 .spacing(5.0)
