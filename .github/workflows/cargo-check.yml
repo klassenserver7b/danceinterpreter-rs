@@ -1,6 +1,6 @@
 on:
   push:
-    branches: [ "main", "dev", "iced-gui" ]
+    branches: [ "dev", "iced-gui" ]
   pull_request:
     branches: [ "main", "dev", "iced-gui" ]
 
