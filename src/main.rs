@@ -1,8 +1,10 @@
+mod async_utils;
 mod dataloading;
 mod macros;
 mod traktor_api;
 mod ui;
 
+use crate::async_utils::run_subscription_with;
 use crate::dataloading::dataprovider::song_data_provider::{
     SongChange, SongDataEdit, SongDataProvider, SongDataSource,
 };
@@ -42,6 +44,7 @@ pub trait Window {
 struct DanceInterpreter {
     config_window: ConfigWindow,
     song_window: SongWindow,
+
     data_provider: SongDataProvider,
     traktor_channel: Option<UnboundedSender<traktor_api::AppMessage>>,
 }
@@ -395,12 +398,14 @@ impl DanceInterpreter {
                     _ => None,
                 },
             ),
-            // TODO: update later
-            Subscription::run(if self.song_window.enable_image {
-                || traktor_api::run_server(8080)
-            } else {
-                || traktor_api::run_server(3030)
-            })
+            run_subscription_with(
+                if self.song_window.enable_image {
+                    8080
+                } else {
+                    3030
+                },
+                |port| traktor_api::run_server(*port),
+            )
             .map(Message::TraktorMessage),
         ])
     }
