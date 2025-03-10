@@ -1,5 +1,6 @@
 mod dataloading;
 mod macros;
+mod traktor_api;
 mod ui;
 
 use crate::dataloading::dataprovider::song_data_provider::{
@@ -11,6 +12,7 @@ use crate::dataloading::songinfo::SongInfo;
 use crate::ui::config_window::{ConfigWindow, PLAYLIST_SCROLLABLE_ID};
 use crate::ui::song_window::SongWindow;
 use iced::advanced::graphics::image::image_rs::ImageFormat;
+use iced::futures::channel::mpsc::UnboundedSender;
 use iced::keyboard::key::Named;
 use iced::keyboard::{on_key_press, Key, Modifiers};
 use iced::widget::scrollable::{AbsoluteOffset, RelativeOffset};
@@ -41,6 +43,7 @@ struct DanceInterpreter {
     config_window: ConfigWindow,
     song_window: SongWindow,
     data_provider: SongDataProvider,
+    traktor_channel: Option<UnboundedSender<traktor_api::AppMessage>>,
 }
 
 #[derive(Debug, Clone)]
@@ -68,6 +71,8 @@ pub enum Message {
 
     EnableImage(bool),
     EnableNextDance(bool),
+
+    TraktorMessage(traktor_api::ServerMessage),
 }
 
 impl DanceInterpreter {
@@ -299,11 +304,54 @@ impl DanceInterpreter {
 
             Message::EnableNextDance(state) => {
                 self.song_window.enable_next_dance = state;
+
+                // TODO: remove later
+                let mut send_error = false;
+                if let Some(channel) = self.traktor_channel.as_mut() {
+                    send_error = matches!(
+                        channel.unbounded_send(traktor_api::AppMessage::Reconnect {
+                            debug_logging: self.song_window.enable_next_dance,
+                        }),
+                        Err(_)
+                    );
+                }
+
+                if send_error {
+                    self.traktor_channel = None;
+                    println!("send error, disconnecting channel");
+                }
+
                 ().into()
             }
 
-            Message::ScrollBy(frac) => {
-                scrollable::scroll_by(PLAYLIST_SCROLLABLE_ID.clone(), AbsoluteOffset{x: 0.0, y: self.config_window.size.height / frac})
+            Message::ScrollBy(frac) => scrollable::scroll_by(
+                PLAYLIST_SCROLLABLE_ID.clone(),
+                AbsoluteOffset {
+                    x: 0.0,
+                    y: self.config_window.size.height / frac,
+                },
+            ),
+
+            Message::TraktorMessage(msg) => {
+                match msg {
+                    traktor_api::ServerMessage::Ready(channel) => {
+                        self.traktor_channel = Some(channel);
+                    }
+                    traktor_api::ServerMessage::Connect {
+                        time_base,
+                        initial_state,
+                    } => {
+                        println!(
+                            "time base {:?} initial state {:?}",
+                            time_base, initial_state
+                        );
+                    }
+                    traktor_api::ServerMessage::Update(update) => {
+                        println!("update {:?}", update);
+                    }
+                }
+
+                ().into()
             }
 
             _ => ().into(),
@@ -319,7 +367,6 @@ impl DanceInterpreter {
     }
 
     pub fn subscription(&self) -> Subscription<Message> {
-
         Subscription::batch([
             window::close_events().map(Message::WindowClosed),
             window::resize_events().map(Message::WindowResized),
@@ -348,6 +395,13 @@ impl DanceInterpreter {
                     _ => None,
                 },
             ),
+            // TODO: update later
+            Subscription::run(if self.song_window.enable_image {
+                || traktor_api::run_server(8080)
+            } else {
+                || traktor_api::run_server(3030)
+            })
+            .map(Message::TraktorMessage),
         ])
     }
 }
