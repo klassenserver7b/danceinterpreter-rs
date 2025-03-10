@@ -1,4 +1,4 @@
-var ENDPOINT = "http://localhost:8080/";
+const ENDPOINT = "http://localhost:8080/";
 
 function sendUpdate(id, data) {
     log(`${id} update (${JSON.stringify(data)})`);
@@ -19,13 +19,13 @@ function tryConnect() {
     if (ApiState.isConnecting) return;
     ApiState.isConnecting = true;
 
-    var request = new XMLHttpRequest();
+    const request = new XMLHttpRequest();
     request.onreadystatechange = function() {
         if (request.readyState !== XMLHttpRequest.DONE) return;
         ApiState.isConnecting = false;
         if (!request.responseText) return;
 
-        var responseData = JSON.parse(request.responseText);
+        const responseData = JSON.parse(request.responseText);
         ApiState.sessionId = responseData.sessionId;
         ApiState.debugLogging = responseData.debugLogging;
 
@@ -48,7 +48,7 @@ function initConnection() {
 }
 
 function sendData(endpoint, data) {
-    var request = new XMLHttpRequest();
+    const request = new XMLHttpRequest();
     request.onreadystatechange = function() {
         if (request.readyState !== XMLHttpRequest.DONE) return;
         if (!request.responseText) {
@@ -73,7 +73,7 @@ function log(msg, isImportant) {
     if (!isImportant && !ApiState.debugLogging)
         return;
 
-    var request = new XMLHttpRequest();
+    const request = new XMLHttpRequest();
     request.open("POST", ENDPOINT + "log");
     request.setRequestHeader("Content-Type", "text/plain;charset=utf-8");
     request.send(msg);

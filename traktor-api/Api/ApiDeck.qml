@@ -35,11 +35,11 @@ Item {
     AppProperty {id: propEffectiveTempo; path: `app.traktor.decks.${index + 1}.track.player.effective_tempo`; onValueChanged: updatePlayState() }
 
     function checkPlayState() {
-        var guessedPosition = (Date.now() - remoteTimestamp) / 1000 * remoteSpeed + remotePosition;
-        var actualPosition = propPlayheadPosition.value;
+        const guessedPosition = (Date.now() - remoteTimestamp) / 1000 * remoteSpeed + remotePosition;
+        const actualPosition = propPlayheadPosition.value;
 
-        var error = Math.abs(actualPosition - guessedPosition);
-        var speedError = Math.abs(remoteSpeed - propEffectiveTempo.value);
+        const error = Math.abs(actualPosition - guessedPosition);
+        const speedError = Math.abs(remoteSpeed - propEffectiveTempo.value);
 
         ApiClient.log(`play state error ${error.toFixed(10)} speed error ${speedError.toFixed(10)}`);
 
@@ -67,15 +67,15 @@ Item {
     }
 
     function updateContent(force) {
-        var updateRequired = force
-                                || (prevIsLoaded && !propIsLoaded.value)
-                                || (!prevIsLoadedSignal && propIsLoadedSignal.value);
+        const updateRequired = force
+            || (prevIsLoaded && !propIsLoaded.value)
+            || (!prevIsLoadedSignal && propIsLoadedSignal.value);
 
         prevIsLoaded = propIsLoaded.value;
         prevIsLoadedSignal = propIsLoadedSignal.value;
         if (!updateRequired) return;
 
-        var isLoaded = propIsLoaded.value;
+        const isLoaded = propIsLoaded.value;
 
         ApiClient.sendUpdate(contentApiId, {
             isLoaded,

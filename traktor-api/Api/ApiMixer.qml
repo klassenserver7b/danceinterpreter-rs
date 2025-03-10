@@ -13,7 +13,7 @@ Item {
 
     function updateState() {
         ApiClient.sendUpdate(apiId, {
-            xfader: propXFaderAdjust.value,
+            xFader: propXFaderAdjust.value,
             masterVolume: propMasterVolume.value,
             cueVolume: propCueVolume.value,
             cueMix: propCueMix.value,
