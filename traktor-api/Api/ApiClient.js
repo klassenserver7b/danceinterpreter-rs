@@ -20,7 +20,7 @@ function tryConnect() {
     ApiState.isConnecting = true;
 
     const request = new XMLHttpRequest();
-    request.onreadystatechange = function() {
+    request.onreadystatechange = function () {
         if (request.readyState !== XMLHttpRequest.DONE) return;
         ApiState.isConnecting = false;
         if (!request.responseText) return;
@@ -49,7 +49,7 @@ function initConnection() {
 
 function sendData(endpoint, data) {
     const request = new XMLHttpRequest();
-    request.onreadystatechange = function() {
+    request.onreadystatechange = function () {
         if (request.readyState !== XMLHttpRequest.DONE) return;
         if (!request.responseText) {
             ApiState.sessionId = "";

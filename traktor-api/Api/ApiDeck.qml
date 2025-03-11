@@ -16,6 +16,7 @@ Item {
     property real remotePosition: 0
     property real remoteSpeed: 0
 
+    // @formatter:off
     AppProperty { id: propIsLoaded; path: `app.traktor.decks.${index + 1}.is_loaded`; onValueChanged: updateContent(false) }
     AppProperty { id: propIsLoadedSignal; path: `app.traktor.decks.${index + 1}.is_loaded_signal`; onValueChanged: updateContent(false) }
 
@@ -33,6 +34,7 @@ Item {
 
     AppProperty {id: propPlayheadPosition; path: `app.traktor.decks.${index + 1}.track.player.playhead_position`; onValueChanged: checkPlayState() }
     AppProperty {id: propEffectiveTempo; path: `app.traktor.decks.${index + 1}.track.player.effective_tempo`; onValueChanged: updatePlayState() }
+    // @formatter:on
 
     function checkPlayState() {
         const guessedPosition = (Date.now() - remoteTimestamp) / 1000 * remoteSpeed + remotePosition;
@@ -101,5 +103,5 @@ Item {
         initialized = true;
     }
 
-     Component.onCompleted: initialize();
+    Component.onCompleted: initialize();
 }
