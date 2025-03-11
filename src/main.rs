@@ -309,19 +309,16 @@ impl DanceInterpreter {
                 self.song_window.enable_next_dance = state;
 
                 // TODO: remove later
-                let mut send_error = false;
                 if let Some(channel) = self.traktor_channel.as_mut() {
-                    send_error = matches!(
-                        channel.unbounded_send(traktor_api::AppMessage::Reconnect {
+                    if channel
+                        .unbounded_send(traktor_api::AppMessage::Reconnect {
                             debug_logging: self.song_window.enable_next_dance,
-                        }),
-                        Err(_)
-                    );
-                }
-
-                if send_error {
-                    self.traktor_channel = None;
-                    println!("send error, disconnecting channel");
+                        })
+                        .is_err()
+                    {
+                        println!("send error, disconnecting channel");
+                        self.traktor_channel = None;
+                    }
                 }
 
                 ().into()
@@ -338,7 +335,14 @@ impl DanceInterpreter {
             Message::TraktorMessage(msg) => {
                 match msg {
                     traktor_api::ServerMessage::Ready(channel) => {
-                        self.traktor_channel = Some(channel);
+                        if channel
+                            .unbounded_send(traktor_api::AppMessage::Reconnect {
+                                debug_logging: self.song_window.enable_next_dance,
+                            })
+                            .is_ok()
+                        {
+                            self.traktor_channel = Some(channel);
+                        }
                     }
                     traktor_api::ServerMessage::Connect {
                         time_base,
