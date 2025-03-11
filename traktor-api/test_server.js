@@ -19,22 +19,16 @@ const onUpdateState = () => {
 const server = Bun.serve({
     port: 8080,
     routes: {
-        "/connect": {
-            POST: async req => {
-                const data = await req.json();
-                baseTime = data.time;
-
-                return new Response(JSON.stringify({
-                    sessionId,
-                    debugLogging: DEBUG_LOGGING,
-                }));
-            },
-        },
+        "/connect": () => new Response(JSON.stringify({
+            sessionId,
+            debugLogging: DEBUG_LOGGING,
+        })),
         "/init": {
             POST: async req => {
                 const data = await req.json();
 
                 if (data.sessionId === sessionId) {
+                    baseTime = data.timestamp;
                     state = data.state;
 
                     for (const update in queue)
@@ -57,8 +51,7 @@ const server = Bun.serve({
 
                         if (queue.length > MAX_QUEUE)
                             resetConnection();
-                    }
-                    else {
+                    } else {
                         state[req.params.id] = data.state;
                         onUpdateState();
                     }

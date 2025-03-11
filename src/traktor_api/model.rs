@@ -147,16 +147,19 @@ pub struct DeckPlayState {
 }
 
 #[derive(Debug, Deserialize, Clone)]
-pub(in crate::traktor_api) struct ConnectionRequest {
-    #[serde(deserialize_with = "deserialize_system_time")]
-    time: SystemTime,
-}
-
-#[derive(Debug, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub(in crate::traktor_api) struct ConnectionResponse {
     session_id: String,
     debug_logging: bool,
+}
+
+#[derive(Debug, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub(in crate::traktor_api) struct InitializeRequest {
+    session_id: String,
+    #[serde(deserialize_with = "deserialize_system_time")]
+    timestamp: SystemTime,
+    state: State,
 }
 
 #[derive(Debug, Deserialize, Clone)]

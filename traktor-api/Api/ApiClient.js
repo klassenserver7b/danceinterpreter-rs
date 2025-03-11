@@ -33,16 +33,15 @@ function tryConnect() {
         initConnection();
     };
 
-    request.open("POST", ENDPOINT + "connect");
+    request.open("GET", ENDPOINT + "connect");
     request.setRequestHeader("Content-Type", "application/json");
-    request.send(JSON.stringify({
-        time: Date.now(),
-    }));
+    request.send();
 }
 
 function initConnection() {
     sendData("init", {
         sessionId: ApiState.sessionId,
+        timestamp: Date.now(),
         state: ApiState.state,
     });
 }
