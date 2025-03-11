@@ -78,7 +78,7 @@ impl TraktorServer {
         if request.session_id == self.session_id {
             let time_offset_ms = SystemTime::now()
                 .duration_since(UNIX_EPOCH)
-                .map(|d| d.as_millis() as u64)
+                .map(|d| (request.timestamp as i64) - (d.as_millis() as i64))
                 .unwrap_or(0);
 
             self.send_message(ServerMessage::Connect {

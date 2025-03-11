@@ -14,7 +14,6 @@ use crate::dataloading::songinfo::SongInfo;
 use crate::ui::config_window::{ConfigWindow, PLAYLIST_SCROLLABLE_ID};
 use crate::ui::song_window::SongWindow;
 use iced::advanced::graphics::image::image_rs::ImageFormat;
-use iced::futures::channel::mpsc::UnboundedSender;
 use iced::keyboard::key::Named;
 use iced::keyboard::{on_key_press, Key, Modifiers};
 use iced::widget::scrollable::{AbsoluteOffset, RelativeOffset};
@@ -46,7 +45,6 @@ struct DanceInterpreter {
     song_window: SongWindow,
 
     data_provider: SongDataProvider,
-    traktor_channel: Option<UnboundedSender<traktor_api::AppMessage>>,
 }
 
 #[derive(Debug, Clone)]
@@ -76,6 +74,10 @@ pub enum Message {
     EnableNextDance(bool),
 
     TraktorMessage(traktor_api::ServerMessage),
+    TraktorEnableServer(bool),
+    TraktorChangeAddress(String),
+    TraktorEnableDebugLogging(bool),
+    TraktorReconnect,
 }
 
 impl DanceInterpreter {
@@ -307,20 +309,6 @@ impl DanceInterpreter {
 
             Message::EnableNextDance(state) => {
                 self.song_window.enable_next_dance = state;
-
-                // TODO: remove later
-                if let Some(channel) = self.traktor_channel.as_mut() {
-                    if channel
-                        .unbounded_send(traktor_api::AppMessage::Reconnect {
-                            debug_logging: self.song_window.enable_next_dance,
-                        })
-                        .is_err()
-                    {
-                        println!("send error, disconnecting channel");
-                        self.traktor_channel = None;
-                    }
-                }
-
                 ().into()
             }
 
@@ -333,32 +321,28 @@ impl DanceInterpreter {
             ),
 
             Message::TraktorMessage(msg) => {
-                match msg {
-                    traktor_api::ServerMessage::Ready(channel) => {
-                        if channel
-                            .unbounded_send(traktor_api::AppMessage::Reconnect {
-                                debug_logging: self.song_window.enable_next_dance,
-                            })
-                            .is_ok()
-                        {
-                            self.traktor_channel = Some(channel);
-                        }
-                    }
-                    traktor_api::ServerMessage::Connect {
-                        time_offset_ms,
-                        initial_state,
-                    } => {
-                        println!(
-                            "time offset ms {:?} initial state {:?}",
-                            time_offset_ms, initial_state
-                        );
-                    }
-                    traktor_api::ServerMessage::Update(update) => {
-                        println!("update {:?}", update);
-                    }
-                    traktor_api::ServerMessage::Log(msg) => println!("log {}", msg),
-                }
+                self.data_provider.traktor_provider.process_message(msg);
+                ().into()
+            }
 
+            Message::TraktorEnableServer(enabled) => {
+                self.data_provider.traktor_provider.is_enabled = enabled;
+                ().into()
+            }
+
+            Message::TraktorChangeAddress(addr) => {
+                self.data_provider.traktor_provider.address = addr;
+                ().into()
+            }
+
+            Message::TraktorEnableDebugLogging(enabled) => {
+                self.data_provider.traktor_provider.debug_logging = enabled;
+                self.data_provider.traktor_provider.reconnect();
+                ().into()
+            }
+
+            Message::TraktorReconnect => {
+                self.data_provider.traktor_provider.reconnect();
                 ().into()
             }
 
@@ -375,7 +359,7 @@ impl DanceInterpreter {
     }
 
     pub fn subscription(&self) -> Subscription<Message> {
-        Subscription::batch([
+        let mut subscriptions = vec![
             window::close_events().map(Message::WindowClosed),
             window::resize_events().map(Message::WindowResized),
             window::events().map(|(_, event)| match event {
@@ -403,15 +387,15 @@ impl DanceInterpreter {
                     _ => None,
                 },
             ),
-            run_subscription_with(
-                if self.song_window.enable_image {
-                    "127.0.0.1:8080".parse().unwrap()
-                } else {
-                    "127.0.0.1:3030".parse().unwrap()
-                },
-                |port| traktor_api::run_server(*port),
-            )
-            .map(Message::TraktorMessage),
-        ])
+        ];
+
+        if let Some(addr) = self.data_provider.traktor_provider.get_socket_addr() {
+            subscriptions.push(
+                run_subscription_with(addr, |addr| traktor_api::run_server(*addr))
+                    .map(Message::TraktorMessage),
+            );
+        }
+
+        Subscription::batch(subscriptions)
     }
 }

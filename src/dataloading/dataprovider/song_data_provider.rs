@@ -1,10 +1,12 @@
 use crate::dataloading::songinfo::SongInfo;
 use std::cmp::PartialEq;
+use crate::traktor_api::TraktorDataProvider;
 
 #[derive(Default, Debug, PartialEq, Clone)]
 pub enum SongDataSource {
     #[default]
     Blank,
+    Traktor,
     Other(SongInfo),
     Static(usize),
     Playlist(usize),
@@ -13,6 +15,7 @@ pub enum SongDataSource {
 #[derive(Debug, Clone, Copy)]
 pub enum SongChange {
     Blank,
+    Traktor,
     StaticAbsolute(usize),
     PlaylistAbsolute(usize),
     Previous,
@@ -31,6 +34,8 @@ pub struct SongDataProvider {
     pub playlist_played: Vec<bool>,
 
     pub statics: Vec<SongInfo>,
+
+    pub traktor_provider: TraktorDataProvider,
 
     pub current: SongDataSource,
     pub next: Option<SongDataSource>,
@@ -68,6 +73,7 @@ impl SongDataProvider {
             SongDataSource::Playlist(i) => self.playlist_songs.get(i),
             SongDataSource::Other(ref song) => Some(song),
             SongDataSource::Blank => None,
+            SongDataSource::Traktor => self.traktor_provider.get_song_info(),
         }
     }
     pub fn get_next_song_info(&self) -> Option<&SongInfo> {
@@ -77,6 +83,7 @@ impl SongDataProvider {
                 SongDataSource::Playlist(i) => self.playlist_songs.get(*i),
                 SongDataSource::Other(ref song) => Some(song),
                 SongDataSource::Blank => None,
+                SongDataSource::Traktor => None,
             };
         }
 
@@ -85,6 +92,7 @@ impl SongDataProvider {
             SongDataSource::Playlist(i) => self.playlist_songs.get(i + 1),
             SongDataSource::Other(ref song) => Some(song),
             SongDataSource::Blank => None,
+            SongDataSource::Traktor => None,
         }
     }
 
@@ -162,6 +170,10 @@ impl SongDataProvider {
             SongChange::Blank => {
                 self.set_current_as_played();
                 self.current = SongDataSource::Blank;
+            }
+            SongChange::Traktor => {
+                self.set_current_as_played();
+                self.current = SongDataSource::Traktor;
             }
             SongChange::StaticAbsolute(index) => {
                 self.set_current_as_played();

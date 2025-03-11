@@ -166,6 +166,10 @@ impl ConfigWindow {
             button(text("Blank").align_y(Vertical::Center).font(bold_font))
                 .style(button::secondary)
                 .on_press(Message::SongChanged(SongChange::Blank));
+        let btn_traktor: Button<Message> =
+            button(text("Traktor").align_y(Vertical::Center).font(bold_font))
+                .style(button::secondary)
+                .on_press(Message::SongChanged(SongChange::Traktor));
         let mut statics: Vec<Element<_>> = dance_interpreter
             .data_provider
             .statics
@@ -180,6 +184,7 @@ impl ConfigWindow {
             .collect();
 
         statics.insert(0, btn_blank.into());
+        statics.insert(1, btn_traktor.into());
 
         scrollable(row(statics).spacing(5))
             .direction(Direction::Horizontal(Scrollbar::new()))
@@ -226,6 +231,20 @@ impl ConfigWindow {
                 )
                 .spacing(5.0)
             )
+            (
+                label_message_button_shrink("Traktor", Message::Noop),
+                menu_tpl_1(
+                    menu_items!(
+                        (labeled_message_checkbox("Enable Server", dance_interpreter.data_provider.traktor_provider.is_enabled, Message::TraktorEnableServer))
+                        // TODO: socket address input
+                        (separator())
+                        (labeled_message_checkbox_opt("Enable Debug Logging", dance_interpreter.data_provider.traktor_provider.debug_logging,
+                            dance_interpreter.data_provider.traktor_provider.is_enabled.then_some(Message::TraktorEnableDebugLogging)))
+                        (label_message_button_fill_opt("Reset Connection", dance_interpreter.data_provider.traktor_provider.is_enabled.then_some(Message::TraktorReconnect)))
+                    )
+                )
+                .spacing(5.0)
+            )
         )
         .spacing(5.0)
         .draw_path(menu::DrawPath::Backdrop)
@@ -256,6 +275,20 @@ fn label_message_button(label: &str, message: Message) -> button::Button<Message
         .on_press(message)
 }
 
+fn label_message_button_opt(label: &str, message: Option<Message>) -> button::Button<Message> {
+    if let Some(message) = message {
+        label_message_button(label, message)
+    } else {
+        button(text(label).align_y(Vertical::Center))
+            .padding([4, 8])
+            .style(button::secondary)
+    }
+}
+
+fn label_message_button_fill_opt(label: &str, message: Option<Message>) -> button::Button<Message> {
+    label_message_button_opt(label, message).width(Length::Fill)
+}
+
 fn material_icon_message_button(icon_id: &str, message: Message) -> button::Button<Message> {
     button(material_icon(icon_id))
         .padding([4, 8])
@@ -273,6 +306,19 @@ fn labeled_message_checkbox(
         .on_toggle(message)
         .width(Length::Fill)
     //.style(checkbox::secondary)
+}
+
+fn labeled_message_checkbox_opt(
+    label: &str,
+    checked: bool,
+    message: Option<fn(bool) -> Message>,
+) -> checkbox::Checkbox<Message> {
+    if let Some(message) = message {
+        labeled_message_checkbox(label, checked, message)
+    } else {
+        checkbox(label, checked).width(Length::Fill)
+        //.style(checkbox::secondary)
+    }
 }
 
 fn separator() -> quad::Quad {
