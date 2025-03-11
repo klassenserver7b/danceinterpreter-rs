@@ -1,3 +1,4 @@
+use std::net::SocketAddr;
 use crate::async_utils::DroppingOnce;
 use crate::traktor_api::model::{AppMessage, ServerMessage};
 use iced::futures::channel::mpsc::{UnboundedReceiver, UnboundedSender};
@@ -8,7 +9,7 @@ use std::sync::{Arc, Mutex};
 use warp::Filter;
 
 async fn server_main(
-    port: u16,
+    addr: SocketAddr,
     mut output: UnboundedSender<ServerMessage>,
     mut input: UnboundedReceiver<AppMessage>,
     cancelled: oneshot::Receiver<()>,
@@ -19,13 +20,13 @@ async fn server_main(
     let hello = warp::path!("hello" / String)
         .map(move |name| format!("Hello, {}! {}", name, test_clone.lock().unwrap()));
 
-    println!("starting traktor server on port {}", port);
+    println!("starting traktor server on {}", addr);
     let Ok((_, fut)) =
-        warp::serve(hello).try_bind_with_graceful_shutdown(([127, 0, 0, 1], port), async {
+        warp::serve(hello).try_bind_with_graceful_shutdown(addr, async {
             cancelled.await.ok();
         })
     else {
-        println!("could not start traktor server on port {}", port);
+        println!("could not start traktor server on {}", addr);
         return;
     };
     tokio::task::spawn(fut);
@@ -39,7 +40,7 @@ async fn server_main(
     }
 }
 
-pub fn run_server(port: u16) -> impl Stream<Item = ServerMessage> {
+pub fn run_server(addr: SocketAddr) -> impl Stream<Item = ServerMessage> {
     let (mut output, output_receive) = mpsc::unbounded();
     let (cancel, cancelled) = oneshot::channel();
 
@@ -48,10 +49,10 @@ pub fn run_server(port: u16) -> impl Stream<Item = ServerMessage> {
             let (input_send, input) = mpsc::unbounded();
             let _ = output.send(ServerMessage::Ready(input_send)).await;
 
-            server_main(port, output, input, cancelled).await
+            server_main(addr, output, input, cancelled).await
         },
         move || {
-            println!("stopping traktor server on port {}", port);
+            println!("stopping traktor server on {}", addr);
             let _ = cancel.send(());
         },
     )

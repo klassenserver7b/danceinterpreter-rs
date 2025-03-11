@@ -400,9 +400,9 @@ impl DanceInterpreter {
             ),
             run_subscription_with(
                 if self.song_window.enable_image {
-                    8080
+                    "127.0.0.1:8080".parse().unwrap()
                 } else {
-                    3030
+                    "127.0.0.1:3030".parse().unwrap()
                 },
                 |port| traktor_api::run_server(*port),
             )
