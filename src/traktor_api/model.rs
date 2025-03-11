@@ -1,6 +1,5 @@
 use iced::futures::channel::mpsc;
-use serde::{Deserialize, Deserializer};
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use serde::{Deserialize, Deserializer, Serialize};
 
 #[derive(Debug, Clone)]
 pub enum AppMessage {
@@ -11,10 +10,11 @@ pub enum AppMessage {
 pub enum ServerMessage {
     Ready(mpsc::UnboundedSender<AppMessage>),
     Connect {
-        time_base: SystemTime,
+        time_offset_ms: u64,
         initial_state: State,
     },
     Update(StateUpdate),
+    Log(String),
 }
 
 #[derive(Debug, Clone)]
@@ -35,9 +35,9 @@ pub enum StateUpdate {
 
 #[derive(Debug, Clone)]
 pub struct State {
-    mixer: MixerState,
-    channels: (ChannelState, ChannelState, ChannelState, ChannelState),
-    decks: (DeckState, DeckState, DeckState, DeckState),
+    pub mixer: MixerState,
+    pub channels: (ChannelState, ChannelState, ChannelState, ChannelState),
+    pub decks: (DeckState, DeckState, DeckState, DeckState),
 }
 
 impl<'de> Deserialize<'de> for State {
@@ -97,82 +97,72 @@ impl<'de> Deserialize<'de> for State {
 #[derive(Debug, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct MixerState {
-    x_fader: f64,
-    master_volume: f64,
-    cue_volume: f64,
-    cue_mix: f64,
-    mic_volume: f64,
+    pub x_fader: f64,
+    pub master_volume: f64,
+    pub cue_volume: f64,
+    pub cue_mix: f64,
+    pub mic_volume: f64,
 }
 
 #[derive(Debug, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct ChannelState {
-    cue: bool,
-    volume: f64,
-    x_fader_left: bool,
-    x_fader_right: bool,
+    pub cue: bool,
+    pub volume: f64,
+    pub x_fader_left: bool,
+    pub x_fader_right: bool,
 }
 
 #[derive(Debug, Clone)]
 pub struct DeckState {
-    content: DeckContentState,
-    play_state: DeckPlayState,
+    pub content: DeckContentState,
+    pub play_state: DeckPlayState,
 }
 
 #[derive(Debug, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct DeckContentState {
-    is_loaded: bool,
+    pub is_loaded: bool,
 
-    title: String,
-    artist: String,
-    album: String,
-    genre: String,
-    comment: String,
-    comment2: String,
-    label: String,
+    pub title: String,
+    pub artist: String,
+    pub album: String,
+    pub genre: String,
+    pub comment: String,
+    pub comment2: String,
+    pub label: String,
 
-    key: String,
-    file_path: String,
-    track_length: f64,
-    bpm: f64,
+    pub key: String,
+    pub file_path: String,
+    pub track_length: f64,
+    pub bpm: f64,
 }
 
 #[derive(Debug, Deserialize, Clone)]
 pub struct DeckPlayState {
-    #[serde(deserialize_with = "deserialize_system_time")]
-    timestamp: SystemTime,
-    position: f64,
-    speed: f64,
+    pub timestamp: u64,
+    pub position: f64,
+    pub speed: f64,
 }
 
-#[derive(Debug, Deserialize, Clone)]
+#[derive(Debug, Serialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub(in crate::traktor_api) struct ConnectionResponse {
-    session_id: String,
-    debug_logging: bool,
+    pub session_id: String,
+    pub debug_logging: bool,
 }
 
 #[derive(Debug, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub(in crate::traktor_api) struct InitializeRequest {
-    session_id: String,
-    #[serde(deserialize_with = "deserialize_system_time")]
-    timestamp: SystemTime,
-    state: State,
+    pub session_id: String,
+    pub timestamp: u64,
+    pub state: State,
 }
 
 #[derive(Debug, Deserialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub(in crate::traktor_api) struct UpdateRequest<T> {
-    session_id: String,
-    state: T,
-}
-
-fn deserialize_system_time<'de, D>(deserializer: D) -> Result<SystemTime, D::Error>
-where
-    D: Deserializer<'de>,
-{
-    let secs_since_epoch: u64 = Deserialize::deserialize(deserializer)?;
-    Ok(UNIX_EPOCH + Duration::from_secs(secs_since_epoch))
+    pub session_id: String,
+    pub state: T,
 }

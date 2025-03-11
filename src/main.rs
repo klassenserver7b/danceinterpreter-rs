@@ -345,17 +345,18 @@ impl DanceInterpreter {
                         }
                     }
                     traktor_api::ServerMessage::Connect {
-                        time_base,
+                        time_offset_ms,
                         initial_state,
                     } => {
                         println!(
-                            "time base {:?} initial state {:?}",
-                            time_base, initial_state
+                            "time offset ms {:?} initial state {:?}",
+                            time_offset_ms, initial_state
                         );
                     }
                     traktor_api::ServerMessage::Update(update) => {
                         println!("update {:?}", update);
                     }
+                    traktor_api::ServerMessage::Log(msg) => println!("log {}", msg),
                 }
 
                 ().into()
