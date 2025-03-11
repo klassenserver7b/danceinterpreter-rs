@@ -8,6 +8,7 @@ pub const TRAKTOR_SERVER_DEFAULT_ADDR: &str = "127.0.0.1:8080";
 pub struct TraktorDataProvider {
     pub is_enabled: bool,
     pub address: String,
+    pub submitted_address: String,
 
     channel: Option<UnboundedSender<AppMessage>>,
 
@@ -24,6 +25,7 @@ impl Default for TraktorDataProvider {
         Self {
             is_enabled: false,
             address: String::new(),
+            submitted_address: String::new(),
             channel: None,
 
             time_offset_ms: 0,
@@ -50,6 +52,10 @@ impl TraktorDataProvider {
     }
 
     pub fn reconnect(&mut self) {
+        self.time_offset_ms = 0;
+        self.state = None;
+        self.update_song_info();
+
         self.send_message(AppMessage::Reconnect {
             debug_logging: self.debug_logging,
         });
@@ -60,11 +66,11 @@ impl TraktorDataProvider {
             return None;
         }
 
-        if self.address.is_empty() {
+        if self.submitted_address.is_empty() {
             return TRAKTOR_SERVER_DEFAULT_ADDR.parse().ok();
         }
 
-        self.address.parse().ok()
+        self.submitted_address.parse().ok()
     }
 
     pub fn get_song_info(&self) -> Option<&SongInfo> {

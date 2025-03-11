@@ -76,6 +76,7 @@ pub enum Message {
     TraktorMessage(traktor_api::ServerMessage),
     TraktorEnableServer(bool),
     TraktorChangeAddress(String),
+    TraktorSubmitAddress,
     TraktorEnableDebugLogging(bool),
     TraktorReconnect,
 }
@@ -332,6 +333,11 @@ impl DanceInterpreter {
 
             Message::TraktorChangeAddress(addr) => {
                 self.data_provider.traktor_provider.address = addr;
+                ().into()
+            }
+
+            Message::TraktorSubmitAddress => {
+                self.data_provider.traktor_provider.submitted_address = self.data_provider.traktor_provider.address.clone();
                 ().into()
             }
 

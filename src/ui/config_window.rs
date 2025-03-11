@@ -1,6 +1,7 @@
 use crate::dataloading::dataprovider::song_data_provider::{
     SongChange, SongDataEdit, SongDataSource,
 };
+use crate::traktor_api::TRAKTOR_SERVER_DEFAULT_ADDR;
 use crate::ui::material_icon;
 use crate::ui::widget::dynamic_text_input::DynamicTextInput;
 use crate::{DanceInterpreter, Message, Window};
@@ -236,7 +237,8 @@ impl ConfigWindow {
                 menu_tpl_1(
                     menu_items!(
                         (labeled_message_checkbox("Enable Server", dance_interpreter.data_provider.traktor_provider.is_enabled, Message::TraktorEnableServer))
-                        // TODO: socket address input
+                        (labeled_dynamic_text_input("Server Address", TRAKTOR_SERVER_DEFAULT_ADDR, dance_interpreter.data_provider.traktor_provider.address.as_str(),
+                            Message::TraktorChangeAddress, Some(Message::TraktorSubmitAddress)))
                         (separator())
                         (labeled_message_checkbox_opt("Enable Debug Logging", dance_interpreter.data_provider.traktor_provider.debug_logging,
                             dance_interpreter.data_provider.traktor_provider.is_enabled.then_some(Message::TraktorEnableDebugLogging)))
@@ -319,6 +321,24 @@ fn labeled_message_checkbox_opt(
         checkbox(label, checked).width(Length::Fill)
         //.style(checkbox::secondary)
     }
+}
+
+fn labeled_dynamic_text_input<'a>(
+    label: &'a str,
+    placeholder: &'a str,
+    value: &'a str,
+    message: fn(String) -> Message,
+    submit_message: Option<Message>,
+) -> Column<'a, Message> {
+    let mut input = DynamicTextInput::<Message>::new(placeholder, value)
+        .width(Length::Fill)
+        .on_change(message);
+
+    if let Some(submit_message) = submit_message {
+        input = input.on_submit(submit_message);
+    }
+
+    col!(text(label).width(Length::Fill), input,).width(Length::Fill)
 }
 
 fn separator() -> quad::Quad {
