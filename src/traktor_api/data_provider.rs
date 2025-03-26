@@ -1,5 +1,5 @@
 use crate::dataloading::songinfo::SongInfo;
-use crate::traktor_api::{AppMessage, ServerMessage, State};
+use crate::traktor_api::{AppMessage, ChannelState, DeckState, MixerState, ServerMessage, State};
 use iced::futures::channel::mpsc::UnboundedSender;
 use std::net::SocketAddr;
 
@@ -81,6 +81,24 @@ impl TraktorDataProvider {
         self.cached_song_info.as_ref()
     }
 
+    fn get_deck_score(&self, deck: &DeckState, channel: &ChannelState, mixer: &MixerState) -> f64 {
+        if !deck.content.is_loaded || deck.play_state.speed == 0.0 {
+            return 0.0;
+        }
+
+        let mut score = channel.volume;
+
+        if channel.x_fader_left && mixer.x_fader > 0.5 {
+            score *= (mixer.x_fader - 0.5) * 2.0;
+        }
+
+        if channel.x_fader_right && mixer.x_fader < 0.5 {
+            score *= mixer.x_fader * 2.0;
+        }
+
+        score
+    }
+
     fn update_song_info(&mut self) {
         self.cached_song_info = None;
 
@@ -92,17 +110,39 @@ impl TraktorDataProvider {
             return;
         };
 
-        // TODO: real implementation that doesn't just always use DECK A
+        let scores = vec![
+            self.get_deck_score(&state.decks.0, &state.channels.0, &state.mixer),
+            self.get_deck_score(&state.decks.1, &state.channels.1, &state.mixer),
+            self.get_deck_score(&state.decks.2, &state.channels.2, &state.mixer),
+            self.get_deck_score(&state.decks.3, &state.channels.3, &state.mixer),
+        ];
 
-        if !state.decks.0.content.is_loaded {
+        let Some(max) = scores
+            .iter()
+            .enumerate()
+            .max_by(|(_, a), (_, b)| a.total_cmp(b))
+        else {
             return;
-        }
+        };
+        let max_index = if *max.1 > 0.0 {
+            max.0
+        } else {
+            return;
+        };
+
+        let content = match max_index {
+            0 => &state.decks.0.content,
+            1 => &state.decks.1.content,
+            2 => &state.decks.2.content,
+            3 => &state.decks.3.content,
+            _ => return,
+        };
 
         self.cached_song_info = Some(SongInfo::new(
             0,
-            state.decks.0.content.title.to_owned(),
-            state.decks.0.content.artist.to_owned(),
-            state.decks.0.content.comment.to_owned(),
+            content.title.to_owned(),
+            content.artist.to_owned(),
+            content.comment.to_owned(),
             None,
         ));
     }
@@ -122,11 +162,15 @@ impl TraktorDataProvider {
                 time_offset_ms,
                 initial_state,
             } => {
+                println!("{:?}", initial_state);
+
                 self.time_offset_ms = time_offset_ms;
                 self.state = Some(initial_state);
                 self.update_song_info();
             }
             ServerMessage::Update(update) => {
+                println!("{:?}", update);
+
                 if let Some(state) = self.state.as_mut() {
                     state.apply_update(update);
                 }
