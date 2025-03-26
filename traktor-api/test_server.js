@@ -60,9 +60,11 @@ const server = Bun.serve({
                 return new Response(sessionId);
             },
         },
-        "/log": async req => {
-            if (req.body) console.log(`[log] ${await req.text()}`);
-            return new Response("OK");
+        "/log": {
+            POST: async req => {
+                if (req.body) console.log(`[log] ${await req.text()}`);
+                return new Response("OK");
+            }
         },
         "/*": async req => {
             console.log(`${req.method}\t${req.url}`);
@@ -70,6 +72,13 @@ const server = Bun.serve({
 
             return new Response("OK");
         },
+    },
+
+    async fetch(req) {
+            console.log(`${req.method}\t${req.url}`);
+            if (req.body) console.log(await req.text());
+
+            return new Response("Not Found", { status: 404 });
     },
 });
 
