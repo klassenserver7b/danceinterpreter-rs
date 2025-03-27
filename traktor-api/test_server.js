@@ -8,7 +8,7 @@ let queue = [];
 
 let requiredImages = [];
 let loadedImages = [];
-let coverPing = null;
+let sentImages = [];
 
 const resetConnection = () => {
     state = null;
@@ -16,10 +16,12 @@ const resetConnection = () => {
 
     requiredImages = [];
     loadedImages = [];
-    if (coverPing) coverPing();
+    sentImages = [];
 
     sessionId = Bun.randomUUIDv7();
 };
+
+const getNeededImages = () => requiredImages.filter(i => !loadedImages.includes(i));
 
 const onUpdateState = () => {
     requiredImages = [
@@ -29,17 +31,23 @@ const onUpdateState = () => {
         state.deck3content.filePath,
     ].filter(i => i);
     loadedImages = loadedImages.filter(i => requiredImages.includes(i));
-    if (coverPing) coverPing();
+    onChangeNeededImages();
 
     console.log(state);
 };
 
-const createCoverPing = () => new Promise(resolve => {
-    coverPing = () => {
-        coverPing = null;
-        resolve();
-    };
-});
+const onChangeNeededImages = () => {
+    const neededImages = getNeededImages();
+    const newImages = neededImages.filter(i => !sentImages.includes(i));
+
+    if (newImages.length > 0)
+        console.log("needed images changed");
+
+    for (const img of newImages)
+        server.publish("cover", img);
+
+    sentImages = neededImages;
+};
 
 const server = Bun.serve({
     port: 8080,
@@ -86,16 +94,11 @@ const server = Bun.serve({
             },
         },
         "/cover": {
-            GET: async _ => {
-                do {
-                    const neededImages = requiredImages.filter(i => !loadedImages.includes(i));
+            GET: async req => {
+                if (server.upgrade(req))
+                    return;
 
-                    if (neededImages.length > 0) {
-                        return new Response(neededImages[0]);
-                    }
-
-                    await createCoverPing();
-                } while (true);
+                return new Response("expected websocket connection", { status: 400 });
             },
             POST: async req => {
                 const { searchParams } = URL.parse(req.url);
@@ -105,6 +108,8 @@ const server = Bun.serve({
 
                 const data = await req.blob();
                 loadedImages.push(path);
+
+                console.log(`image "${path}" received`);
 
                 const file = Bun.file(`./${Bun.randomUUIDv7()}.bin`);
                 await Bun.write(file, data);
@@ -130,6 +135,20 @@ const server = Bun.serve({
         if (req.body) console.log(await req.text());
 
         return new Response("Not Found", { status: 404 });
+    },
+
+    websocket: {
+        open(ws) {
+            console.log("web socket connected");
+
+            for (const img of sentImages)
+                ws.send(img);
+
+            ws.subscribe("cover");
+        },
+        close() {
+            console.log("web socket disconnected");
+        },
     },
 });
 
