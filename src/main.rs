@@ -1,7 +1,10 @@
+mod async_utils;
 mod dataloading;
 mod macros;
+mod traktor_api;
 mod ui;
 
+use crate::async_utils::run_subscription_with;
 use crate::dataloading::dataprovider::song_data_provider::{
     SongChange, SongDataEdit, SongDataProvider, SongDataSource,
 };
@@ -40,6 +43,7 @@ pub trait Window {
 struct DanceInterpreter {
     config_window: ConfigWindow,
     song_window: SongWindow,
+
     data_provider: SongDataProvider,
 }
 
@@ -68,6 +72,13 @@ pub enum Message {
 
     EnableImage(bool),
     EnableNextDance(bool),
+
+    TraktorMessage(traktor_api::ServerMessage),
+    TraktorEnableServer(bool),
+    TraktorChangeAddress(String),
+    TraktorSubmitAddress,
+    TraktorEnableDebugLogging(bool),
+    TraktorReconnect,
 }
 
 impl DanceInterpreter {
@@ -302,8 +313,43 @@ impl DanceInterpreter {
                 ().into()
             }
 
-            Message::ScrollBy(frac) => {
-                scrollable::scroll_by(PLAYLIST_SCROLLABLE_ID.clone(), AbsoluteOffset{x: 0.0, y: self.config_window.size.height / frac})
+            Message::ScrollBy(frac) => scrollable::scroll_by(
+                PLAYLIST_SCROLLABLE_ID.clone(),
+                AbsoluteOffset {
+                    x: 0.0,
+                    y: self.config_window.size.height / frac,
+                },
+            ),
+
+            Message::TraktorMessage(msg) => {
+                self.data_provider.traktor_provider.process_message(msg);
+                ().into()
+            }
+
+            Message::TraktorEnableServer(enabled) => {
+                self.data_provider.traktor_provider.is_enabled = enabled;
+                ().into()
+            }
+
+            Message::TraktorChangeAddress(addr) => {
+                self.data_provider.traktor_provider.address = addr;
+                ().into()
+            }
+
+            Message::TraktorSubmitAddress => {
+                self.data_provider.traktor_provider.submitted_address = self.data_provider.traktor_provider.address.clone();
+                ().into()
+            }
+
+            Message::TraktorEnableDebugLogging(enabled) => {
+                self.data_provider.traktor_provider.debug_logging = enabled;
+                self.data_provider.traktor_provider.reconnect();
+                ().into()
+            }
+
+            Message::TraktorReconnect => {
+                self.data_provider.traktor_provider.reconnect();
+                ().into()
             }
 
             _ => ().into(),
@@ -319,8 +365,7 @@ impl DanceInterpreter {
     }
 
     pub fn subscription(&self) -> Subscription<Message> {
-
-        Subscription::batch([
+        let mut subscriptions = vec![
             window::close_events().map(Message::WindowClosed),
             window::resize_events().map(Message::WindowResized),
             window::events().map(|(_, event)| match event {
@@ -348,6 +393,15 @@ impl DanceInterpreter {
                     _ => None,
                 },
             ),
-        ])
+        ];
+
+        if let Some(addr) = self.data_provider.traktor_provider.get_socket_addr() {
+            subscriptions.push(
+                run_subscription_with(addr, |addr| traktor_api::run_server(*addr))
+                    .map(Message::TraktorMessage),
+            );
+        }
+
+        Subscription::batch(subscriptions)
     }
 }
