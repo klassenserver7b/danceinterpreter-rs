@@ -6,9 +6,10 @@ use crate::traktor_api::{StateUpdate, ID};
 use bytes::Bytes;
 use iced::futures::channel::mpsc::{UnboundedReceiver, UnboundedSender};
 use iced::futures::channel::{mpsc, oneshot};
-use iced::futures::stream;
+use iced::futures::{stream, TryFutureExt};
 use iced::futures::{SinkExt, Stream, StreamExt};
 use serde::de::DeserializeOwned;
+use std::collections::HashMap;
 use std::convert::Infallible;
 use std::net::SocketAddr;
 use std::sync::Arc;
@@ -28,6 +29,13 @@ struct TraktorServer {
 
     is_initialized: bool,
     queue: Vec<StateUpdate>,
+
+    deck_files: (String, String, String, String),
+    loaded_images: Vec<String>,
+    pending_images: Vec<String>,
+
+    cover_socket_id: usize,
+    cover_sockets: HashMap<usize, UnboundedSender<warp::ws::Message>>,
 }
 
 impl TraktorServer {
@@ -40,6 +48,13 @@ impl TraktorServer {
 
             is_initialized: false,
             queue: Vec::new(),
+
+            deck_files: Default::default(),
+            loaded_images: Vec::new(),
+            pending_images: Vec::new(),
+
+            cover_socket_id: 0,
+            cover_sockets: HashMap::new(),
         }
     }
 
@@ -67,6 +82,38 @@ impl TraktorServer {
         self.queue.clear();
     }
 
+    fn get_required_images(&self) -> Vec<String> {
+        let mut required_images: Vec<String> = vec![
+            &self.deck_files.0,
+            &self.deck_files.1,
+            &self.deck_files.2,
+            &self.deck_files.3,
+        ]
+        .into_iter()
+        .filter_map(|f| (!f.is_empty()).then(|| f.to_owned()))
+        .collect();
+        required_images.dedup();
+
+        required_images
+    }
+
+    async fn on_update_deck_files(&mut self) {
+        let required_images = self.get_required_images();
+
+        self.loaded_images.retain(|i| required_images.contains(i));
+        self.pending_images.retain(|i| required_images.contains(i));
+
+        let new_images = required_images
+            .iter()
+            .filter(|&i| !self.loaded_images.contains(i) && !self.pending_images.contains(i));
+
+        for img in new_images {
+            for socket in self.cover_sockets.values_mut() {
+                _ = socket.send(warp::ws::Message::text(img)).await;
+            }
+        }
+    }
+
     async fn handle_connect(&mut self) -> impl warp::Reply {
         warp::reply::json(&ConnectionResponse {
             session_id: self.session_id.to_owned(),
@@ -80,6 +127,12 @@ impl TraktorServer {
                 .duration_since(UNIX_EPOCH)
                 .map(|d| (request.timestamp as i64) - (d.as_millis() as i64))
                 .unwrap_or(0);
+
+            self.deck_files.0 = request.state.decks.0.content.file_path.clone();
+            self.deck_files.1 = request.state.decks.1.content.file_path.clone();
+            self.deck_files.2 = request.state.decks.2.content.file_path.clone();
+            self.deck_files.3 = request.state.decks.3.content.file_path.clone();
+            self.on_update_deck_files().await;
 
             self.send_message(ServerMessage::Connect {
                 time_offset_ms,
@@ -102,6 +155,23 @@ impl TraktorServer {
 
     async fn handle_update(&mut self, session_id: String, update: StateUpdate) -> impl warp::Reply {
         if session_id == self.session_id {
+            match &update {
+                StateUpdate::DeckContent(ID::A, content) => {
+                    self.deck_files.0 = content.file_path.clone()
+                }
+                StateUpdate::DeckContent(ID::B, content) => {
+                    self.deck_files.1 = content.file_path.clone()
+                }
+                StateUpdate::DeckContent(ID::C, content) => {
+                    self.deck_files.2 = content.file_path.clone()
+                }
+                StateUpdate::DeckContent(ID::D, content) => {
+                    self.deck_files.3 = content.file_path.clone()
+                }
+                _ => {}
+            }
+            self.on_update_deck_files().await;
+
             if self.is_initialized {
                 self.send_message(ServerMessage::Update(update)).await;
             } else {
@@ -114,6 +184,44 @@ impl TraktorServer {
         }
 
         self.session_id.to_owned()
+    }
+
+    async fn handle_cover(&mut self, path: String, data: Bytes) -> StatusCode {
+        if data.is_empty() {
+            return StatusCode::BAD_REQUEST;
+        }
+
+        if !self.get_required_images().contains(&path) {
+            return StatusCode::OK;
+        }
+
+        println!("cover received for \"{}\"", path);
+
+        self.pending_images.retain(|i| i != &path);
+        if !self.loaded_images.contains(&path) {
+            self.loaded_images.push(path.clone());
+        }
+
+        self.send_message(ServerMessage::CoverImage { path, data })
+            .await;
+        StatusCode::ACCEPTED
+    }
+
+    async fn handle_socket_connect(&mut self, mut tx: UnboundedSender<warp::ws::Message>) -> usize {
+        while self.cover_sockets.contains_key(&self.cover_socket_id) {
+            self.cover_socket_id += 1;
+        }
+
+        for img in &self.pending_images {
+            _ = tx.send(warp::ws::Message::text(img)).await;
+        }
+
+        self.cover_sockets.insert(self.cover_socket_id, tx);
+        self.cover_socket_id
+    }
+
+    fn handle_socket_disconnect(&mut self, id: usize) {
+        self.cover_sockets.remove(&id);
     }
 
     async fn handle_log(&mut self, msg: String) -> impl warp::Reply {
@@ -131,7 +239,8 @@ impl TraktorServer {
                 Self::route_connect(state.clone())
                     .or(Self::route_init(state.clone()))
                     .or(Self::route_update(state.clone()))
-                    .or(Self::route_log(state.clone())),
+                    .or(Self::route_log(state.clone()))
+                    .or(Self::route_cover(state.clone())),
             )
             .map(|_, reply| reply)
     }
@@ -199,83 +308,148 @@ impl TraktorServer {
 
     fn route_update_sub_routes(
     ) -> impl Filter<Extract = ((String, StateUpdate),), Error = warp::Rejection> + Clone {
-        (warp::path!("mixer")
+        warp::path!("mixer")
             .and(Self::json_body())
             .then(async move |req: UpdateRequest<_>| {
                 (req.session_id, StateUpdate::Mixer(req.state))
-            }))
-        .or(warp::path!("channel0").and(Self::json_body()).then(
-            async move |req: UpdateRequest<_>| {
-                (req.session_id, StateUpdate::Channel(ID::A, req.state))
-            },
-        ))
-        .unify()
-        .or(warp::path!("channel1").and(Self::json_body()).then(
-            async move |req: UpdateRequest<_>| {
-                (req.session_id, StateUpdate::Channel(ID::B, req.state))
-            },
-        ))
-        .unify()
-        .or(warp::path!("channel2").and(Self::json_body()).then(
-            async move |req: UpdateRequest<_>| {
-                (req.session_id, StateUpdate::Channel(ID::C, req.state))
-            },
-        ))
-        .unify()
-        .or(warp::path!("channel3").and(Self::json_body()).then(
-            async move |req: UpdateRequest<_>| {
-                (req.session_id, StateUpdate::Channel(ID::D, req.state))
-            },
-        ))
-        .unify()
-        .or(warp::path!("deck0content").and(Self::json_body()).then(
-            async move |req: UpdateRequest<_>| {
-                (req.session_id, StateUpdate::DeckContent(ID::A, req.state))
-            },
-        ))
-        .unify()
-        .or(warp::path!("deck1content").and(Self::json_body()).then(
-            async move |req: UpdateRequest<_>| {
-                (req.session_id, StateUpdate::DeckContent(ID::B, req.state))
-            },
-        ))
-        .unify()
-        .or(warp::path!("deck2content").and(Self::json_body()).then(
-            async move |req: UpdateRequest<_>| {
-                (req.session_id, StateUpdate::DeckContent(ID::C, req.state))
-            },
-        ))
-        .unify()
-        .or(warp::path!("deck3content").and(Self::json_body()).then(
-            async move |req: UpdateRequest<_>| {
-                (req.session_id, StateUpdate::DeckContent(ID::D, req.state))
-            },
-        ))
-        .unify()
-        .or(warp::path!("deck0playstate").and(Self::json_body()).then(
-            async move |req: UpdateRequest<_>| {
-                (req.session_id, StateUpdate::DeckPlayState(ID::A, req.state))
-            },
-        ))
-        .unify()
-        .or(warp::path!("deck1playstate").and(Self::json_body()).then(
-            async move |req: UpdateRequest<_>| {
-                (req.session_id, StateUpdate::DeckPlayState(ID::B, req.state))
-            },
-        ))
-        .unify()
-        .or(warp::path!("deck2playstate").and(Self::json_body()).then(
-            async move |req: UpdateRequest<_>| {
-                (req.session_id, StateUpdate::DeckPlayState(ID::C, req.state))
-            },
-        ))
-        .unify()
-        .or(warp::path!("deck3playstate").and(Self::json_body()).then(
-            async move |req: UpdateRequest<_>| {
-                (req.session_id, StateUpdate::DeckPlayState(ID::D, req.state))
-            },
-        ))
-        .unify()
+            })
+            .or(warp::path!("channel0").and(Self::json_body()).then(
+                async move |req: UpdateRequest<_>| {
+                    (req.session_id, StateUpdate::Channel(ID::A, req.state))
+                },
+            ))
+            .unify()
+            .or(warp::path!("channel1").and(Self::json_body()).then(
+                async move |req: UpdateRequest<_>| {
+                    (req.session_id, StateUpdate::Channel(ID::B, req.state))
+                },
+            ))
+            .unify()
+            .or(warp::path!("channel2").and(Self::json_body()).then(
+                async move |req: UpdateRequest<_>| {
+                    (req.session_id, StateUpdate::Channel(ID::C, req.state))
+                },
+            ))
+            .unify()
+            .or(warp::path!("channel3").and(Self::json_body()).then(
+                async move |req: UpdateRequest<_>| {
+                    (req.session_id, StateUpdate::Channel(ID::D, req.state))
+                },
+            ))
+            .unify()
+            .or(warp::path!("deck0content").and(Self::json_body()).then(
+                async move |req: UpdateRequest<_>| {
+                    (req.session_id, StateUpdate::DeckContent(ID::A, req.state))
+                },
+            ))
+            .unify()
+            .or(warp::path!("deck1content").and(Self::json_body()).then(
+                async move |req: UpdateRequest<_>| {
+                    (req.session_id, StateUpdate::DeckContent(ID::B, req.state))
+                },
+            ))
+            .unify()
+            .or(warp::path!("deck2content").and(Self::json_body()).then(
+                async move |req: UpdateRequest<_>| {
+                    (req.session_id, StateUpdate::DeckContent(ID::C, req.state))
+                },
+            ))
+            .unify()
+            .or(warp::path!("deck3content").and(Self::json_body()).then(
+                async move |req: UpdateRequest<_>| {
+                    (req.session_id, StateUpdate::DeckContent(ID::D, req.state))
+                },
+            ))
+            .unify()
+            .or(warp::path!("deck0playstate").and(Self::json_body()).then(
+                async move |req: UpdateRequest<_>| {
+                    (req.session_id, StateUpdate::DeckPlayState(ID::A, req.state))
+                },
+            ))
+            .unify()
+            .or(warp::path!("deck1playstate").and(Self::json_body()).then(
+                async move |req: UpdateRequest<_>| {
+                    (req.session_id, StateUpdate::DeckPlayState(ID::B, req.state))
+                },
+            ))
+            .unify()
+            .or(warp::path!("deck2playstate").and(Self::json_body()).then(
+                async move |req: UpdateRequest<_>| {
+                    (req.session_id, StateUpdate::DeckPlayState(ID::C, req.state))
+                },
+            ))
+            .unify()
+            .or(warp::path!("deck3playstate").and(Self::json_body()).then(
+                async move |req: UpdateRequest<_>| {
+                    (req.session_id, StateUpdate::DeckPlayState(ID::D, req.state))
+                },
+            ))
+            .unify()
+    }
+
+    fn route_cover(
+        state: Arc<Mutex<Self>>,
+    ) -> impl Filter<Extract = (impl warp::Reply,), Error = warp::Rejection> + Clone {
+        warp::path!("cover").and(
+            Self::route_cover_upload(state.clone()).or(Self::route_cover_socket(state.clone())),
+        )
+    }
+
+    fn route_cover_upload(
+        state: Arc<Mutex<Self>>,
+    ) -> impl Filter<Extract = (impl warp::Reply,), Error = warp::Rejection> + Clone {
+        warp::post()
+            .and(Self::with_state(state))
+            .and(warp::body::content_length_limit(16 * 1024 * 1024).and(warp::body::bytes()))
+            .and(warp::query::<HashMap<String, String>>())
+            .then(
+                async |state: Arc<Mutex<Self>>, body: Bytes, query: HashMap<String, String>| {
+                    match query.get("path") {
+                        Some(path) => state.lock().await.handle_cover(path.to_owned(), body).await,
+                        None => StatusCode::BAD_REQUEST,
+                    }
+                },
+            )
+    }
+
+    fn route_cover_socket(
+        state: Arc<Mutex<Self>>,
+    ) -> impl Filter<Extract = (impl warp::Reply,), Error = warp::Rejection> + Clone {
+        warp::ws()
+            .and(Self::with_state(state))
+            .map(|ws: warp::ws::Ws, state: Arc<Mutex<Self>>| {
+                ws.on_upgrade(move |socket| async move {
+                    let (mut ws_tx, mut ws_rx) = socket.split();
+                    let (tx, mut rx) = mpsc::unbounded();
+
+                    tokio::task::spawn(async move {
+                        while let Some(message) = rx.next().await {
+                            ws_tx
+                                .send(message)
+                                .unwrap_or_else(|e| {
+                                    println!("websocket send error: {}", e);
+                                })
+                                .await;
+                        }
+                    });
+
+                    let socket_id = state.lock().await.handle_socket_connect(tx).await;
+                    println!("websocket connected");
+
+                    while let Some(result) = ws_rx.next().await {
+                        match result {
+                            Ok(_) => {}
+                            Err(e) => {
+                                println!("websocket error: {}", e);
+                                break;
+                            }
+                        };
+                    }
+
+                    state.lock().await.handle_socket_disconnect(socket_id);
+                    println!("websocket disconnected");
+                })
+            })
     }
 
     fn route_log(

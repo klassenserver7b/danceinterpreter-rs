@@ -1,3 +1,4 @@
+use bytes::Bytes;
 use iced::futures::channel::mpsc;
 use serde::{Deserialize, Deserializer, Serialize};
 
@@ -14,6 +15,10 @@ pub enum ServerMessage {
         initial_state: State,
     },
     Update(StateUpdate),
+    CoverImage {
+        path: String,
+        data: Bytes,
+    },
     Log(String),
 }
 
