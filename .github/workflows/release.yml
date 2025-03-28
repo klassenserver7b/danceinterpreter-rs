@@ -160,7 +160,7 @@ jobs:
                   exe=".exe"
               fi
               pkgname=$PROJECT_NAME-$TAG-$platform
-              mv bins-$platform/$BIN_NAME$exe dist/$pkgname
+              mv bins-$platform/$BIN_NAME$exe dist/$pkgname$exe
               chmod -R +x dist
           done
 

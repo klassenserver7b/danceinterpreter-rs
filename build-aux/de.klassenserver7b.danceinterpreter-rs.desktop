@@ -5,7 +5,7 @@ Type=Application
 # should be the same as the Cargo project name
 Exec=danceinterpreter-rs
 Terminal=false
-Categories=Utility;Rust;iced
+Categories=Utility;X-Rust
 Keywords=Rust;Flatpak;
 Icon=de.klassenserver7b.danceinterpreter-rs
 StartupNotify=true
