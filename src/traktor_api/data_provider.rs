@@ -1,6 +1,8 @@
 use crate::dataloading::songinfo::SongInfo;
 use crate::traktor_api::{AppMessage, ChannelState, DeckState, MixerState, ServerMessage, State};
 use iced::futures::channel::mpsc::UnboundedSender;
+use iced::widget::image;
+use std::collections::HashMap;
 use std::net::SocketAddr;
 
 pub const TRAKTOR_SERVER_DEFAULT_ADDR: &str = "127.0.0.1:8080";
@@ -14,6 +16,7 @@ pub struct TraktorDataProvider {
 
     time_offset_ms: i64,
     state: Option<State>,
+    covers: HashMap<String, image::Handle>,
     cached_song_info: Option<SongInfo>,
 
     pub debug_logging: bool,
@@ -30,6 +33,7 @@ impl Default for TraktorDataProvider {
 
             time_offset_ms: 0,
             state: None,
+            covers: HashMap::new(),
             cached_song_info: None,
 
             debug_logging: false,
@@ -143,8 +147,27 @@ impl TraktorDataProvider {
             content.title.to_owned(),
             content.artist.to_owned(),
             content.comment.to_owned(),
-            None,
+            self.covers.get(&content.file_path).cloned(),
         ));
+    }
+
+    fn get_loaded_files(&self) -> Vec<String> {
+        let Some(state) = self.state.as_ref() else {
+            return Vec::new();
+        };
+
+        let mut files: Vec<String> = vec![
+            &state.decks.0.content.file_path,
+            &state.decks.1.content.file_path,
+            &state.decks.2.content.file_path,
+            &state.decks.3.content.file_path,
+        ]
+        .into_iter()
+        .filter_map(|f| (!f.is_empty()).then(|| f.to_owned()))
+        .collect();
+        files.dedup();
+
+        files
     }
 
     pub fn process_message(&mut self, message: ServerMessage) {
@@ -176,6 +199,12 @@ impl TraktorDataProvider {
                 }
 
                 self.update_song_info();
+            }
+            ServerMessage::CoverImage { path, data } => {
+                self.covers.insert(path, image::Handle::from_bytes(data));
+
+                let loaded_files = self.get_loaded_files();
+                self.covers.retain(|path, _| loaded_files.contains(path));
             }
             ServerMessage::Log(msg) => {
                 if self.debug_logging {
