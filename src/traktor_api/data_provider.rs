@@ -146,7 +146,7 @@ impl TraktorDataProvider {
             0,
             content.title.to_owned(),
             content.artist.to_owned(),
-            content.comment.to_owned(),
+            content.genre.to_owned(),
             self.covers.get(&content.file_path).cloned(),
         ));
     }
