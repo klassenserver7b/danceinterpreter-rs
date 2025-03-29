@@ -13,7 +13,10 @@
         "--socket=x11",
         "--socket=wayland",
         "--socket=session-bus",
-        "--filesystem=home"
+        "--socket=system-bus",
+        "--filesystem=home",
+        "--filesystem=host",
+        "--share=network"
     ],
     "build-options": {
         "append-path" : "/usr/lib/sdk/rust-stable/bin",
