@@ -181,6 +181,7 @@ pub struct DeckState {
 pub struct DeckContentState {
     pub is_loaded: bool,
 
+    pub number: u32,
     pub title: String,
     pub artist: String,
     pub album: String,
