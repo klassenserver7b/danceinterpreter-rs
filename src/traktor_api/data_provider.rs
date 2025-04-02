@@ -86,21 +86,17 @@ impl TraktorDataProvider {
     }
 
     fn get_deck_score(&self, deck: &DeckState, channel: &ChannelState, mixer: &MixerState) -> f64 {
-        if !deck.content.is_loaded || deck.play_state.speed == 0.0 {
+        if !deck.content.is_loaded || deck.play_state.speed == 0.0 || channel.volume == 0.0 {
             return 0.0;
         }
 
-        let mut score = channel.volume;
-
         if channel.x_fader_left && mixer.x_fader > 0.5 {
-            score *= (mixer.x_fader - 0.5) * 2.0;
+            (mixer.x_fader - 0.5) * 2.0
+        } else if channel.x_fader_right && mixer.x_fader < 0.5 {
+            mixer.x_fader * 2.0
+        } else {
+            1.0
         }
-
-        if channel.x_fader_right && mixer.x_fader < 0.5 {
-            score *= mixer.x_fader * 2.0;
-        }
-
-        score
     }
 
     fn update_song_info(&mut self) {
