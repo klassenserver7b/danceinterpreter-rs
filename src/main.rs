@@ -11,6 +11,7 @@ use crate::dataloading::dataprovider::song_data_provider::{
 use crate::dataloading::id3tagreader::read_song_info_from_filepath;
 use crate::dataloading::m3uloader::load_tag_data_from_m3u;
 use crate::dataloading::songinfo::SongInfo;
+use crate::traktor_api::TraktorSyncAction;
 use crate::ui::config_window::{ConfigWindow, PLAYLIST_SCROLLABLE_ID};
 use crate::ui::song_window::SongWindow;
 use iced::advanced::graphics::image::image_rs::ImageFormat;
@@ -322,7 +323,27 @@ impl DanceInterpreter {
             ),
 
             Message::TraktorMessage(msg) => {
-                self.data_provider.traktor_provider.process_message(msg);
+                self.data_provider
+                    .traktor_provider
+                    .process_message(msg, &self.data_provider.playlist_songs);
+
+                match self.data_provider.traktor_provider.take_sync_action() {
+                    TraktorSyncAction::Relative(offset) => {
+                        if offset >= 0 {
+                            for _ in 0..offset {
+                                self.data_provider.next();
+                            }
+                        } else {
+                            for _ in 0..(-offset) {
+                                self.data_provider.prev();
+                            }
+                        }
+                    }
+                    TraktorSyncAction::PlaylistAbsolute(pos) => {
+                        self.data_provider.set_current(SongDataSource::Playlist(pos));
+                    }
+                }
+
                 ().into()
             }
 
@@ -337,7 +358,8 @@ impl DanceInterpreter {
             }
 
             Message::TraktorSubmitAddress => {
-                self.data_provider.traktor_provider.submitted_address = self.data_provider.traktor_provider.address.clone();
+                self.data_provider.traktor_provider.submitted_address =
+                    self.data_provider.traktor_provider.address.clone();
                 ().into()
             }
 
