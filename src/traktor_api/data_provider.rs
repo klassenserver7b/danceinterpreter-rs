@@ -91,7 +91,7 @@ impl TraktorDataProvider {
         }
 
         if channel.x_fader_left && mixer.x_fader > 0.5 {
-            (mixer.x_fader - 0.5) * 2.0
+            (1.0 - mixer.x_fader) * 2.0
         } else if channel.x_fader_right && mixer.x_fader < 0.5 {
             mixer.x_fader * 2.0
         } else {
