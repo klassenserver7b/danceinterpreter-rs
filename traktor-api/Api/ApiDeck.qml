@@ -20,6 +20,7 @@ Item {
     AppProperty { id: propIsLoaded; path: `app.traktor.decks.${index + 1}.is_loaded`; onValueChanged: updateContent(false) }
     AppProperty { id: propIsLoadedSignal; path: `app.traktor.decks.${index + 1}.is_loaded_signal`; onValueChanged: updateContent(false) }
 
+    AppProperty { id: propNumber; path: `app.traktor.decks.${index + 1}.content.number`; onValueChanged: updateContentProp() }
     AppProperty { id: propTitle; path: `app.traktor.decks.${index + 1}.content.title`; onValueChanged: updateContentProp() }
     AppProperty { id: propArtist; path: `app.traktor.decks.${index + 1}.content.artist`; onValueChanged: updateContentProp() }
     AppProperty { id: propAlbum; path: `app.traktor.decks.${index + 1}.content.album`; onValueChanged: updateContentProp() }
@@ -82,6 +83,7 @@ Item {
         ApiClient.sendUpdate(contentApiId, {
             isLoaded,
 
+            number: isLoaded ? propNumber.value : 0,
             title: isLoaded ? propTitle.value : "",
             artist: isLoaded ? propArtist.value : "",
             album: isLoaded ? propAlbum.value : "",
