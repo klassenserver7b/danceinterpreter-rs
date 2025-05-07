@@ -10,7 +10,7 @@ authors = ["Klassenserver7b <klassenserver7bwin10@gmail.com>", "Konsl <82901383+
 id3 = "1.16.2"
 url = "2.5.4"
 percent-encoding = "2.3.1"
-iced = { version = "0.13.1", features = ["image", "debug", "multi-window", "svg", "lazy", "async-std", "canvas", "tokio"] }
+iced = { version = "0.13.1", features = ["auto-detect-theme", "image", "debug", "multi-window", "svg", "lazy", "async-std", "canvas", "tokio"] }
 iced_aw = { version = "0.12.1", features = ["default"] }
 rfd = "0.15.2"
 dirs = "6.0.0"
