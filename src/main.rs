@@ -86,7 +86,7 @@ impl DanceInterpreter {
         let mut tasks = Vec::new();
 
         let icon = from_file_data(
-            match dark_light::detect().unwrap_or(dark_light::Mode::Unspecified) {
+            match dark_light::detect() {
                 dark_light::Mode::Dark => include_bytes!(res_file!("icon_dark.png")),
                 _ => include_bytes!(res_file!("icon_light.png")),
             },
