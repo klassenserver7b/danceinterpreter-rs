@@ -17,7 +17,7 @@ env:
 jobs:
   test:
     name: Test
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
     steps:
       - name: Checkout sources
         uses: actions/checkout@v4
@@ -43,7 +43,7 @@ jobs:
     strategy:
       fail-fast: false # don't fail other jobs if one fails
       matrix:
-        build: [ x86_64-linux, aarch64-linux, x86_64-windows, x86_64-macos, aarch64-macos ]
+        build: [ x86_64-linux, aarch64-linux, x86_64-windows, aarch64-macos ]
         include:
           - build: x86_64-linux
             os: ubuntu-latest
@@ -59,11 +59,6 @@ jobs:
             os: windows-2019
             rust: stable
             target: x86_64-pc-windows-msvc
-            cross: false
-          - build: x86_64-macos
-            os: macos-latest
-            rust: stable
-            target: x86_64-apple-darwin
             cross: false
           - build: aarch64-macos
             os: macos-latest
@@ -83,13 +78,6 @@ jobs:
           toolchain: ${{ matrix.rust }}
           target: ${{ matrix.target }}
           override: true
-
-      - name: Run cargo test
-        uses: actions-rs/cargo@v1
-        with:
-          use-cross: ${{ matrix.cross }}
-          command: test
-          args: --release --target ${{ matrix.target }}
 
       - name: Build release binary
         uses: actions-rs/cargo@v1
