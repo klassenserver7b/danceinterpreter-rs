@@ -18,7 +18,7 @@ Altough only the [**Flathub**](https://github.com/klassenserver7b/danceinterpret
 
 ## Flathub - Linux only - preferred
 ### Installation
-![https://flathub.org/apps/io.github.klassenserver7b.danceinterpreter-rs](https://flathub.org/api/badge?locale=en)
+[![https://flathub.org/apps/io.github.klassenserver7b.danceinterpreter-rs](https://flathub.org/api/badge?locale=en)](https://flathub.org/apps/io.github.klassenserver7b.danceinterpreter-rs)
 
 ### Update
 Update via your distros software store or run `flatpak update io.github.klassenserver7b.danceinterpreter-rs`
