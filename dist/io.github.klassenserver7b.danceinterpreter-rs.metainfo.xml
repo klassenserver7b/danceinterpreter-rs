@@ -18,11 +18,11 @@
 
   <screenshots>
     <screenshot type="default">
-      <image>https://raw.githubusercontent.com/klassenserver7b/danceinterpreter-rs/6657a6c45b8064f5f30ddeaef47941ea1ebfa6db/dist/MainWindow.png</image>
+      <image type="source">https://github.com/user-attachments/assets/5d378bd7-44f2-418a-bd0b-99e5add67c6d</image>
       <caption>Main Window</caption>
     </screenshot>
     <screenshot>
-      <image>https://raw.githubusercontent.com/klassenserver7b/danceinterpreter-rs/6657a6c45b8064f5f30ddeaef47941ea1ebfa6db/dist/DanceWindow.png</image>
+      <image type="source">https://github.com/user-attachments/assets/a9775faa-6701-43b0-8532-3e400a4a0592</image>
       <caption>Dance Window</caption>
     </screenshot>
   </screenshots>
