@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>io.github.klassenserver7b.danceinterpreter-rs</id>
+  <metadata_license>CC0</metadata_license>
+  <project_license>GPL-3.0+</project_license>
+  <name>Danceinterpreter</name>
+  <summary>Utility for displaying song infos</summary>
+
+  <description>
+    <p>The Danceinterpreter is a utility to display songs and their according dances at ballroom dance events</p>
+    <p>It currently contains three source modes</p>
+    <ol>
+      <li>M3U / M3U8 files with references to local mp3 files</li>
+      <li>A connection to a running Traktor Pro instance</li>
+      <li>Manually added songs and static dance labels</li>
+    </ol>
+  </description>
+
+  <screenshots>
+    <screenshot type="default">
+      <image type="source">https://github.com/user-attachments/assets/5d378bd7-44f2-418a-bd0b-99e5add67c6d</image>
+      <caption>Main Window</caption>
+    </screenshot>
+    <screenshot>
+      <image type="source">https://github.com/user-attachments/assets/a9775faa-6701-43b0-8532-3e400a4a0592</image>
+      <caption>Dance Window</caption>
+    </screenshot>
+  </screenshots>
+
+  <url type="homepage">https://github.com/klassenserver7b/danceinterpreter-rs</url>
+  <url type="vcs-browser">https://github.com/klassenserver7b/danceinterpreter-rs</url>
+  <url type="bugtracker">https://github.com/klassenserver7b/danceinterpreter-rs/issues</url>
+
+  <branding>
+  <color type="primary" scheme_preference="light">#3aa4e6</color>
+  <color type="primary" scheme_preference="dark">#0d4062</color>
+</branding>
+
+  <!--
+  Open Age Rating Service
+  https://hughsie.github.io/oars/index.html
+  -->
+  <content_rating type="oars-1.1" />
+
+  <releases>
+    <release version="0.4.0" date="2025-05-07">
+      <url type="details">https://github.com/klassenserver7b/danceinterpreter-rs/releases/tag/v0.4.0</url>
+      <description>
+        <p>Rust rewrite of Danceinterpreter</p>
+        <p>All features except Spotify from https://github.com/klassenserver7b/danceinterpreter</p>
+        <p>Added Traktor Support</p>
+      </description>
+    </release>
+  </releases>
+
+  <developer id="io.github">
+    <name>Klassenserver7b</name>
+  </developer>
+
+  <update_contact>klassenserver7bwin10@gmail.com</update_contact>
+  <launchable type="desktop-id">io.github.klassenserver7b.danceinterpreter-rs.desktop</launchable>
+
+</component>

@@ -1,6 +1,17 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
+  <component name="DiscordProjectSettings">
+    <option name="show" value="ASK" />
+    <option name="description" value="" />
+  </component>
   <component name="JsBuildToolPackageJson" sorting="DEFINITION_ORDER" />
+  <component name="MaterialThemeProjectNewConfig">
+    <option name="metadata">
+      <MTProjectMetadataState>
+        <option name="userId" value="-c74c793:18f6757e12f:-7f58" />
+      </MTProjectMetadataState>
+    </option>
+  </component>
   <component name="ProjectUserFactors">
     <factor id="completionFinishedType">
       <dailyData date="29-02-2024">
