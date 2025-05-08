@@ -8,20 +8,24 @@ It currently contains three source modes
 2. A connection to a running Traktor Pro instance
 3. Manually added songs and static dance labels
 
+
+
 # Installation
 
 The danceinterpreter is currently availible for all platforms which are supported by the rust language
 Altough only the [**Flathub**](https://github.com/klassenserver7b/danceinterpreter-rs/tree/flatpak-packaging?tab=readme-ov-file#flathub---linux-only---preferred) release is actively tested
+
 
 ## Flathub - Linux only - preferred
 ### Installation
 ![https://flathub.org/apps/io.github.klassenserver7b.danceinterpreter-rs](https://flathub.org/api/badge?locale=en)
 
 ### Update
-Update via your Software Store or run `flatpak update io.github.klassenserver7b.danceinterpreter-rs`
+Update via your distros software store or run `flatpak update io.github.klassenserver7b.danceinterpreter-rs`
 
 ### Uninstall
-Uninstall via your Software Store or run `flatpak uninstall io.github.klassenserver7b.danceinterpreter-rs`
+Uninstall via your distros software store or run `flatpak uninstall io.github.klassenserver7b.danceinterpreter-rs`
+
 
 ## Cargo - all platforms
 ### Installation
@@ -35,8 +39,11 @@ Rerun `cargo install danceinterpreter-rs`
 ### Uninstall
 Run `cargo uninstall danceinterpreter-rs`
 
+
+
 # Support
 Always feel free to open an issue according to the issue templates at this github page.
+
 
 
 ## Screenshots
