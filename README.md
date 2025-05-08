@@ -11,7 +11,7 @@ It currently contains three source modes
 # Installation
 
 The danceinterpreter is currently availible for all platforms which are supported by the rust language
-Altough only the [**Flathub**](https://github.com/klassenserver7b/danceinterpreter-rs/?tab=readme-ov-file#flathub - Linux only - preferred) release is actively tested
+Altough only the [**Flathub**](https://github.com/klassenserver7b/danceinterpreter-rs/tree/flatpak-packaging?tab=readme-ov-file#flathub---linux-only---preferred) release is actively tested
 
 ## Flathub - Linux only - preferred
 ### Installation
