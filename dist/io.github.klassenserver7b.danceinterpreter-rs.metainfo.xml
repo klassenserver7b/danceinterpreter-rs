@@ -32,9 +32,9 @@
   <url type="bugtracker">https://github.com/klassenserver7b/danceinterpreter-rs/issues</url>
 
   <branding>
-  <color type="primary" scheme_preference="light">#3aa4e6</color>
-  <color type="primary" scheme_preference="dark">#0d4062</color>
-</branding>
+    <color type="primary" scheme_preference="light">#3aa4e6</color>
+    <color type="primary" scheme_preference="dark">#0d4062</color>
+  </branding>
 
   <!--
   Open Age Rating Service
