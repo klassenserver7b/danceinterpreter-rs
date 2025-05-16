@@ -11,7 +11,7 @@ use std::net::SocketAddr;
 
 pub const TRAKTOR_SERVER_DEFAULT_ADDR: &str = "127.0.0.1:8080";
 
-#[derive(Copy, Clone)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub enum TraktorNextMode {
     DeckByPosition,
     DeckByNumber,
@@ -19,12 +19,14 @@ pub enum TraktorNextMode {
     PlaylistByName,
 }
 
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub enum TraktorSyncMode {
     Relative,
     AbsoluteByNumber,
     AbsoluteByName,
 }
 
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub enum TraktorSyncAction {
     Relative(isize),
     PlaylistAbsolute(usize),
@@ -42,7 +44,7 @@ pub struct TraktorDataProvider {
     channel: Option<UnboundedSender<AppMessage>>,
 
     time_offset_ms: i64,
-    state: Option<State>,
+    pub state: Option<State>,
     covers: HashMap<String, image::Handle>,
 
     sync_x_fader_is_left: bool,
@@ -63,9 +65,9 @@ impl Default for TraktorDataProvider {
             submitted_address: String::new(),
             channel: None,
 
-            next_mode: None,
+            next_mode: Some(TraktorNextMode::DeckByNumber),
             next_mode_fallback: None,
-            sync_mode: Some(TraktorSyncMode::Relative),
+            sync_mode: None,
 
             time_offset_ms: 0,
             state: None,

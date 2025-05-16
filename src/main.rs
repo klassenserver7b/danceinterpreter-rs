@@ -11,7 +11,9 @@ use crate::dataloading::dataprovider::song_data_provider::{
 use crate::dataloading::id3tagreader::read_song_info_from_filepath;
 use crate::dataloading::m3uloader::load_tag_data_from_m3u;
 use crate::dataloading::songinfo::SongInfo;
-use crate::traktor_api::TraktorSyncAction;
+use crate::traktor_api::{
+    ServerMessage, StateUpdate, TraktorNextMode, TraktorSyncAction, TraktorSyncMode,
+};
 use crate::ui::config_window::{ConfigWindow, PLAYLIST_SCROLLABLE_ID};
 use crate::ui::song_window::SongWindow;
 use iced::advanced::graphics::image::image_rs::ImageFormat;
@@ -21,6 +23,7 @@ use iced::widget::scrollable::{AbsoluteOffset, RelativeOffset};
 use iced::widget::{horizontal_space, scrollable};
 use iced::window::icon::from_file_data;
 use iced::{exit, window, Element, Size, Subscription, Task, Theme};
+use iced_aw::iced_fonts::REQUIRED_FONT_BYTES;
 use rfd::FileDialog;
 use std::path::PathBuf;
 
@@ -31,6 +34,7 @@ fn main() -> iced::Result {
         DanceInterpreter::view,
     )
     .theme(DanceInterpreter::theme)
+    .font(REQUIRED_FONT_BYTES)
     .subscription(DanceInterpreter::subscription)
     .run_with(DanceInterpreter::new)
 }
@@ -75,6 +79,9 @@ pub enum Message {
     EnableNextDance(bool),
 
     TraktorMessage(traktor_api::ServerMessage),
+    TraktorSetSyncMode(Option<TraktorSyncMode>),
+    TraktorSetNextMode(Option<TraktorNextMode>),
+    TraktorSetNextModeFallback(Option<TraktorNextMode>),
     TraktorEnableServer(bool),
     TraktorChangeAddress(String),
     TraktorSubmitAddress,
@@ -326,23 +333,7 @@ impl DanceInterpreter {
                 self.data_provider
                     .traktor_provider
                     .process_message(msg, &self.data_provider.playlist_songs);
-
-                match self.data_provider.traktor_provider.take_sync_action() {
-                    TraktorSyncAction::Relative(offset) => {
-                        if offset >= 0 {
-                            for _ in 0..offset {
-                                self.data_provider.next();
-                            }
-                        } else {
-                            for _ in 0..(-offset) {
-                                self.data_provider.prev();
-                            }
-                        }
-                    }
-                    TraktorSyncAction::PlaylistAbsolute(pos) => {
-                        self.data_provider.set_current(SongDataSource::Playlist(pos));
-                    }
-                }
+                self.run_traktor_sync_action();
 
                 ().into()
             }
@@ -374,7 +365,65 @@ impl DanceInterpreter {
                 ().into()
             }
 
+            Message::TraktorSetSyncMode(mode) => {
+                self.data_provider.traktor_provider.sync_mode = mode;
+                self.traktor_provider_force_update();
+
+                ().into()
+            }
+
+            Message::TraktorSetNextMode(mode) => {
+                self.data_provider.traktor_provider.next_mode = mode;
+                self.traktor_provider_force_update();
+
+                ().into()
+            }
+
+            Message::TraktorSetNextModeFallback(mode) => {
+                self.data_provider.traktor_provider.next_mode_fallback = mode;
+                self.traktor_provider_force_update();
+
+                ().into()
+            }
+
             _ => ().into(),
+        }
+    }
+
+    fn traktor_provider_force_update(&mut self) {
+        // send fake state update message to enforce sync refresh
+        if let Some(mixer_state) = self
+            .data_provider
+            .traktor_provider
+            .state
+            .as_ref()
+            .map(|s| s.mixer.clone())
+        {
+            self.data_provider.traktor_provider.process_message(
+                ServerMessage::Update(StateUpdate::Mixer(mixer_state)),
+                &self.data_provider.playlist_songs,
+            );
+            self.run_traktor_sync_action();
+        }
+    }
+
+    fn run_traktor_sync_action(&mut self) {
+        match self.data_provider.traktor_provider.take_sync_action() {
+            TraktorSyncAction::Relative(offset) => {
+                if offset >= 0 {
+                    for _ in 0..offset {
+                        self.data_provider.next();
+                    }
+                } else {
+                    for _ in 0..(-offset) {
+                        self.data_provider.prev();
+                    }
+                }
+            }
+            TraktorSyncAction::PlaylistAbsolute(pos) => {
+                self.data_provider
+                    .set_current(SongDataSource::Playlist(pos));
+            }
         }
     }
 
