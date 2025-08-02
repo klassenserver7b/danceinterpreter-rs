@@ -102,27 +102,27 @@ jobs:
       - name: Build archive
         shell: bash
         run: |
-          mkdir dist
+          mkdir bins
           if [ "${{ matrix.os }}" = "windows-2019" ]; then
-            cp "target/${{ matrix.target }}/release/$BIN_NAME.exe" "dist/"
+            cp "target/${{ matrix.target }}/release/$BIN_NAME.exe" "bins/"
           else
-            cp "target/${{ matrix.target }}/release/$BIN_NAME" "dist/"
+            cp "target/${{ matrix.target }}/release/$BIN_NAME" "bins/"
           fi
 
       - uses: actions/upload-artifact@v4.6.2
         with:
           name: bins-${{ matrix.build }}
-          path: dist
+          path: bins
 
   publish:
     name: Publish
     needs: [ dist ]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/download-artifact@v4.2.1
+      - uses: actions/download-artifact@v4.3.0
         # with:
-        #   path: dist
-      # - run: ls -al ./dist
+        #   path: bins
+      # - run: ls -al ./bins
       - run: ls -al bins-*
 
       - name: Calculate tag name
@@ -139,7 +139,7 @@ jobs:
         shell: bash
         run: |
           set -ex
-          mkdir dist
+          mkdir bins
 
           for dir in bins-* ; do
               platform=${dir#"bins-"}
@@ -148,15 +148,15 @@ jobs:
                   exe=".exe"
               fi
               pkgname=$PROJECT_NAME-$TAG-$platform
-              mv bins-$platform/$BIN_NAME$exe dist/$pkgname$exe
-              chmod -R +x dist
+              mv bins-$platform/$BIN_NAME$exe bins/$pkgname$exe
+              chmod -R +x bins
           done
 
       - name: Upload binaries to release
         uses: svenstaro/upload-release-action@v2
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
-          file: dist/*
+          file: bins/*
           file_glob: true
           tag: ${{ steps.tagname.outputs.val }}
           overwrite: true
