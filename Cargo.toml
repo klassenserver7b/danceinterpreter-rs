@@ -21,3 +21,4 @@ pin-project-lite = "0.2.16"
 serde = { version = "1.0.218", features = ["derive"] }
 uuid = { version = "1.15.1", features = ["v4"] }
 bytes = "1.10.0"
+network-interface = "2.0.2"

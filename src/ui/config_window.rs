@@ -20,6 +20,8 @@ use iced_aw::menu::Item;
 use iced_aw::style::{menu_bar::primary, Status};
 use iced_aw::widget::InnerBounds;
 use iced_aw::{menu, menu_bar, menu_items, quad, Menu, MenuBar};
+use network_interface::Addr::V4;
+use network_interface::{NetworkInterface, NetworkInterfaceConfig};
 use std::sync::LazyLock;
 
 #[derive(Default)]
@@ -241,8 +243,11 @@ impl ConfigWindow {
                 menu_tpl_1(
                     menu_items!(
                         (labeled_message_checkbox("Enable Server", dance_interpreter.data_provider.traktor_provider.is_enabled, Message::TraktorEnableServer))
-                        (labeled_dynamic_text_input("Server Address", TRAKTOR_SERVER_DEFAULT_ADDR, dance_interpreter.data_provider.traktor_provider.address.as_str(),
-                            Message::TraktorChangeAddress, Some(Message::TraktorSubmitAddress)))
+                        (
+                            labeled_dynamic_text_input("Server Address", TRAKTOR_SERVER_DEFAULT_ADDR, dance_interpreter.data_provider.traktor_provider.address.as_str(),
+                                Message::TraktorChangeAddress, Some(Message::TraktorSubmitAddress)),
+                            menu_tpl_2(get_network_interface_menu(dance_interpreter))
+                        )
                         (separator())
                         (labeled_message_checkbox_opt("Enable Debug Logging", dance_interpreter.data_provider.traktor_provider.debug_logging,
                             dance_interpreter.data_provider.traktor_provider.is_enabled.then_some(Message::TraktorEnableDebugLogging)))
@@ -316,15 +321,24 @@ impl ConfigWindow {
     }
 }
 
-fn label_message_button_fill(label: &str, message: Message) -> button::Button<Message> {
+fn label_message_button_fill<'a>(
+    label: impl text::IntoFragment<'a>,
+    message: Message,
+) -> button::Button<'a, Message> {
     label_message_button(label, message).width(Length::Fill)
 }
 
-fn label_message_button_shrink(label: &str, message: Message) -> button::Button<Message> {
+fn label_message_button_shrink<'a>(
+    label: impl text::IntoFragment<'a>,
+    message: Message,
+) -> button::Button<'a, Message> {
     label_message_button(label, message).width(Length::Shrink)
 }
 
-fn label_message_button(label: &str, message: Message) -> button::Button<Message> {
+fn label_message_button<'a>(
+    label: impl text::IntoFragment<'a>,
+    message: Message,
+) -> button::Button<'a, Message> {
     button(text(label).align_y(Vertical::Center))
         .padding([4, 8])
         .style(button::secondary)
@@ -434,4 +448,43 @@ fn separator() -> quad::Quad {
         width: Length::Fill,
         ..Default::default()
     }
+}
+
+fn get_network_interface_menu(
+    dance_interpreter: &DanceInterpreter,
+) -> Vec<Item<Message, Theme, Renderer>> {
+    let mut interfaces = vec![("any".to_owned(), "0.0.0.0".to_owned())];
+
+    if let Ok(network_interfaces) = NetworkInterface::show() {
+        for i in network_interfaces {
+            for addr in i.addr {
+                let V4(ipv4_addr) = addr else {
+                    continue;
+                };
+
+                interfaces.push((i.name.clone(), ipv4_addr.ip.to_string()));
+            }
+        }
+    }
+
+    let original_addr = dance_interpreter
+        .data_provider
+        .traktor_provider
+        .get_socket_addr()
+        .unwrap_or(TRAKTOR_SERVER_DEFAULT_ADDR.parse().unwrap());
+    let original_port = original_addr.port();
+
+    let interfaces = interfaces
+        .into_iter()
+        .map(|(name, addr)| (name, addr.clone(), format!("{}:{}", addr, original_port)));
+
+    interfaces
+        .into_iter()
+        .map(|(name, addr, addr_with_port)| {
+            Item::new(label_message_button_fill(
+                format!("{}: {}", name, addr),
+                Message::TraktorChangeAndSubmitAddress(addr_with_port),
+            ))
+        })
+        .collect()
 }
