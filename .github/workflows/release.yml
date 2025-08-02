@@ -90,7 +90,7 @@ jobs:
       - name: Build release binary (windows)
         if: matrix.build == 'x86_64-windows'
         run: |
-            export RUSTFLAGS=-Csymbol-mangling-version=v0
+            $env:RUSTFLAGS = "-Csymbol-mangling-version=v0"
             cargo build --release --target ${{ matrix.target }}
 
       - name: Strip release binary (linux and macos)
