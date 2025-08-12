@@ -15,7 +15,7 @@ iced_aw = { version = "0.12.2", features = ["default"] }
 rfd = "0.15.4"
 dirs = "6.0.0"
 dark-light = "=1.0.0"
-warp = { version = "0.3.7", features = ["websocket"] }
+warp = { version = "0.4.1", features = ["websocket"] }
 tokio = "1.47.1"
 pin-project-lite = "0.2.16"
 serde = { version = "1.0.219", features = ["derive"] }
