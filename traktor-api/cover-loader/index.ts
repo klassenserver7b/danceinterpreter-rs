@@ -26,7 +26,7 @@ const {
 	strict: true
 });
 
-function discoverServiceViaMDNS(): Promise<string> {
+function discoverMdnsServices(): Promise<string[]> {
 	return new Promise((res, rej) => {
 		console.log("No endpoint provided, discovering via mDNS...");
 
@@ -34,10 +34,10 @@ function discoverServiceViaMDNS(): Promise<string> {
 			if (service.name !== "traktor-di-webserver") {
 				return;
 			}
-			const server = service.host.concat(":", String(service.port));
+			const servers = service.addresses.map(adress => adress.concat(":", String(service.port)));
 
 			browser.stop();
-			res(server);
+			res(servers);
 		});
 
 		setTimeout(() => {
@@ -51,31 +51,21 @@ function discoverServiceViaMDNS(): Promise<string> {
 	});
 }
 
-async function getEndpoint(): Promise<string> {
+async function getEndpoints(): Promise<string[]> {
 	if (providedEndpoint) {
 		console.log(`Using provided endpoint: ${providedEndpoint}`);
-		return providedEndpoint;
+		return [providedEndpoint];
 	}
 
 	try {
-		const discovered = await discoverServiceViaMDNS();
-		console.log(`Discovered service at: ${discovered}`);
+		const discovered = await discoverMdnsServices();
+		console.log(`Discovered services at: ${discovered}`);
 		return discovered;
 	} catch (error: any) {
 		console.error(error.message);
 		exit(1);
 	}
 }
-
-// Get the endpoint (either provided or discovered)
-const endpoint = await getEndpoint();
-
-if (!URL.canParse(`http://${endpoint}/cover`)) {
-	console.log("could not parse configured endpoint url");
-	exit(1);
-}
-
-console.log(`connecting to ${endpoint}`);
 
 async function translatePath(path: string): Promise<string> {
 	if (!pathTranslator) return path;
@@ -108,30 +98,44 @@ async function getCover(path: string): Promise<Uint8Array | null> {
 }
 
 while (true) {
-	const ws = new WebSocket(`ws://${endpoint}/cover`);
+	// Get the endpoint (either provided or discovered)
+	let endpoints = await getEndpoints();
+	endpoints = endpoints.filter(e => URL.canParse(`http://${e}/cover`));
 
-	ws.addEventListener("message", async msg => {
-		if (!msg.data || typeof msg.data !== "string") return;
+	if (endpoints.length === 0) {
+		console.log("could not parse configured endpoint url");
+		exit(1);
+	}
 
-		const path = msg.data;
-		console.log(`loading cover for ${path}`);
+	for (let endpoint of endpoints) {
+		console.log(`connecting to ${endpoint}`);
 
-		const coverData = await getCover(path);
-		if (!coverData) {
-			console.log(`loading of ${path} failed`);
-			return;
-		}
+		const ws = new WebSocket(`ws://${endpoint}/cover`);
 
-		const url = URL.parse(`http://${endpoint}/cover`)!;
-		url.searchParams.set("path", path);
+		ws.addEventListener("message", async msg => {
+			if (!msg.data || typeof msg.data !== "string") return;
 
-		await fetch(url, {
-			method: "POST",
-			body: coverData
+			const path = msg.data;
+			console.log(`loading cover for ${path}`);
+
+			const coverData = await getCover(path);
+			if (!coverData) {
+				console.log(`loading of ${path} failed`);
+				return;
+			}
+
+			const url = URL.parse(`http://${endpoint}/cover`)!;
+			url.searchParams.set("path", path);
+
+			await fetch(url, {
+				method: "POST",
+				body: coverData
+			});
 		});
-	});
 
-	await new Promise(resolve => ws.addEventListener("close", resolve));
+		await new Promise(resolve => ws.addEventListener("close", resolve));
+	}
+
 	console.log("connection failed, retrying in 30s");
 	await Bun.sleep(30 * 1000);
 }
