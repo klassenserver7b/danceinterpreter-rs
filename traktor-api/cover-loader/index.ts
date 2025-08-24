@@ -2,14 +2,15 @@ import { $ } from "bun";
 import { parseArgs } from "util";
 import { parseWebStream } from "music-metadata";
 import { exit } from "process";
+const bonjour = require('bonjour')()
 
-const { values: { endpoint, pathTranslator } } = parseArgs({
+// @ts-ignore
+const { values: { providedEndpoint, pathTranslator } } = parseArgs({
     args: Bun.argv,
     options: {
-        endpoint: {
+        providedEndpoint: {
             type: "string",
             short: "e",
-            default: "localhost:8080",
         },
         pathTranslator: {
             type: "string",
@@ -20,6 +21,38 @@ const { values: { endpoint, pathTranslator } } = parseArgs({
     allowPositionals: true,
     strict: true,
 });
+
+function discoverServiceViaMDNS(): Promise<string> {
+    console.log("No endpoint provided, discovering via mDNS...");
+    bonjour.find({ type: "http", protocol: "tcp"}, function(service){
+        const server = service.host.concat(':', String(service.port));
+        console.log("service up: ", server);
+        return server
+    }).start();
+
+    throw new Error("Could not discover traktor-di-webserver via mDNS. Please provide endpoint manually with -e option.");
+}
+
+
+async function getEndpoint(): Promise<string> {
+
+    if (providedEndpoint) {
+        console.log(`Using provided endpoint: ${providedEndpoint}`);
+        return providedEndpoint;
+    }
+
+    try {
+        const discovered = await discoverServiceViaMDNS();
+        console.log(`Discovered service at: ${discovered}`);
+        return discovered;
+    } catch (error: any) {
+        console.error(error.message);
+        exit(1);
+    }
+}
+
+// Get the endpoint (either provided or discovered)
+const endpoint = await getEndpoint();
 
 if (!URL.canParse(`http://${endpoint}/cover`)) {
     console.log("could not parse configured endpoint url");
