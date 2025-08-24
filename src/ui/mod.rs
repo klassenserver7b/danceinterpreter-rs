@@ -6,7 +6,7 @@ pub mod config_window;
 pub mod song_window;
 pub mod widget;
 
-pub fn material_icon(id: &str) -> Text<Theme, Renderer> {
+pub fn material_icon(id: &'_ str) -> Text<'_, Theme, Renderer> {
     Text::new(id)
         .font(Font::with_name("Material Symbols Outlined"))
         .shaping(Shaping::Advanced)

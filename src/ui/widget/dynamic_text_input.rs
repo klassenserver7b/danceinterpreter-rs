@@ -89,7 +89,7 @@ where
         <Theme as iced::widget::text::Catalog>::Class<'a>:
             From<iced::widget::text::StyleFn<'a, Theme>>,
     {
-        let input = TextInput::new(&placeholder, &value).padding(0);
+        let input = TextInput::new(placeholder, value).padding(0);
 
         let label = if !value.is_empty() {
             Text::new(value.to_owned())
@@ -305,7 +305,7 @@ where
             return event::Status::Captured;
         }
 
-        update::<Message, Theme, Renderer>(
+        update::<Message, Renderer>(
             tree,
             event,
             layout,
@@ -376,7 +376,6 @@ where
 
 fn update<
     Message: Clone,
-    Theme: text_input::Catalog + iced::widget::text::Catalog,
     Renderer: text::Renderer,
 >(
     tree: &mut Tree,
@@ -419,7 +418,7 @@ fn update<
                         state.previous_click = Some(new_click);
 
                         if matches!(new_click.kind(), mouse::click::Kind::Double) {
-                            enter_edit_mode::<Message, Theme, Renderer>(tree, shell, on_enter);
+                            enter_edit_mode::<Message, Renderer>(tree, shell, on_enter);
                         }
                     }
                 }
@@ -436,7 +435,7 @@ fn update<
     event::Status::Ignored
 }
 
-fn enter_edit_mode<Message: Clone, Theme, Renderer: text::Renderer>(
+fn enter_edit_mode<Message: Clone, Renderer: text::Renderer>(
     tree: &mut Tree,
     shell: &mut Shell<'_, Message>,
     on_enter: Option<Message>,

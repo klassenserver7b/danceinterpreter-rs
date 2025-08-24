@@ -13,14 +13,14 @@ pin_project! {
     pub struct DroppingOnce<Fut, DropFn>
     where
         Fut: Future,
-        DropFn: FnOnce() -> (),
+        DropFn: FnOnce(),
     {
         #[pin]
         future: Option<Fut>,
         drop_fn: Option<DropFn>,
     }
 
-    impl<Fut: Future, DropFn: FnOnce() -> ()> PinnedDrop for DroppingOnce<Fut, DropFn> {
+    impl<Fut: Future, DropFn: FnOnce()> PinnedDrop for DroppingOnce<Fut, DropFn> {
         fn drop(this: Pin<&mut Self>) {
             let this = this.project();
             if let Some(drop_fn) = this.drop_fn.take() {
@@ -30,7 +30,7 @@ pin_project! {
     }
 }
 
-impl<Fut: Future, DropFn: FnOnce() -> ()> DroppingOnce<Fut, DropFn> {
+impl<Fut: Future, DropFn: FnOnce()> DroppingOnce<Fut, DropFn> {
     pub fn new(future: Fut, drop_fn: DropFn) -> Self {
         Self {
             future: Some(future),
@@ -39,7 +39,7 @@ impl<Fut: Future, DropFn: FnOnce() -> ()> DroppingOnce<Fut, DropFn> {
     }
 }
 
-impl<Fut: Future, DropFn: FnOnce() -> ()> Stream for DroppingOnce<Fut, DropFn> {
+impl<Fut: Future, DropFn: FnOnce()> Stream for DroppingOnce<Fut, DropFn> {
     type Item = Fut::Output;
 
     fn poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
@@ -62,7 +62,7 @@ impl<Fut: Future, DropFn: FnOnce() -> ()> Stream for DroppingOnce<Fut, DropFn> {
     }
 }
 
-impl<Fut: Future, DropFn: FnOnce() -> ()> FusedStream for DroppingOnce<Fut, DropFn> {
+impl<Fut: Future, DropFn: FnOnce()> FusedStream for DroppingOnce<Fut, DropFn> {
     fn is_terminated(&self) -> bool {
         self.future.is_none()
     }
