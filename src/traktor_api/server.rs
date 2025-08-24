@@ -4,19 +4,17 @@ use crate::traktor_api::model::{
 };
 use crate::traktor_api::{StateUpdate, ID};
 use bytes::Bytes;
+use iced::futures::channel::mpsc::{UnboundedReceiver, UnboundedSender};
+use iced::futures::channel::oneshot;
 use iced::futures::{stream, TryFutureExt};
 use iced::futures::{SinkExt, Stream, StreamExt};
+use libmdns::{Responder, Service};
 use serde::de::DeserializeOwned;
 use std::collections::HashMap;
 use std::convert::Infallible;
 use std::net::SocketAddr;
 use std::sync::Arc;
-use std::sync::mpsc::{Sender, TryRecvError};
-use std::thread;
 use std::time::{SystemTime, UNIX_EPOCH};
-use iced::futures::channel::mpsc::{UnboundedReceiver, UnboundedSender};
-use iced::futures::channel::oneshot;
-use libmdns::{Responder};
 use tokio::sync::Mutex;
 use uuid::Uuid;
 use warp::http::StatusCode;
@@ -483,13 +481,12 @@ async fn server_main(
     let routes = TraktorServer::routes(&state);
 
     println!("starting traktor server on {}", addr);
-    let sender = advertise_server(addr);
-    println!("advertising traktor server on {}", addr);
+    let service = advertise_server(addr);
     let Ok((_, fut)) = warp::serve(routes).try_bind_with_graceful_shutdown(addr, async {
         cancelled.await.ok();
     }) else {
         println!("could not start traktor server on {}", addr);
-        sender.send(-1).ok();
+        drop(service);
         return;
     };
     tokio::task::spawn(fut);
@@ -502,35 +499,17 @@ async fn server_main(
     }
 }
 
-fn advertise_server(addr: SocketAddr) -> Sender<i8> {
-    let (tx, rx) = std::sync::mpsc::channel();
-    thread::Builder::new()
-        .name("traktor-server.advertise".to_string())
-        .spawn(move || {
-            let addr_vec = if !addr.ip().is_unspecified() {[addr.ip()].to_vec()} else {Vec::new()};
-            let responder = Responder::new_with_ip_list(addr_vec).expect("could not create responder");
-            let _svc = responder.register(
-                "_http._tcp".to_owned(),
-                "traktor-di-webserver".to_owned(),
-                addr.port(),
-                &["path=/"],
-            );
-            loop {
-                thread::sleep(std::time::Duration::from_secs(10));
-                match rx.try_recv() {
-                    Ok(-1) | Err(TryRecvError::Disconnected) => {
-                        println!("Terminating Traktor server advertisement.");
-                        break;
-                    }
-                    Err(TryRecvError::Empty) => {}
-                    _ => {
-                        println!("Terminating Traktor server advertisement.");
-                        break;
-                    }
-                }
-            }
-        }).ok();
-    tx
+fn advertise_server(addr: SocketAddr) -> Service {
+    let addr_vec = if !addr.ip().is_unspecified() {[addr.ip()].to_vec()} else {Vec::new()};
+    let responder = Responder::new_with_ip_list(addr_vec).expect("could not create responder");
+    let svc = responder.register(
+        "_http._tcp".to_owned(),
+        "traktor-di-webserver".to_owned(),
+        addr.port(),
+        &["path=/"],
+    );
+    println!("advertising traktor server on {}", addr);
+    svc
 }
 
 pub fn run_server(addr: SocketAddr) -> impl Stream<Item = ServerMessage> {
