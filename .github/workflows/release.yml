@@ -12,7 +12,6 @@ env:
   BIN_NAME: danceinterpreter-rs
   PROJECT_NAME: danceinterpreter-rs
   REPO_NAME: klassenserver7b/danceinterpreter-rs
-  BREW_TAP: jondot/homebrew-tap
 
 jobs:
   test-rust:
@@ -135,6 +134,9 @@ jobs:
           uses: oven-sh/setup-bun@v2
           with:
             bun-version: "latest"
+
+        - name: Change dir
+          run: cd traktor-api/cover-loader
 
         - name: Setup Deps
           run : bun install
