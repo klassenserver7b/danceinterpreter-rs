@@ -130,13 +130,11 @@ jobs:
           uses: actions/checkout@v4
           with:
             submodules: true
+
         - name: Setup Bun
           uses: oven-sh/setup-bun@v2
           with:
             bun-version: "latest"
-
-        - name: Setup Bun Cache
-          uses: AtomiCloud/actions.cache-bun @v1.0.0
 
         - name: Setup Deps
           run : bun install
