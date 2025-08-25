@@ -48,5 +48,5 @@ Always feel free to open an issue according to the issue templates at this githu
 
 
 ## Screenshots
-![MainWindow](https://github.com/user-attachments/assets/5d378bd7-44f2-418a-bd0b-99e5add67c6d)
-![DanceWindow](https://github.com/user-attachments/assets/a9775faa-6701-43b0-8532-3e400a4a0592)
+![MainWindow](https://github.com/user-attachments/assets/896e5cf3-832b-4579-aba5-398d5075aeee)
+![DanceWindow](https://github.com/user-attachments/assets/f7d7c43e-31cb-4c9e-a593-1a664d9190b4)
