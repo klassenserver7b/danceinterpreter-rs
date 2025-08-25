@@ -15,8 +15,8 @@ env:
   BREW_TAP: jondot/homebrew-tap
 
 jobs:
-  test:
-    name: Test
+  test-rust:
+    name: Test Rust
     runs-on: macos-latest
     steps:
       - name: Checkout sources
@@ -35,10 +35,11 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: test
-          args: --release
+          args: --release          
   
-  dist:
-    name: Dist
+  dist-rust:
+    name: Rust-dist
+    needs: [ test-rust ]
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false # don't fail other jobs if one fails
@@ -118,18 +119,51 @@ jobs:
 
       - uses: actions/upload-artifact@v4.6.2
         with:
-          name: bins-${{ matrix.build }}
+          name: bins-rust-${{ matrix.build }}
           path: bins
+
+  dist-js:
+      name: JS-dist
+      runs-on: ubuntu-latest
+      steps:
+        - name: Checkout sources
+          uses: actions/checkout@v4
+          with:
+            submodules: true
+        - name: Setup Bun
+          uses: oven-sh/setup-bun@v2
+          with:
+            bun-version: "latest"
+
+        - name: Setup Bun Cache
+          uses: AtomiCloud/actions.cache-bun @v1.0.0
+
+        - name: Setup Deps
+          run : bun install
+
+        - name: Compile Binaries
+          run: |
+            bun build --compile --target=bun-linux-x64 ./index.ts --outfile target/cover-loader
+            bun build --compile --target=bun-windows-x64-baseline ./index.ts --outfile target/cover-loader
+
+        - name: Build archive
+          shell: bash
+          run: |
+            mkdir bins
+              cp "target/*" "bins/"
+
+        - uses: actions/upload-artifact@v4.6.2
+          with:
+            name: bins-js
+            path: bins
+        
 
   publish:
     name: Publish
-    needs: [ dist ]
+    needs: [ dist-rust, dist-js ]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/download-artifact@v5.0.0
-        # with:
-        #   path: bins
-      # - run: ls -al ./bins
       - run: ls -al bins-*
 
       - name: Calculate tag name
@@ -148,16 +182,17 @@ jobs:
           set -ex
           mkdir bins
 
-          for dir in bins-* ; do
-              platform=${dir#"bins-"}
+          for dir in bins-rust-* ; do
+              platform=${dir#"bins-rust-"}
               unset exe
               if [[ $platform =~ "windows" ]]; then
                   exe=".exe"
               fi
               pkgname=$PROJECT_NAME-$TAG-$platform
               mv bins-$platform/$BIN_NAME$exe bins/$pkgname$exe
-              chmod -R +x bins
           done
+          mv bins-js/* bins/
+          chmod -R +x bins
 
       - name: Upload binaries to release
         uses: svenstaro/upload-release-action@v2

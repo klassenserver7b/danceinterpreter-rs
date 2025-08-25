@@ -78,7 +78,7 @@ impl ConfigWindow {
         (is_current, is_next, is_played)
     }
 
-    fn build_playlist_view(&self, dance_interpreter: &DanceInterpreter) -> Column<Message> {
+    fn build_playlist_view(&'_ self, dance_interpreter: &DanceInterpreter) -> Column<'_, Message> {
         let trow: Row<_> = row![
             text!("#").width(Length::Fixed(24.0)),
             text!("Title").width(Length::Fill),
@@ -345,7 +345,7 @@ fn label_message_button<'a>(
         .on_press(message)
 }
 
-fn submenu_button(label: &str) -> button::Button<Message, iced::Theme, iced::Renderer> {
+fn submenu_button(label: &'_ str) -> button::Button<'_, Message, iced::Theme, iced::Renderer> {
     button(
         row![
             text(label).width(Length::Fill).align_y(Vertical::Center),
@@ -362,7 +362,7 @@ fn submenu_button(label: &str) -> button::Button<Message, iced::Theme, iced::Ren
     .width(Length::Fill)
 }
 
-fn label_message_button_opt(label: &str, message: Option<Message>) -> button::Button<Message> {
+fn label_message_button_opt(label: &'_ str, message: Option<Message>) -> button::Button<'_, Message> {
     if let Some(message) = message {
         label_message_button(label, message)
     } else {
@@ -372,11 +372,11 @@ fn label_message_button_opt(label: &str, message: Option<Message>) -> button::Bu
     }
 }
 
-fn label_message_button_fill_opt(label: &str, message: Option<Message>) -> button::Button<Message> {
+fn label_message_button_fill_opt(label: &'_ str, message: Option<Message>) -> button::Button<'_, Message> {
     label_message_button_opt(label, message).width(Length::Fill)
 }
 
-fn material_icon_message_button(icon_id: &str, message: Message) -> button::Button<Message> {
+fn material_icon_message_button(icon_id: &'_ str, message: Message) -> button::Button<'_, Message> {
     button(material_icon(icon_id))
         .padding([4, 8])
         .style(button::secondary)
@@ -385,10 +385,10 @@ fn material_icon_message_button(icon_id: &str, message: Message) -> button::Butt
 }
 
 fn labeled_message_checkbox(
-    label: &str,
+    label: &'_ str,
     checked: bool,
     message: fn(bool) -> Message,
-) -> checkbox::Checkbox<Message> {
+) -> checkbox::Checkbox<'_, Message> {
     checkbox(label, checked)
         .on_toggle(message)
         .width(Length::Fill)
@@ -396,20 +396,20 @@ fn labeled_message_checkbox(
 }
 
 fn labeled_message_radio<T: Copy + Eq>(
-    label: &str,
+    label: &'_ str,
     value: T,
     selection: Option<T>,
     message: fn(T) -> Message,
-) -> radio::Radio<Message> {
+) -> radio::Radio<'_, Message> {
     radio(label, value, selection, message).width(Length::Fill)
     //.style(checkbox::secondary)
 }
 
 fn labeled_message_checkbox_opt(
-    label: &str,
+    label: &'_ str,
     checked: bool,
     message: Option<fn(bool) -> Message>,
-) -> checkbox::Checkbox<Message> {
+) -> checkbox::Checkbox<'_, Message> {
     if let Some(message) = message {
         labeled_message_checkbox(label, checked, message)
     } else {
@@ -451,8 +451,8 @@ fn separator() -> quad::Quad {
 }
 
 fn get_network_interface_menu(
-    dance_interpreter: &DanceInterpreter,
-) -> Vec<Item<Message, Theme, Renderer>> {
+    dance_interpreter: &'_ DanceInterpreter,
+) -> Vec<Item<'_, Message, Theme, Renderer>> {
     let mut interfaces = vec![("any".to_owned(), "0.0.0.0".to_owned())];
 
     if let Ok(network_interfaces) = NetworkInterface::show() {
