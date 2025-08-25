@@ -181,7 +181,7 @@ jobs:
                   exe=".exe"
               fi
               pkgname=$PROJECT_NAME-$TAG-$platform
-              mv bins-$platform/$BIN_NAME$exe bins/$pkgname$exe
+              mv bins-rust-$platform/$BIN_NAME$exe bins/$pkgname$exe
           done
           mv bins-js/* bins/
           chmod -R +x bins
