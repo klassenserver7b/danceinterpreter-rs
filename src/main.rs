@@ -16,7 +16,6 @@ use crate::traktor_api::{
 };
 use crate::ui::config_window::{ConfigWindow, PLAYLIST_SCROLLABLE_ID};
 use crate::ui::song_window::SongWindow;
-use iced::advanced::graphics::image::image_rs::ImageFormat;
 use iced::keyboard::key::Named;
 use iced::keyboard::{on_key_press, Key, Modifiers};
 use iced::widget::scrollable::{AbsoluteOffset, RelativeOffset};
@@ -26,6 +25,7 @@ use iced::{exit, window, Element, Size, Subscription, Task, Theme};
 use iced_aw::iced_fonts::REQUIRED_FONT_BYTES;
 use rfd::FileDialog;
 use std::path::PathBuf;
+use iced::advanced::graphics::image::image_rs::ImageFormat;
 
 fn main() -> iced::Result {
     iced::daemon(

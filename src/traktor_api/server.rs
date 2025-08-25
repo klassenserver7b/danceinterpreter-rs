@@ -482,14 +482,18 @@ async fn server_main(
 
     println!("starting traktor server on {}", addr);
     let service = advertise_server(addr);
-    let Ok((_, fut)) = warp::serve(routes).try_bind_with_graceful_shutdown(addr, async {
-        cancelled.await.ok();
-    }) else {
+
+    let Ok(listener) = tokio::net::TcpListener::bind(addr).await else {
         println!("could not start traktor server on {}", addr);
+
         drop(service);
         return;
     };
-    tokio::task::spawn(fut);
+    let server = warp::serve(routes).incoming(listener).graceful(async {
+        cancelled.await.ok();
+    });
+
+    tokio::task::spawn(server.run());
 
     state.lock().await.send_ready(input_send).await;
     loop {
