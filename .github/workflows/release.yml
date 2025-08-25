@@ -12,6 +12,7 @@ env:
   BIN_NAME: danceinterpreter-rs
   PROJECT_NAME: danceinterpreter-rs
   REPO_NAME: klassenserver7b/danceinterpreter-rs
+  COVER_LOADER_PATH: traktor-api/cover-loader
 
 jobs:
   test-rust:
@@ -137,7 +138,7 @@ jobs:
 
         - name: Compile Binaries
           run: |
-            cd traktor-api/cover-loader
+            cd $COVER_LOADER_PATH
             bun install
             bun build --compile --target=bun-linux-x64 ./index.ts --outfile target/cover-loader
             bun build --compile --target=bun-windows-x64-baseline ./index.ts --outfile target/cover-loader
@@ -145,13 +146,13 @@ jobs:
         - name: Build archive
           shell: bash
           run: |
-            mkdir bins
-              cp "target/*" "bins/"
+            mkdir bins-js
+              cp "$COVER_LOADER_PATH/target/*" "bins-js/"
 
         - uses: actions/upload-artifact@v4.6.2
           with:
             name: bins-js
-            path: bins
+            path: bins-js
         
 
   publish:
