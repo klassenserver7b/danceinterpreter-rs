@@ -83,7 +83,7 @@ impl SongDataProvider {
                 SongDataSource::Playlist(i) => self.playlist_songs.get(*i),
                 SongDataSource::Other(ref song) => Some(song),
                 SongDataSource::Blank => None,
-                SongDataSource::Traktor => None,
+                SongDataSource::Traktor => self.traktor_provider.get_next_song_info(),
             };
         }
 
@@ -92,7 +92,7 @@ impl SongDataProvider {
             SongDataSource::Playlist(i) => self.playlist_songs.get(i + 1),
             SongDataSource::Other(ref song) => Some(song),
             SongDataSource::Blank => None,
-            SongDataSource::Traktor => None,
+            SongDataSource::Traktor => self.traktor_provider.get_next_song_info(),
         }
     }
 

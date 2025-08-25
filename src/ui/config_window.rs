@@ -1,7 +1,7 @@
 use crate::dataloading::dataprovider::song_data_provider::{
     SongChange, SongDataEdit, SongDataSource,
 };
-use crate::traktor_api::TRAKTOR_SERVER_DEFAULT_ADDR;
+use crate::traktor_api::{TraktorNextMode, TraktorSyncMode, TRAKTOR_SERVER_DEFAULT_ADDR};
 use crate::ui::material_icon;
 use crate::ui::widget::dynamic_text_input::DynamicTextInput;
 use crate::{DanceInterpreter, Message, Window};
@@ -10,13 +10,18 @@ use iced::alignment::Vertical;
 use iced::border::Radius;
 use iced::widget::scrollable::{Direction, RelativeOffset, Scrollbar};
 use iced::widget::{
-    button, checkbox, column as col, row, scrollable, text, Button, Column, Row, Scrollable, Space,
+    button, checkbox, column as col, radio, row, scrollable, text, Button, Column, Row, Scrollable,
+    Space,
 };
 use iced::{font, window, Border, Color, Element, Font, Length, Renderer, Size, Theme};
+use iced_aw::iced_fonts::required::{icon_to_string, RequiredIcons};
+use iced_aw::iced_fonts::REQUIRED_FONT;
 use iced_aw::menu::Item;
 use iced_aw::style::{menu_bar::primary, Status};
 use iced_aw::widget::InnerBounds;
 use iced_aw::{menu, menu_bar, menu_items, quad, Menu, MenuBar};
+use network_interface::Addr::V4;
+use network_interface::{NetworkInterface, NetworkInterfaceConfig};
 use std::sync::LazyLock;
 
 #[derive(Default)]
@@ -73,7 +78,7 @@ impl ConfigWindow {
         (is_current, is_next, is_played)
     }
 
-    fn build_playlist_view(&self, dance_interpreter: &DanceInterpreter) -> Column<Message> {
+    fn build_playlist_view(&'_ self, dance_interpreter: &DanceInterpreter) -> Column<'_, Message> {
         let trow: Row<_> = row![
             text!("#").width(Length::Fixed(24.0)),
             text!("Title").width(Length::Fill),
@@ -198,6 +203,7 @@ impl ConfigWindow {
         dance_interpreter: &'a DanceInterpreter,
     ) -> MenuBar<'a, Message, Theme, Renderer> {
         let menu_tpl_1 = |items| Menu::new(items).max_width(150.0).offset(15.0).spacing(5.0);
+        let menu_tpl_2 = |items| Menu::new(items).max_width(150.0).offset(0.0).spacing(5.0);
 
         #[rustfmt::skip]
         let mb = menu_bar!
@@ -237,12 +243,65 @@ impl ConfigWindow {
                 menu_tpl_1(
                     menu_items!(
                         (labeled_message_checkbox("Enable Server", dance_interpreter.data_provider.traktor_provider.is_enabled, Message::TraktorEnableServer))
-                        (labeled_dynamic_text_input("Server Address", TRAKTOR_SERVER_DEFAULT_ADDR, dance_interpreter.data_provider.traktor_provider.address.as_str(),
-                            Message::TraktorChangeAddress, Some(Message::TraktorSubmitAddress)))
+                        (
+                            labeled_dynamic_text_input("Server Address", TRAKTOR_SERVER_DEFAULT_ADDR, dance_interpreter.data_provider.traktor_provider.address.as_str(),
+                                Message::TraktorChangeAddress, Some(Message::TraktorSubmitAddress)),
+                            menu_tpl_2(get_network_interface_menu(dance_interpreter))
+                        )
                         (separator())
                         (labeled_message_checkbox_opt("Enable Debug Logging", dance_interpreter.data_provider.traktor_provider.debug_logging,
                             dance_interpreter.data_provider.traktor_provider.is_enabled.then_some(Message::TraktorEnableDebugLogging)))
                         (label_message_button_fill_opt("Reset Connection", dance_interpreter.data_provider.traktor_provider.is_enabled.then_some(Message::TraktorReconnect)))
+                        (separator())
+                        (
+                            submenu_button("Sync Mode"),
+                            menu_tpl_2(
+                                menu_items!(
+                                    (labeled_message_radio("None", true,
+                                        Some(dance_interpreter.data_provider.traktor_provider.sync_mode.is_none()), |_| Message::TraktorSetSyncMode(None)))
+                                    (labeled_message_radio("X Fader", TraktorSyncMode::Relative,
+                                        dance_interpreter.data_provider.traktor_provider.sync_mode, |v| Message::TraktorSetSyncMode(Some(v))))
+                                    (labeled_message_radio("By Track Number", TraktorSyncMode::AbsoluteByNumber,
+                                        dance_interpreter.data_provider.traktor_provider.sync_mode, |v| Message::TraktorSetSyncMode(Some(v))))
+                                    (labeled_message_radio("By Title / Artist", TraktorSyncMode::AbsoluteByName,
+                                        dance_interpreter.data_provider.traktor_provider.sync_mode, |v| Message::TraktorSetSyncMode(Some(v))))
+                                )
+                            )
+                        )
+                        (
+                            submenu_button("Next Song Mode"),
+                            menu_tpl_2(
+                                menu_items!(
+                                    (labeled_message_radio("None", true,
+                                        Some(dance_interpreter.data_provider.traktor_provider.next_mode.is_none()), |_| Message::TraktorSetNextMode(None)))
+                                    (labeled_message_radio("From other Deck (by Position)", TraktorNextMode::DeckByPosition,
+                                        dance_interpreter.data_provider.traktor_provider.next_mode, |v| Message::TraktorSetNextMode(Some(v))))
+                                    (labeled_message_radio("From other Deck (by Track Number)", TraktorNextMode::DeckByNumber,
+                                        dance_interpreter.data_provider.traktor_provider.next_mode, |v| Message::TraktorSetNextMode(Some(v))))
+                                    (labeled_message_radio("From Playlist (by Track Number)", TraktorNextMode::PlaylistByNumber,
+                                        dance_interpreter.data_provider.traktor_provider.next_mode, |v| Message::TraktorSetNextMode(Some(v))))
+                                    (labeled_message_radio("From Playlist (by Title / Artist)", TraktorNextMode::PlaylistByName,
+                                        dance_interpreter.data_provider.traktor_provider.next_mode, |v| Message::TraktorSetNextMode(Some(v))))
+                                )
+                            )
+                        )
+                        (
+                            submenu_button("Next Song Mode (Fallback)"),
+                            menu_tpl_2(
+                                menu_items!(
+                                    (labeled_message_radio("None", true,
+                                        Some(dance_interpreter.data_provider.traktor_provider.next_mode_fallback.is_none()), |_| Message::TraktorSetNextModeFallback(None)))
+                                    (labeled_message_radio("From other Deck (by Position)", TraktorNextMode::DeckByPosition,
+                                        dance_interpreter.data_provider.traktor_provider.next_mode_fallback, |v| Message::TraktorSetNextModeFallback(Some(v))))
+                                    (labeled_message_radio("From other Deck (by Track Number)", TraktorNextMode::DeckByNumber,
+                                        dance_interpreter.data_provider.traktor_provider.next_mode_fallback, |v| Message::TraktorSetNextModeFallback(Some(v))))
+                                    (labeled_message_radio("From Playlist (by Track Number)", TraktorNextMode::PlaylistByNumber,
+                                        dance_interpreter.data_provider.traktor_provider.next_mode_fallback, |v| Message::TraktorSetNextModeFallback(Some(v))))
+                                    (labeled_message_radio("From Playlist (by Title / Artist)", TraktorNextMode::PlaylistByName,
+                                        dance_interpreter.data_provider.traktor_provider.next_mode_fallback, |v| Message::TraktorSetNextModeFallback(Some(v))))
+                                )
+                            )
+                        )
                     )
                 )
                 .spacing(5.0)
@@ -262,22 +321,48 @@ impl ConfigWindow {
     }
 }
 
-fn label_message_button_fill(label: &str, message: Message) -> button::Button<Message> {
+fn label_message_button_fill<'a>(
+    label: impl text::IntoFragment<'a>,
+    message: Message,
+) -> button::Button<'a, Message> {
     label_message_button(label, message).width(Length::Fill)
 }
 
-fn label_message_button_shrink(label: &str, message: Message) -> button::Button<Message> {
+fn label_message_button_shrink<'a>(
+    label: impl text::IntoFragment<'a>,
+    message: Message,
+) -> button::Button<'a, Message> {
     label_message_button(label, message).width(Length::Shrink)
 }
 
-fn label_message_button(label: &str, message: Message) -> button::Button<Message> {
+fn label_message_button<'a>(
+    label: impl text::IntoFragment<'a>,
+    message: Message,
+) -> button::Button<'a, Message> {
     button(text(label).align_y(Vertical::Center))
         .padding([4, 8])
         .style(button::secondary)
         .on_press(message)
 }
 
-fn label_message_button_opt(label: &str, message: Option<Message>) -> button::Button<Message> {
+fn submenu_button(label: &'_ str) -> button::Button<'_, Message, iced::Theme, iced::Renderer> {
+    button(
+        row![
+            text(label).width(Length::Fill).align_y(Vertical::Center),
+            text(icon_to_string(RequiredIcons::CaretRightFill))
+                .font(REQUIRED_FONT)
+                .width(Length::Shrink)
+                .align_y(Vertical::Center),
+        ]
+        .align_y(iced::Alignment::Center),
+    )
+    .padding([4, 8])
+    .style(button::text)
+    .on_press(Message::Noop)
+    .width(Length::Fill)
+}
+
+fn label_message_button_opt(label: &'_ str, message: Option<Message>) -> button::Button<'_, Message> {
     if let Some(message) = message {
         label_message_button(label, message)
     } else {
@@ -287,11 +372,11 @@ fn label_message_button_opt(label: &str, message: Option<Message>) -> button::Bu
     }
 }
 
-fn label_message_button_fill_opt(label: &str, message: Option<Message>) -> button::Button<Message> {
+fn label_message_button_fill_opt(label: &'_ str, message: Option<Message>) -> button::Button<'_, Message> {
     label_message_button_opt(label, message).width(Length::Fill)
 }
 
-fn material_icon_message_button(icon_id: &str, message: Message) -> button::Button<Message> {
+fn material_icon_message_button(icon_id: &'_ str, message: Message) -> button::Button<'_, Message> {
     button(material_icon(icon_id))
         .padding([4, 8])
         .style(button::secondary)
@@ -300,21 +385,31 @@ fn material_icon_message_button(icon_id: &str, message: Message) -> button::Butt
 }
 
 fn labeled_message_checkbox(
-    label: &str,
+    label: &'_ str,
     checked: bool,
     message: fn(bool) -> Message,
-) -> checkbox::Checkbox<Message> {
+) -> checkbox::Checkbox<'_, Message> {
     checkbox(label, checked)
         .on_toggle(message)
         .width(Length::Fill)
     //.style(checkbox::secondary)
 }
 
+fn labeled_message_radio<T: Copy + Eq>(
+    label: &'_ str,
+    value: T,
+    selection: Option<T>,
+    message: fn(T) -> Message,
+) -> radio::Radio<'_, Message> {
+    radio(label, value, selection, message).width(Length::Fill)
+    //.style(checkbox::secondary)
+}
+
 fn labeled_message_checkbox_opt(
-    label: &str,
+    label: &'_ str,
     checked: bool,
     message: Option<fn(bool) -> Message>,
-) -> checkbox::Checkbox<Message> {
+) -> checkbox::Checkbox<'_, Message> {
     if let Some(message) = message {
         labeled_message_checkbox(label, checked, message)
     } else {
@@ -353,4 +448,43 @@ fn separator() -> quad::Quad {
         width: Length::Fill,
         ..Default::default()
     }
+}
+
+fn get_network_interface_menu(
+    dance_interpreter: &'_ DanceInterpreter,
+) -> Vec<Item<'_, Message, Theme, Renderer>> {
+    let mut interfaces = vec![("any".to_owned(), "0.0.0.0".to_owned())];
+
+    if let Ok(network_interfaces) = NetworkInterface::show() {
+        for i in network_interfaces {
+            for addr in i.addr {
+                let V4(ipv4_addr) = addr else {
+                    continue;
+                };
+
+                interfaces.push((i.name.clone(), ipv4_addr.ip.to_string()));
+            }
+        }
+    }
+
+    let original_addr = dance_interpreter
+        .data_provider
+        .traktor_provider
+        .get_socket_addr()
+        .unwrap_or(TRAKTOR_SERVER_DEFAULT_ADDR.parse().unwrap());
+    let original_port = original_addr.port();
+
+    let interfaces = interfaces
+        .into_iter()
+        .map(|(name, addr)| (name, addr.clone(), format!("{}:{}", addr, original_port)));
+
+    interfaces
+        .into_iter()
+        .map(|(name, addr, addr_with_port)| {
+            Item::new(label_message_button_fill(
+                format!("{}: {}", name, addr),
+                Message::TraktorChangeAndSubmitAddress(addr_with_port),
+            ))
+        })
+        .collect()
 }
