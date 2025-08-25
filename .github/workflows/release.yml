@@ -135,14 +135,10 @@ jobs:
           with:
             bun-version: "latest"
 
-        - name: Change dir
-          run: cd traktor-api/cover-loader
-
-        - name: Setup Deps
-          run : bun install
-
         - name: Compile Binaries
           run: |
+            cd traktor-api/cover-loader
+            bun install
             bun build --compile --target=bun-linux-x64 ./index.ts --outfile target/cover-loader
             bun build --compile --target=bun-windows-x64-baseline ./index.ts --outfile target/cover-loader
 
