@@ -1,4 +1,5 @@
 [![CodeFactor](https://www.codefactor.io/repository/github/klassenserver7b/danceinterpreter-rs/badge)](https://www.codefactor.io/repository/github/klassenserver7b/danceinterpreter-rs)
+[![CI](https://github.com/klassenserver7b/danceinterpreter-rs/actions/workflows/cargo-check.yml/badge.svg)](https://github.com/klassenserver7b/danceinterpreter-rs/actions/workflows/cargo-check.yml)
 # danceinterpreter-rs
 
 The Danceinterpreter is a utility to display songs and their according dances at ballroom dance events
