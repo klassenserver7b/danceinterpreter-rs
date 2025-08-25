@@ -18,11 +18,11 @@
 
   <screenshots>
     <screenshot type="default">
-      <image type="source">https://github.com/user-attachments/assets/5d378bd7-44f2-418a-bd0b-99e5add67c6d</image>
+      <image type="source">https://github.com/user-attachments/assets/896e5cf3-832b-4579-aba5-398d5075aeee</image>
       <caption>Main Window</caption>
     </screenshot>
     <screenshot>
-      <image type="source">https://github.com/user-attachments/assets/a9775faa-6701-43b0-8532-3e400a4a0592</image>
+      <image type="source">https://github.com/user-attachments/assets/f7d7c43e-31cb-4c9e-a593-1a664d9190b4</image>
       <caption>Dance Window</caption>
     </screenshot>
   </screenshots>
@@ -43,6 +43,12 @@
   <content_rating type="oars-1.1" />
 
   <releases>
+    <release version="0.6.5" date="2025-08-25">
+      <url type="details">https://github.com/klassenserver7b/danceinterpreter-rs/releases/tag/v0.6.5</url>
+      <description>
+        <p>Added autodiscovery for traktor http server and the cover loader</p>
+      </description>
+    </release>
     <release version="0.6.0" date="2025-08-02">
       <url type="details">https://github.com/klassenserver7b/danceinterpreter-rs/releases/tag/v0.6.0</url>
       <description>
