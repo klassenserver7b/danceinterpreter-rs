@@ -2,7 +2,7 @@
 name = "danceinterpreter-rs"
 description = "Danceinterpreter in Rust"
 license = "GPL-3.0-or-later"
-version = "0.6.4"
+version = "0.6.5"
 edition = "2021"
 authors = ["Klassenserver7b <klassenserver7bwin10@gmail.com>", "Konsl <82901383+Konsl@users.noreply.github.com>, Robocraft999 <59525378+Robocraft999@users.noreply.github.com>"]
 
@@ -22,3 +22,4 @@ serde = { version = "1.0.219", features = ["derive"] }
 uuid = { version = "1.17.0", features = ["v4"] }
 bytes = "1.10.1"
 network-interface = "2.0.2"
+libmdns = "0.9.1"

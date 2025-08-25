@@ -5,9 +5,10 @@ use crate::traktor_api::model::{
 use crate::traktor_api::{StateUpdate, ID};
 use bytes::Bytes;
 use iced::futures::channel::mpsc::{UnboundedReceiver, UnboundedSender};
-use iced::futures::channel::{mpsc, oneshot};
+use iced::futures::channel::oneshot;
 use iced::futures::{stream, TryFutureExt};
 use iced::futures::{SinkExt, Stream, StreamExt};
+use libmdns::{Responder, Service};
 use serde::de::DeserializeOwned;
 use std::collections::HashMap;
 use std::convert::Infallible;
@@ -65,7 +66,7 @@ impl TraktorServer {
     async fn send_messages(&mut self, messages: impl IntoIterator<Item = ServerMessage>) {
         let _ = self
             .output
-            .send_all(&mut stream::iter(messages).map(|msg| Ok(msg)))
+            .send_all(&mut stream::iter(messages).map(Ok))
             .await;
     }
 
@@ -90,7 +91,7 @@ impl TraktorServer {
             &self.deck_files.3,
         ]
         .into_iter()
-        .filter_map(|f| (!f.is_empty()).then(|| f.to_owned()))
+        .filter(|&f| !f.is_empty()).map(|f| f.to_owned())
         .collect();
         required_images.dedup();
 
@@ -420,7 +421,7 @@ impl TraktorServer {
             .map(|ws: warp::ws::Ws, state: Arc<Mutex<Self>>| {
                 ws.on_upgrade(move |socket| async move {
                     let (mut ws_tx, mut ws_rx) = socket.split();
-                    let (tx, mut rx) = mpsc::unbounded();
+                    let (tx, mut rx) = iced::futures::channel::mpsc::unbounded();
 
                     tokio::task::spawn(async move {
                         while let Some(message) = rx.next().await {
@@ -463,7 +464,7 @@ impl TraktorServer {
                 state
                     .lock()
                     .await
-                    .handle_log(String::from_utf8_lossy(&*body).into_owned())
+                    .handle_log(String::from_utf8_lossy(&body).into_owned())
                     .await
             })
     }
@@ -480,10 +481,12 @@ async fn server_main(
     let routes = TraktorServer::routes(&state);
 
     println!("starting traktor server on {}", addr);
+    let service = advertise_server(addr);
     let Ok((_, fut)) = warp::serve(routes).try_bind_with_graceful_shutdown(addr, async {
         cancelled.await.ok();
     }) else {
         println!("could not start traktor server on {}", addr);
+        drop(service);
         return;
     };
     tokio::task::spawn(fut);
@@ -496,9 +499,22 @@ async fn server_main(
     }
 }
 
+fn advertise_server(addr: SocketAddr) -> Service {
+    let addr_vec = if !addr.ip().is_unspecified() {[addr.ip()].to_vec()} else {Vec::new()};
+    let responder = Responder::new_with_ip_list(addr_vec).expect("could not create responder");
+    let svc = responder.register(
+        "_http._tcp".to_owned(),
+        "traktor-di-webserver".to_owned(),
+        addr.port(),
+        &["path=/"],
+    );
+    println!("advertising traktor server on {}", addr);
+    svc
+}
+
 pub fn run_server(addr: SocketAddr) -> impl Stream<Item = ServerMessage> {
-    let (output, output_receive) = mpsc::unbounded();
-    let (input_send, input) = mpsc::unbounded();
+    let (output, output_receive) = iced::futures::channel::mpsc::unbounded();
+    let (input_send, input) = iced::futures::channel::mpsc::unbounded();
     let (cancel, cancelled) = oneshot::channel();
 
     let runner = DroppingOnce::new(

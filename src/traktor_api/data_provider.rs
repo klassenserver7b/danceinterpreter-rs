@@ -163,12 +163,10 @@ impl TraktorDataProvider {
             return;
         };
 
-        let scores = vec![
-            self.get_deck_score(&state.decks.0, &state.channels.0, &state.mixer),
+        let scores = [self.get_deck_score(&state.decks.0, &state.channels.0, &state.mixer),
             self.get_deck_score(&state.decks.1, &state.channels.1, &state.mixer),
             self.get_deck_score(&state.decks.2, &state.channels.2, &state.mixer),
-            self.get_deck_score(&state.decks.3, &state.channels.3, &state.mixer),
-        ];
+            self.get_deck_score(&state.decks.3, &state.channels.3, &state.mixer)];
 
         let Some(max) = scores
             .iter()
@@ -199,7 +197,7 @@ impl TraktorDataProvider {
             _ => return,
         };
 
-        let current_song_info = self.copy_song_info_from_deck(&content, playlist);
+        let current_song_info = self.copy_song_info_from_deck(content, playlist);
         self.cached_song_info = Some(current_song_info.clone());
         self.cached_next_song_info = self
             .try_get_next_with_mode(self.next_mode, channel, playlist)
@@ -236,21 +234,15 @@ impl TraktorDataProvider {
         current_channel: &ChannelState,
         playlist: &[SongInfo],
     ) -> Option<SongInfo> {
-        let Some(mode) = mode else {
-            return None;
-        };
+        let mode = mode?;
 
         if !self.is_ready() {
             return None;
         }
 
-        let Some(state) = self.state.as_ref() else {
-            return None;
-        };
+        let state = self.state.as_ref()?;
 
-        let Some(current_song_info) = self.cached_song_info.as_ref() else {
-            return None;
-        };
+        let current_song_info = self.cached_song_info.as_ref()?;
 
         match mode {
             TraktorNextMode::DeckByPosition => {
@@ -278,14 +270,13 @@ impl TraktorDataProvider {
                 });
 
                 let deck = other_side
-                    .map(|o| match o {
+                    .and_then(|o| match o {
                         0 => Some(&state.decks.0),
                         1 => Some(&state.decks.1),
                         2 => Some(&state.decks.2),
                         3 => Some(&state.decks.3),
                         _ => None,
-                    })
-                    .flatten();
+                    });
 
                 deck.filter(|d| d.play_state.position < 0.5 * d.content.track_length)
                     .map(|d| self.copy_song_info_from_deck(&d.content, playlist))
@@ -308,8 +299,7 @@ impl TraktorDataProvider {
                     .position(|s| current_song_info.track_number == s.track_number);
 
                 current_index
-                    .map(|ci| playlist.get(ci + 1).cloned())
-                    .flatten()
+                    .and_then(|ci| playlist.get(ci + 1).cloned())
             }
             TraktorNextMode::PlaylistByName => {
                 let current_index = playlist
@@ -317,8 +307,7 @@ impl TraktorDataProvider {
                     .position(|s| Self::songs_name_match(current_song_info, s));
 
                 current_index
-                    .map(|ci| playlist.get(ci + 1).cloned())
-                    .flatten()
+                    .and_then(|ci| playlist.get(ci + 1).cloned())
             }
         }
     }
@@ -340,8 +329,7 @@ impl TraktorDataProvider {
             song_info.album_art = playlist
                 .iter()
                 .find(|s| Self::songs_name_match(&song_info, s))
-                .map(|s| s.album_art.clone())
-                .flatten();
+                .and_then(|s| s.album_art.clone());
         }
 
         song_info
@@ -364,7 +352,7 @@ impl TraktorDataProvider {
             &state.decks.3.content.file_path,
         ]
         .into_iter()
-        .filter_map(|f| (!f.is_empty()).then(|| f.to_owned()))
+        .filter(|&f| !f.is_empty()).map(|f| f.to_owned())
         .collect();
         files.dedup();
 
