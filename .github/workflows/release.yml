@@ -143,18 +143,15 @@ jobs:
             bun install
             bun build --compile --target=bun-linux-x64 ./index.ts --outfile target/cover-loader
             bun build --compile --target=bun-windows-x64-baseline ./index.ts --outfile target/cover-loader
-            tree
 
-        - name: Build archive
+        - name: Search exe
           shell: bash
-          run: |
-            mkdir bins-js
-            cp "target/*" "bins-js/"
+          run: find -name cover-loader.exe -type f
 
         - uses: actions/upload-artifact@v4.6.2
           with:
             name: bins-js
-            path: bins-js
+            path: $COVER_LOADER_PATH/target/cover-loader
         
 
   publish:
