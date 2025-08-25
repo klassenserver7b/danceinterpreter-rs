@@ -144,14 +144,10 @@ jobs:
             bun build --compile --target=bun-linux-x64 ./index.ts --outfile target/cover-loader
             bun build --compile --target=bun-windows-x64-baseline ./index.ts --outfile target/cover-loader
 
-        - name: Search exe
-          shell: bash
-          run: find -name cover-loader.exe -type f
-
         - uses: actions/upload-artifact@v4.6.2
           with:
             name: bins-js
-            path: $COVER_LOADER_PATH/target/cover-loader
+            path: ./traktor-api/cover-loader/target/cover-loader
         
 
   publish:
