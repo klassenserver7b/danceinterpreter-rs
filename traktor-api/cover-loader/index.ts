@@ -111,6 +111,8 @@ while (true) {
 		console.log(`connecting to ${endpoint}`);
 
 		const ws = new WebSocket(`ws://${endpoint}/cover`);
+        let connected = false;
+        ws.addEventListener("open", () => connected = true);
 
 		ws.addEventListener("message", async msg => {
 			if (!msg.data || typeof msg.data !== "string") return;
@@ -134,6 +136,9 @@ while (true) {
 		});
 
 		await new Promise(resolve => ws.addEventListener("close", resolve));
+
+        if (connected)
+            break;
 	}
 
 	console.log("connection failed, retrying in 30s");
