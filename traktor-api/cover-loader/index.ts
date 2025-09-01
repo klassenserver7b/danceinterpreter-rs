@@ -3,7 +3,6 @@ import { parseArgs } from "util";
 import { parseWebStream } from "music-metadata";
 import { exit } from "process";
 import GUTENMORGEN from "bonjour";
-import { match } from "assert";
 
 const bonjour = GUTENMORGEN();
 
