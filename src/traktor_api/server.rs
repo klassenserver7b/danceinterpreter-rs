@@ -115,14 +115,14 @@ impl TraktorServer {
         }
     }
 
-    async fn handle_connect(&mut self) -> impl warp::Reply {
+    async fn handle_connect(&mut self) -> impl warp::Reply + use<> {
         warp::reply::json(&ConnectionResponse {
             session_id: self.session_id.to_owned(),
             debug_logging: self.debug_logging,
         })
     }
 
-    async fn handle_init(&mut self, request: InitializeRequest) -> impl warp::Reply {
+    async fn handle_init(&mut self, request: InitializeRequest) -> impl warp::Reply + use<> {
         if request.session_id == self.session_id {
             let time_offset_ms = SystemTime::now()
                 .duration_since(UNIX_EPOCH)
@@ -154,7 +154,7 @@ impl TraktorServer {
         self.session_id.to_owned()
     }
 
-    async fn handle_update(&mut self, session_id: String, update: StateUpdate) -> impl warp::Reply {
+    async fn handle_update(&mut self, session_id: String, update: StateUpdate) -> impl warp::Reply + use<> {
         if session_id == self.session_id {
             match &update {
                 StateUpdate::DeckContent(ID::A, content) => {

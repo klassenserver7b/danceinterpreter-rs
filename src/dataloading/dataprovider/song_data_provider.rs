@@ -81,7 +81,7 @@ impl SongDataProvider {
             return match next {
                 SongDataSource::Static(i) => self.statics.get(*i),
                 SongDataSource::Playlist(i) => self.playlist_songs.get(*i),
-                SongDataSource::Other(ref song) => Some(song),
+                SongDataSource::Other(song) => Some(song),
                 SongDataSource::Blank => None,
                 SongDataSource::Traktor => self.traktor_provider.get_next_song_info(),
             };
