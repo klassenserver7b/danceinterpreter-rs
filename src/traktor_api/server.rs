@@ -225,7 +225,7 @@ impl TraktorServer {
         self.cover_sockets.remove(&id);
     }
 
-    async fn handle_log(&mut self, msg: String) -> impl warp::Reply {
+    async fn handle_log(&mut self, msg: String) -> impl warp::Reply + use<> {
         self.send_message(ServerMessage::Log(msg)).await;
         StatusCode::CREATED
     }
@@ -234,7 +234,7 @@ impl TraktorServer {
 impl TraktorServer {
     pub fn routes(
         state: &Arc<Mutex<Self>>,
-    ) -> impl Filter<Extract = (impl warp::Reply,), Error = warp::Rejection> + Clone {
+    ) -> impl Filter<Extract = (impl warp::Reply,), Error = warp::Rejection> + Clone + use<> {
         Self::is_started(state.clone())
             .and(
                 Self::route_connect(state.clone())
