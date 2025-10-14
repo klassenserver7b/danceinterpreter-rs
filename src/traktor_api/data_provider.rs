@@ -386,8 +386,8 @@ impl TraktorDataProvider {
                 println!("{:?}", update);
 
                 if let Some(state) = self.state.as_mut() {
-                    if matches!(self.sync_mode, Some(TraktorSyncMode::Relative)) {
-                        if let StateUpdate::Mixer(new_mixer_state) = &update {
+                    if matches!(self.sync_mode, Some(TraktorSyncMode::Relative))
+                        && let StateUpdate::Mixer(new_mixer_state) = &update {
                             let x_fader_old = state.mixer.x_fader;
                             let x_fader_new = new_mixer_state.x_fader;
 
@@ -421,7 +421,6 @@ impl TraktorDataProvider {
                                 }
                             };
                         }
-                    }
 
                     state.apply_update(update);
                 }
@@ -447,10 +446,9 @@ impl TraktorDataProvider {
     }
 
     fn send_message(&mut self, message: AppMessage) {
-        if let Some(channel) = self.channel.as_ref() {
-            if channel.unbounded_send(message).is_err() {
+        if let Some(channel) = self.channel.as_ref()
+            && channel.unbounded_send(message).is_err() {
                 self.channel = None;
             }
-        }
     }
 }

@@ -282,13 +282,11 @@ where
             let input_state: &mut text_input::State<Renderer::Paragraph> =
                 tree.children[state.get_child_index()].state.downcast_mut();
 
-            if input_state.is_focused() {
-                if let Event::Keyboard(keyboard::Event::KeyPressed { key, .. }) = event.clone() {
-                    if key == Key::Named(Named::Enter) {
+            if input_state.is_focused()
+                && let Event::Keyboard(keyboard::Event::KeyPressed { key, .. }) = event.clone()
+                    && key == Key::Named(Named::Enter) {
                         input_state.unfocus();
                     }
-                }
-            }
 
             if !input_state.is_focused() {
                 state.is_edit_mode = false;
@@ -407,8 +405,8 @@ fn update<
 
                 let bounds = layout.bounds();
 
-                if cursor.is_over(bounds) {
-                    if let Some(cursor_position) = cursor.position() {
+                if cursor.is_over(bounds)
+                    && let Some(cursor_position) = cursor.position() {
                         let new_click = mouse::Click::new(
                             cursor_position,
                             mouse::Button::Left,
@@ -421,7 +419,6 @@ fn update<
                             enter_edit_mode::<Message, Renderer>(tree, shell, on_enter);
                         }
                     }
-                }
 
                 return event::Status::Captured;
             }
