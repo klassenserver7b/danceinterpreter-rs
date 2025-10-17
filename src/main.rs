@@ -16,16 +16,16 @@ use crate::traktor_api::{
 };
 use crate::ui::config_window::{ConfigWindow, PLAYLIST_SCROLLABLE_ID};
 use crate::ui::song_window::SongWindow;
+use iced::advanced::graphics::image::image_rs::ImageFormat;
 use iced::keyboard::key::Named;
-use iced::keyboard::{on_key_press, Key, Modifiers};
+use iced::keyboard::{Key, Modifiers, on_key_press};
 use iced::widget::scrollable::{AbsoluteOffset, RelativeOffset};
 use iced::widget::{horizontal_space, scrollable};
 use iced::window::icon::from_file_data;
-use iced::{exit, window, Element, Size, Subscription, Task, Theme};
+use iced::{Element, Size, Subscription, Task, Theme, exit, window};
 use iced_aw::iced_fonts::REQUIRED_FONT_BYTES;
 use rfd::FileDialog;
 use std::path::PathBuf;
-use iced::advanced::graphics::image::image_rs::ImageFormat;
 
 fn main() -> iced::Result {
     iced::daemon(
@@ -78,7 +78,7 @@ pub enum Message {
     EnableImage(bool),
     EnableNextDance(bool),
 
-    TraktorMessage(traktor_api::ServerMessage),
+    TraktorMessage(Box<ServerMessage>),
     TraktorSetSyncMode(Option<TraktorSyncMode>),
     TraktorSetNextMode(Option<TraktorNextMode>),
     TraktorSetNextModeFallback(Option<TraktorNextMode>),
@@ -333,7 +333,7 @@ impl DanceInterpreter {
             Message::TraktorMessage(msg) => {
                 self.data_provider
                     .traktor_provider
-                    .process_message(msg, &self.data_provider.playlist_songs);
+                    .process_message(*msg, &self.data_provider.playlist_songs);
                 self.run_traktor_sync_action();
 
                 ().into()
@@ -477,7 +477,7 @@ impl DanceInterpreter {
         if let Some(addr) = self.data_provider.traktor_provider.get_socket_addr() {
             subscriptions.push(
                 run_subscription_with(addr, |addr| traktor_api::run_server(*addr))
-                    .map(Message::TraktorMessage),
+                    .map(|m| Message::TraktorMessage(Box::new(m))),
             );
         }
 

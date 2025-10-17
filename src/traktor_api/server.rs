@@ -115,14 +115,14 @@ impl TraktorServer {
         }
     }
 
-    async fn handle_connect(&mut self) -> impl warp::Reply {
+    async fn handle_connect(&mut self) -> warp::reply::Json {
         warp::reply::json(&ConnectionResponse {
             session_id: self.session_id.to_owned(),
             debug_logging: self.debug_logging,
         })
     }
 
-    async fn handle_init(&mut self, request: InitializeRequest) -> impl warp::Reply {
+    async fn handle_init(&mut self, request: InitializeRequest) -> impl warp::Reply + use<> {
         if request.session_id == self.session_id {
             let time_offset_ms = SystemTime::now()
                 .duration_since(UNIX_EPOCH)
@@ -137,7 +137,7 @@ impl TraktorServer {
 
             self.send_message(ServerMessage::Connect {
                 time_offset_ms,
-                initial_state: request.state,
+                initial_state: Box::new(request.state),
             })
             .await;
 
@@ -154,7 +154,7 @@ impl TraktorServer {
         self.session_id.to_owned()
     }
 
-    async fn handle_update(&mut self, session_id: String, update: StateUpdate) -> impl warp::Reply {
+    async fn handle_update(&mut self, session_id: String, update: StateUpdate) -> impl warp::Reply + use<> {
         if session_id == self.session_id {
             match &update {
                 StateUpdate::DeckContent(ID::A, content) => {
@@ -225,7 +225,7 @@ impl TraktorServer {
         self.cover_sockets.remove(&id);
     }
 
-    async fn handle_log(&mut self, msg: String) -> impl warp::Reply {
+    async fn handle_log(&mut self, msg: String) -> impl warp::Reply + use<> {
         self.send_message(ServerMessage::Log(msg)).await;
         StatusCode::CREATED
     }
@@ -233,8 +233,8 @@ impl TraktorServer {
 
 impl TraktorServer {
     pub fn routes(
-        state: &Arc<Mutex<Self>>,
-    ) -> impl Filter<Extract = (impl warp::Reply,), Error = warp::Rejection> + Clone {
+        state: Arc<Mutex<Self>>,
+    ) -> impl Filter<Extract = (impl warp::Reply,), Error = warp::Rejection> + Clone + use<> {
         Self::is_started(state.clone())
             .and(
                 Self::route_connect(state.clone())
@@ -478,7 +478,7 @@ async fn server_main(
     cancelled: oneshot::Receiver<()>,
 ) {
     let state = Arc::new(Mutex::new(TraktorServer::new(output)));
-    let routes = TraktorServer::routes(&state);
+    let routes = TraktorServer::routes(state.clone());
 
     println!("starting traktor server on {}", addr);
     let service = advertise_server(addr);

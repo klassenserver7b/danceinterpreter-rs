@@ -30,24 +30,20 @@ function discoverMdnsServices(): Promise<string[]> {
 	return new Promise((res, rej) => {
 		console.log("No endpoint provided, discovering via mDNS...");
 
-		const browser = bonjour.findOne({ type: "http", protocol: "tcp" }, service => {
+		const browser = bonjour.find({ type: "http", protocol: "tcp" }, service => {
 			if (service.name !== "traktor-di-webserver") {
 				return;
 			}
-			const servers = service.addresses.map(adress => adress.concat(":", String(service.port)));
+			const servers = service.addresses.map(address => address.concat(":", String(service.port)));
+			clearInterval(interval);
 
 			browser.stop();
 			res(servers);
 		});
 
-		setTimeout(() => {
-			browser.stop();
-			rej(
-				new Error(
-					"Could not discover traktor-di-webserver via mDNS. Please provide endpoint manually with -e option."
-				)
-			);
-		}, 10000);
+		let interval = setInterval(() => {
+			browser.update();
+		}, 5000);
 	});
 }
 
@@ -77,7 +73,7 @@ async function getCover(path: string): Promise<Uint8Array | null> {
 	const file = Bun.file(await translatePath(path));
 
 	if (!(await file.exists())) {
-		console.log(`error: translated file "${await translatePath(path)}" for ${path} does not exist`);
+		console.log(`Error: Translated file "${await translatePath(path)}" for ${path} does not exist`);
 		return null;
 	}
 
@@ -90,11 +86,31 @@ async function getCover(path: string): Promise<Uint8Array | null> {
 	});
 
 	if (!picture) {
-		console.log(`error: file ${path} has no picture`);
+		console.log(`Error: File ${path} has no picture`);
 		return null;
 	}
 
 	return picture.data;
+}
+
+function startProxyServer(endpoint: string) {
+	return Bun.serve({
+		port: 8080,
+		hostname: "localhost",
+		fetch(req) {
+			let url = URL.parse(req.url);
+
+			if (!url) {
+				return new Response("Bro i actually don't know what you did, but you seriously fucked up!", {
+					status: 418
+				});
+			}
+
+			url.host = endpoint;
+			let newReq = new Request(url.toString(), req);
+			return fetch(newReq);
+		}
+	});
 }
 
 while (true) {
@@ -103,24 +119,33 @@ while (true) {
 	endpoints = endpoints.filter(e => URL.canParse(`http://${e}/cover`));
 
 	if (endpoints.length === 0) {
-		console.log("could not parse configured endpoint url");
+		console.log("Could not parse configured endpoint url");
 		exit(1);
 	}
 
 	for (let endpoint of endpoints) {
-		console.log(`connecting to ${endpoint}`);
+		console.log(`Connecting to ${endpoint}`);
 
 		const ws = new WebSocket(`ws://${endpoint}/cover`);
+		let connected = false;
+
+		let server: Bun.Server | null = null;
+
+		ws.addEventListener("open", () => {
+			connected = true;
+			console.log(`Successfully connected to ${endpoint}`);
+			server = startProxyServer(endpoint);
+		});
 
 		ws.addEventListener("message", async msg => {
 			if (!msg.data || typeof msg.data !== "string") return;
 
 			const path = msg.data;
-			console.log(`loading cover for ${path}`);
+			console.log(`Loading cover for ${path}`);
 
 			const coverData = await getCover(path);
 			if (!coverData) {
-				console.log(`loading of ${path} failed`);
+				console.log(`Loading of ${path} failed`);
 				return;
 			}
 
@@ -134,8 +159,13 @@ while (true) {
 		});
 
 		await new Promise(resolve => ws.addEventListener("close", resolve));
+		console.log(`Cancelled connection to ${endpoint}`);
+
+		if (server) server.stop();
+
+		if (connected) break;
 	}
 
-	console.log("connection failed, retrying in 30s");
+	console.log("Connection failed, retrying in 30s");
 	await Bun.sleep(30 * 1000);
 }
