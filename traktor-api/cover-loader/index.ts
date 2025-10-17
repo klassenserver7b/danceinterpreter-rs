@@ -101,7 +101,7 @@ function startProxyServer(endpoint: string) {
 			let url = URL.parse(req.url);
 
 			if (!url) {
-				return new Response("Bro i actually don't know what you did, but you seriously fucker up!", {
+				return new Response("Bro i actually don't know what you did, but you seriously fucked up!", {
 					status: 418
 				});
 			}
