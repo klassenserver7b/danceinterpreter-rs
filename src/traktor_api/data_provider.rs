@@ -90,10 +90,12 @@ impl TraktorDataProvider {
         self.is_enabled && self.channel.as_ref().is_some_and(|c| !c.is_closed())
     }
 
+    #[allow(dead_code)]
     pub fn get_log(&self) -> &[String] {
         &self.log
     }
 
+    #[allow(dead_code)]
     pub fn clear_log(&mut self) {
         self.log.clear();
     }
@@ -379,7 +381,7 @@ impl TraktorDataProvider {
 
                 self.time_offset_ms = time_offset_ms;
                 self.sync_x_fader_is_left = initial_state.mixer.x_fader < 0.5;
-                self.state = Some(initial_state);
+                self.state = Some(*initial_state);
                 self.update_song_info(playlist);
             }
             ServerMessage::Update(update) => {

@@ -78,7 +78,7 @@ pub enum Message {
     EnableImage(bool),
     EnableNextDance(bool),
 
-    TraktorMessage(ServerMessage),
+    TraktorMessage(Box<ServerMessage>),
     TraktorSetSyncMode(Option<TraktorSyncMode>),
     TraktorSetNextMode(Option<TraktorNextMode>),
     TraktorSetNextModeFallback(Option<TraktorNextMode>),
@@ -333,7 +333,7 @@ impl DanceInterpreter {
             Message::TraktorMessage(msg) => {
                 self.data_provider
                     .traktor_provider
-                    .process_message(msg, &self.data_provider.playlist_songs);
+                    .process_message(*msg, &self.data_provider.playlist_songs);
                 self.run_traktor_sync_action();
 
                 ().into()
@@ -477,7 +477,7 @@ impl DanceInterpreter {
         if let Some(addr) = self.data_provider.traktor_provider.get_socket_addr() {
             subscriptions.push(
                 run_subscription_with(addr, |addr| traktor_api::run_server(*addr))
-                    .map(Message::TraktorMessage),
+                    .map(|m| Message::TraktorMessage(Box::new(m))),
             );
         }
 

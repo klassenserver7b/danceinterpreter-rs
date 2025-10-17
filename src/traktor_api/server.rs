@@ -137,7 +137,7 @@ impl TraktorServer {
 
             self.send_message(ServerMessage::Connect {
                 time_offset_ms,
-                initial_state: request.state,
+                initial_state: Box::new(request.state),
             })
             .await;
 
