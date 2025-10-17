@@ -34,7 +34,7 @@ function discoverMdnsServices(): Promise<string[]> {
 			if (service.name !== "traktor-di-webserver") {
 				return;
 			}
-			const servers = service.addresses.map(adress => adress.concat(":", String(service.port)));
+			const servers = service.addresses.map(address => address.concat(":", String(service.port)));
 			clearInterval(interval);
 
 			browser.stop();
