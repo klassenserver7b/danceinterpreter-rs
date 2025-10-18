@@ -507,8 +507,8 @@ fn advertise_server(addr: SocketAddr) -> Service {
     let addr_vec = if !addr.ip().is_unspecified() {[addr.ip()].to_vec()} else {Vec::new()};
     let responder = Responder::new_with_ip_list(addr_vec).expect("could not create responder");
     let svc = responder.register(
-        "_http._tcp".to_owned(),
-        "traktor-di-webserver".to_owned(),
+        "_http._tcp",
+        "traktor-di-webserver",
         addr.port(),
         &["path=/"],
     );
