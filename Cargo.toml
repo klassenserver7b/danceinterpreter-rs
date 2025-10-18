@@ -2,14 +2,14 @@
 name = "danceinterpreter-rs"
 description = "Danceinterpreter in Rust"
 license = "GPL-3.0-or-later"
-version = "0.6.5"
-edition = "2021"
+version = "0.6.6"
+edition = "2024"
 authors = ["Klassenserver7b <klassenserver7bwin10@gmail.com>", "Konsl <82901383+Konsl@users.noreply.github.com>, Robocraft999 <59525378+Robocraft999@users.noreply.github.com>"]
 
 [dependencies]
 id3 = "1.16.3"
-url = "2.5.4"
-percent-encoding = "2.3.1"
+url = "2.5.7"
+percent-encoding = "2.3.2"
 iced = { version = "0.13.1", features = ["auto-detect-theme", "image", "debug", "multi-window", "svg", "lazy", "async-std", "canvas", "tokio"]  }
 iced_aw = { version = "0.12.2", features = ["default"] }
 rfd = "0.15.4"
@@ -18,8 +18,8 @@ dark-light = "=1.0.0"
 warp = { version = "0.4.2", features = ["websocket", "server"] }
 tokio = "1.47.1"
 pin-project-lite = "0.2.16"
-serde = { version = "1.0.219", features = ["derive"] }
-uuid = { version = "1.17.0", features = ["v4"] }
+serde = { version = "1.0.224", features = ["derive"] }
+uuid = { version = "1.18.1", features = ["v4"] }
 bytes = "1.10.1"
-network-interface = "2.0.2"
+network-interface = "2.0.3"
 libmdns = "0.9.1"

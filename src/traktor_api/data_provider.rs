@@ -90,10 +90,12 @@ impl TraktorDataProvider {
         self.is_enabled && self.channel.as_ref().is_some_and(|c| !c.is_closed())
     }
 
+    #[allow(dead_code)]
     pub fn get_log(&self) -> &[String] {
         &self.log
     }
 
+    #[allow(dead_code)]
     pub fn clear_log(&mut self) {
         self.log.clear();
     }
@@ -379,15 +381,15 @@ impl TraktorDataProvider {
 
                 self.time_offset_ms = time_offset_ms;
                 self.sync_x_fader_is_left = initial_state.mixer.x_fader < 0.5;
-                self.state = Some(initial_state);
+                self.state = Some(*initial_state);
                 self.update_song_info(playlist);
             }
             ServerMessage::Update(update) => {
                 println!("{:?}", update);
 
                 if let Some(state) = self.state.as_mut() {
-                    if matches!(self.sync_mode, Some(TraktorSyncMode::Relative)) {
-                        if let StateUpdate::Mixer(new_mixer_state) = &update {
+                    if matches!(self.sync_mode, Some(TraktorSyncMode::Relative))
+                        && let StateUpdate::Mixer(new_mixer_state) = &update {
                             let x_fader_old = state.mixer.x_fader;
                             let x_fader_new = new_mixer_state.x_fader;
 
@@ -421,7 +423,6 @@ impl TraktorDataProvider {
                                 }
                             };
                         }
-                    }
 
                     state.apply_update(update);
                 }
@@ -447,10 +448,9 @@ impl TraktorDataProvider {
     }
 
     fn send_message(&mut self, message: AppMessage) {
-        if let Some(channel) = self.channel.as_ref() {
-            if channel.unbounded_send(message).is_err() {
+        if let Some(channel) = self.channel.as_ref()
+            && channel.unbounded_send(message).is_err() {
                 self.channel = None;
             }
-        }
     }
 }
