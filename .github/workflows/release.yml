@@ -43,8 +43,8 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false # don't fail other jobs if one fails
-      matrix:
-        build: [ x86_64-linux, aarch64-linux, x86_64-windows, aarch64-macos ]
+      matrix:  # Remove MacOS because 10x cost multiplier <<<[ x86_64-linux, aarch64-linux, x86_64-windows, aarch64-macos ]>>>
+        build: [ x86_64-linux, aarch64-linux, x86_64-windows ]
         include:
           - build: x86_64-linux
             os: ubuntu-latest
