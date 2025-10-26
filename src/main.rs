@@ -18,11 +18,11 @@ use crate::ui::config_window::{ConfigWindow, PLAYLIST_SCROLLABLE_ID};
 use crate::ui::song_window::SongWindow;
 use iced::advanced::graphics::image::image_rs::ImageFormat;
 use iced::keyboard::key::Named;
-use iced::keyboard::{Key, Modifiers, on_key_press};
+use iced::keyboard::{on_key_press, Key, Modifiers};
 use iced::widget::scrollable::{AbsoluteOffset, RelativeOffset};
 use iced::widget::{horizontal_space, scrollable};
 use iced::window::icon::from_file_data;
-use iced::{Element, Size, Subscription, Task, Theme, exit, window};
+use iced::{exit, window, Element, Size, Subscription, Task, Theme};
 use iced_aw::iced_fonts::REQUIRED_FONT_BYTES;
 use rfd::FileDialog;
 use std::path::PathBuf;
@@ -68,6 +68,7 @@ pub enum Message {
     AddSong(SongInfo),
     DeleteSong(SongDataSource),
     ScrollBy(f32),
+    SnapTo(RelativeOffset),
     AddBlankSong(RelativeOffset),
 
     FileDropped(PathBuf),
@@ -299,7 +300,7 @@ impl DanceInterpreter {
 
             Message::AddBlankSong(offset) => {
                 self.data_provider.append_song(SongInfo::default());
-                scrollable::snap_to(PLAYLIST_SCROLLABLE_ID.clone(), offset)
+                Task::done(Message::SnapTo(offset))
             }
 
             Message::DeleteSong(song) => {
@@ -330,10 +331,10 @@ impl DanceInterpreter {
                 },
             ),
 
+            Message::SnapTo(offset) => scrollable::snap_to(PLAYLIST_SCROLLABLE_ID.clone(), offset),
+
             Message::TraktorMessage(msg) => {
-                self.data_provider
-                    .traktor_provider
-                    .process_message(*msg, &self.data_provider.playlist_songs);
+                self.data_provider.process_traktor_message(*msg);
                 self.run_traktor_sync_action();
 
                 ().into()
@@ -407,10 +408,8 @@ impl DanceInterpreter {
             .as_ref()
             .map(|s| s.mixer.clone())
         {
-            self.data_provider.traktor_provider.process_message(
-                ServerMessage::Update(StateUpdate::Mixer(mixer_state)),
-                &self.data_provider.playlist_songs,
-            );
+            self.data_provider
+                .process_traktor_message(ServerMessage::Update(StateUpdate::Mixer(mixer_state)));
             self.run_traktor_sync_action();
         }
     }

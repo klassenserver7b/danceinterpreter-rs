@@ -165,10 +165,12 @@ impl TraktorDataProvider {
             return;
         };
 
-        let scores = [self.get_deck_score(&state.decks.0, &state.channels.0, &state.mixer),
+        let scores = [
+            self.get_deck_score(&state.decks.0, &state.channels.0, &state.mixer),
             self.get_deck_score(&state.decks.1, &state.channels.1, &state.mixer),
             self.get_deck_score(&state.decks.2, &state.channels.2, &state.mixer),
-            self.get_deck_score(&state.decks.3, &state.channels.3, &state.mixer)];
+            self.get_deck_score(&state.decks.3, &state.channels.3, &state.mixer),
+        ];
 
         let Some(max) = scores
             .iter()
@@ -271,14 +273,13 @@ impl TraktorDataProvider {
                     }
                 });
 
-                let deck = other_side
-                    .and_then(|o| match o {
-                        0 => Some(&state.decks.0),
-                        1 => Some(&state.decks.1),
-                        2 => Some(&state.decks.2),
-                        3 => Some(&state.decks.3),
-                        _ => None,
-                    });
+                let deck = other_side.and_then(|o| match o {
+                    0 => Some(&state.decks.0),
+                    1 => Some(&state.decks.1),
+                    2 => Some(&state.decks.2),
+                    3 => Some(&state.decks.3),
+                    _ => None,
+                });
 
                 deck.filter(|d| d.play_state.position < 0.5 * d.content.track_length)
                     .map(|d| self.copy_song_info_from_deck(&d.content, playlist))
@@ -300,16 +301,14 @@ impl TraktorDataProvider {
                     .iter()
                     .position(|s| current_song_info.track_number == s.track_number);
 
-                current_index
-                    .and_then(|ci| playlist.get(ci + 1).cloned())
+                current_index.and_then(|ci| playlist.get(ci + 1).cloned())
             }
             TraktorNextMode::PlaylistByName => {
                 let current_index = playlist
                     .iter()
                     .position(|s| Self::songs_name_match(current_song_info, s));
 
-                current_index
-                    .and_then(|ci| playlist.get(ci + 1).cloned())
+                current_index.and_then(|ci| playlist.get(ci + 1).cloned())
             }
         }
     }
@@ -337,7 +336,7 @@ impl TraktorDataProvider {
         song_info
     }
 
-    fn songs_name_match(a: &SongInfo, b: &SongInfo) -> bool {
+    pub fn songs_name_match(a: &SongInfo, b: &SongInfo) -> bool {
         // TODO: maybe change this to levenshtein or sth
         a.artist == b.artist && a.title == b.title
     }
@@ -354,7 +353,8 @@ impl TraktorDataProvider {
             &state.decks.3.content.file_path,
         ]
         .into_iter()
-        .filter(|&f| !f.is_empty()).map(|f| f.to_owned())
+        .filter(|&f| !f.is_empty())
+        .map(|f| f.to_owned())
         .collect();
         files.dedup();
 
@@ -389,40 +389,41 @@ impl TraktorDataProvider {
 
                 if let Some(state) = self.state.as_mut() {
                     if matches!(self.sync_mode, Some(TraktorSyncMode::Relative))
-                        && let StateUpdate::Mixer(new_mixer_state) = &update {
-                            let x_fader_old = state.mixer.x_fader;
-                            let x_fader_new = new_mixer_state.x_fader;
+                        && let StateUpdate::Mixer(new_mixer_state) = &update
+                    {
+                        let x_fader_old = state.mixer.x_fader;
+                        let x_fader_new = new_mixer_state.x_fader;
 
-                            let mut offset = 0;
-                            if x_fader_old > 0.5 && x_fader_new <= 0.5 {
-                                if self.sync_x_fader_is_left {
-                                    offset -= 1;
-                                } else {
-                                    offset += 1;
-                                }
-                            } else if x_fader_old <= 0.5 && x_fader_new > 0.5 {
-                                if self.sync_x_fader_is_left {
-                                    offset += 1;
-                                } else {
-                                    offset -= 1;
-                                }
+                        let mut offset = 0;
+                        if x_fader_old > 0.5 && x_fader_new <= 0.5 {
+                            if self.sync_x_fader_is_left {
+                                offset -= 1;
+                            } else {
+                                offset += 1;
                             }
-
-                            if x_fader_new < 0.2 {
-                                self.sync_x_fader_is_left = true;
-                            } else if x_fader_new > 0.8 {
-                                self.sync_x_fader_is_left = false;
+                        } else if x_fader_old <= 0.5 && x_fader_new > 0.5 {
+                            if self.sync_x_fader_is_left {
+                                offset += 1;
+                            } else {
+                                offset -= 1;
                             }
-
-                            self.cached_sync_action = match self.cached_sync_action {
-                                TraktorSyncAction::Relative(prev) => {
-                                    TraktorSyncAction::Relative(prev + offset)
-                                }
-                                TraktorSyncAction::PlaylistAbsolute(_) => {
-                                    TraktorSyncAction::Relative(offset)
-                                }
-                            };
                         }
+
+                        if x_fader_new < 0.2 {
+                            self.sync_x_fader_is_left = true;
+                        } else if x_fader_new > 0.8 {
+                            self.sync_x_fader_is_left = false;
+                        }
+
+                        self.cached_sync_action = match self.cached_sync_action {
+                            TraktorSyncAction::Relative(prev) => {
+                                TraktorSyncAction::Relative(prev + offset)
+                            }
+                            TraktorSyncAction::PlaylistAbsolute(_) => {
+                                TraktorSyncAction::Relative(offset)
+                            }
+                        };
+                    }
 
                     state.apply_update(update);
                 }
@@ -447,10 +448,21 @@ impl TraktorDataProvider {
         mem::replace(&mut self.cached_sync_action, TraktorSyncAction::Relative(0))
     }
 
+    pub fn get_current_index(&self, playlist: &[SongInfo]) -> Option<usize> {
+        let traktor_song = self.get_song_info()?;
+
+        playlist
+            .iter()
+            .enumerate()
+            .find(|(_i, s)| TraktorDataProvider::songs_name_match(s, traktor_song))
+            .map(|(i, _s)| i)
+    }
+
     fn send_message(&mut self, message: AppMessage) {
         if let Some(channel) = self.channel.as_ref()
-            && channel.unbounded_send(message).is_err() {
-                self.channel = None;
-            }
+            && channel.unbounded_send(message).is_err()
+        {
+            self.channel = None;
+        }
     }
 }

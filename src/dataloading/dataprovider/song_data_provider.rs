@@ -1,6 +1,7 @@
 use crate::dataloading::songinfo::SongInfo;
-use std::cmp::PartialEq;
+use crate::traktor_api;
 use crate::traktor_api::TraktorDataProvider;
+use std::cmp::PartialEq;
 
 #[derive(Default, Debug, PartialEq, Clone)]
 pub enum SongDataSource {
@@ -58,8 +59,15 @@ impl SongDataProvider {
     }
 
     fn set_current_as_played(&mut self) {
-        let SongDataSource::Playlist(i) = self.current else {
-            return;
+        let i = match self.current {
+            SongDataSource::Playlist(i) => i,
+            SongDataSource::Traktor => {
+                let Some(index) = self.get_current_traktor_index() else {
+                    return;
+                };
+                index
+            }
+            _ => return,
         };
 
         if let Some(v) = self.playlist_played.get_mut(i) {
@@ -128,7 +136,6 @@ impl SongDataProvider {
         self.current = SongDataSource::Playlist(current_index + 1);
     }
 
-    #[allow(dead_code)]
     pub fn set_current(&mut self, n: SongDataSource) {
         self.set_current_as_played();
 
@@ -206,5 +213,16 @@ impl SongDataProvider {
                 }
             }
         }
+    }
+
+    pub fn process_traktor_message(&mut self, message: traktor_api::ServerMessage) {
+        self.set_current_as_played();
+        self.traktor_provider
+            .process_message(message, &self.playlist_songs);
+    }
+
+    pub fn get_current_traktor_index(&self) -> Option<usize> {
+        self.traktor_provider
+            .get_current_index(&self.playlist_songs)
     }
 }
