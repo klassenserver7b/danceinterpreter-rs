@@ -52,6 +52,7 @@ pub struct TraktorDataProvider {
     cached_song_info: Option<SongInfo>,
     cached_next_song_info: Option<SongInfo>,
     cached_sync_action: TraktorSyncAction,
+    should_scroll: bool,
 
     pub debug_logging: bool,
     log: Vec<String>,
@@ -78,6 +79,7 @@ impl Default for TraktorDataProvider {
             cached_song_info: None,
             cached_next_song_info: None,
             cached_sync_action: TraktorSyncAction::Relative(0),
+            should_scroll: false,
 
             debug_logging: false,
             log: Vec::new(),
@@ -154,7 +156,7 @@ impl TraktorDataProvider {
     }
 
     fn update_song_info(&mut self, playlist: &[SongInfo]) {
-        self.cached_song_info = None;
+        let old_song_info = self.cached_song_info.take();
         self.cached_next_song_info = None;
 
         if !self.is_ready() {
@@ -203,6 +205,11 @@ impl TraktorDataProvider {
 
         let current_song_info = self.copy_song_info_from_deck(content, playlist);
         self.cached_song_info = Some(current_song_info.clone());
+
+        if old_song_info != self.cached_song_info {
+            self.should_scroll = true;
+        }
+
         self.cached_next_song_info = self
             .try_get_next_with_mode(self.next_mode, channel, playlist)
             .or_else(|| self.try_get_next_with_mode(self.next_mode_fallback, channel, playlist));
@@ -446,6 +453,12 @@ impl TraktorDataProvider {
 
     pub fn take_sync_action(&mut self) -> TraktorSyncAction {
         mem::replace(&mut self.cached_sync_action, TraktorSyncAction::Relative(0))
+    }
+
+    pub fn take_should_scroll(&mut self) -> bool {
+        let should_scroll = self.should_scroll;
+        self.should_scroll = false;
+        should_scroll
     }
 
     pub fn get_current_index(&self, playlist: &[SongInfo]) -> Option<usize> {

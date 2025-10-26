@@ -28,6 +28,7 @@ use std::sync::LazyLock;
 pub struct ConfigWindow {
     pub id: Option<window::Id>,
     pub size: Size,
+    pub enable_autoscroll: bool,
 }
 
 pub static PLAYLIST_SCROLLABLE_ID: LazyLock<scrollable::Id> = LazyLock::new(scrollable::Id::unique);
@@ -236,6 +237,7 @@ impl ConfigWindow {
                 label_message_button_shrink("Edit", Message::Noop),
                 menu_tpl_1(
                     menu_items!(
+                        (labeled_message_checkbox("Autoscroll", self.enable_autoscroll , Message::EnableAutoscroll))
                         (label_message_button_fill("Reload Statics", Message::ReloadStatics))
                         (label_message_button_fill("Add blank song", Message::AddBlankSong(RelativeOffset::END)))
                     )

@@ -40,6 +40,8 @@ pub struct SongDataProvider {
 
     pub current: SongDataSource,
     pub next: Option<SongDataSource>,
+
+    should_scroll: bool,
 }
 
 impl SongDataProvider {
@@ -105,6 +107,8 @@ impl SongDataProvider {
     }
 
     pub fn prev(&mut self) {
+        self.should_scroll = true;
+
         let SongDataSource::Playlist(current_index) = self.current else {
             return;
         };
@@ -118,6 +122,8 @@ impl SongDataProvider {
     }
 
     pub fn next(&mut self) {
+        self.should_scroll = true;
+
         if let Some(next) = self.next.take() {
             self.set_current_as_played();
             self.current = next;
@@ -224,5 +230,20 @@ impl SongDataProvider {
     pub fn get_current_traktor_index(&self) -> Option<usize> {
         self.traktor_provider
             .get_current_index(&self.playlist_songs)
+    }
+
+    pub fn take_scroll_index(&mut self) -> Option<usize> {
+        let should_scroll = self.should_scroll | self.traktor_provider.take_should_scroll();
+        self.should_scroll = false;
+
+        if !should_scroll {
+            return None;
+        }
+
+        match self.current {
+            SongDataSource::Traktor => self.get_current_traktor_index(),
+            SongDataSource::Playlist(i) => Some(i),
+            _ => None,
+        }
     }
 }

@@ -16,6 +16,7 @@ use crate::traktor_api::{
 };
 use crate::ui::config_window::{ConfigWindow, PLAYLIST_SCROLLABLE_ID};
 use crate::ui::song_window::SongWindow;
+use crate::Message::SnapTo;
 use iced::advanced::graphics::image::image_rs::ImageFormat;
 use iced::keyboard::key::Named;
 use iced::keyboard::{on_key_press, Key, Modifiers};
@@ -78,6 +79,7 @@ pub enum Message {
 
     EnableImage(bool),
     EnableNextDance(bool),
+    EnableAutoscroll(bool),
 
     TraktorMessage(Box<ServerMessage>),
     TraktorSetSyncMode(Option<TraktorSyncMode>),
@@ -285,7 +287,7 @@ impl DanceInterpreter {
 
             Message::SongChanged(song_change) => {
                 self.data_provider.handle_song_change(song_change);
-                ().into()
+                self.try_scroll_to_song()
             }
 
             Message::SongDataEdit(i, edit) => {
@@ -323,6 +325,11 @@ impl DanceInterpreter {
                 ().into()
             }
 
+            Message::EnableAutoscroll(state) => {
+                self.config_window.enable_autoscroll = state;
+                ().into()
+            }
+
             Message::ScrollBy(frac) => scrollable::scroll_by(
                 PLAYLIST_SCROLLABLE_ID.clone(),
                 AbsoluteOffset {
@@ -337,7 +344,7 @@ impl DanceInterpreter {
                 self.data_provider.process_traktor_message(*msg);
                 self.run_traktor_sync_action();
 
-                ().into()
+                self.try_scroll_to_song()
             }
 
             Message::TraktorEnableServer(enabled) => {
@@ -376,30 +383,24 @@ impl DanceInterpreter {
 
             Message::TraktorSetSyncMode(mode) => {
                 self.data_provider.traktor_provider.sync_mode = mode;
-                self.traktor_provider_force_update();
-
-                ().into()
+                self.traktor_provider_force_update()
             }
 
             Message::TraktorSetNextMode(mode) => {
                 self.data_provider.traktor_provider.next_mode = mode;
-                self.traktor_provider_force_update();
-
-                ().into()
+                self.traktor_provider_force_update()
             }
 
             Message::TraktorSetNextModeFallback(mode) => {
                 self.data_provider.traktor_provider.next_mode_fallback = mode;
-                self.traktor_provider_force_update();
-
-                ().into()
+                self.traktor_provider_force_update()
             }
 
             _ => ().into(),
         }
     }
 
-    fn traktor_provider_force_update(&mut self) {
+    fn traktor_provider_force_update(&mut self) -> Task<Message> {
         // send fake state update message to enforce sync refresh
         if let Some(mixer_state) = self
             .data_provider
@@ -411,6 +412,9 @@ impl DanceInterpreter {
             self.data_provider
                 .process_traktor_message(ServerMessage::Update(StateUpdate::Mixer(mixer_state)));
             self.run_traktor_sync_action();
+            self.try_scroll_to_song()
+        } else {
+            ().into()
         }
     }
 
@@ -431,6 +435,19 @@ impl DanceInterpreter {
                 self.data_provider
                     .set_current(SongDataSource::Playlist(pos));
             }
+        }
+    }
+
+    fn try_scroll_to_song(&mut self) -> Task<Message> {
+        if let Some(index) = self.data_provider.take_scroll_index() {
+            let offset_y = index as f32 / (self.data_provider.playlist_songs.len() - 1) as f32;
+
+            Task::done(SnapTo(RelativeOffset {
+                x: 0.0,
+                y: offset_y,
+            }))
+        } else {
+            ().into()
         }
     }
 
