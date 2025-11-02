@@ -63,11 +63,7 @@ struct State {
 
 impl State {
     fn get_child_index(&self) -> usize {
-        if self.is_edit_mode {
-            1
-        } else {
-            0
-        }
+        if self.is_edit_mode { 1 } else { 0 }
     }
 }
 
@@ -284,9 +280,9 @@ where
 
             if input_state.is_focused()
                 && let Event::Keyboard(keyboard::Event::KeyPressed { key, .. }) = event.clone()
-                    && key == Key::Named(Named::Enter) {
-                        input_state.unfocus();
-                    }
+                && key == Key::Named(Named::Enter) {
+                input_state.unfocus();
+                }
 
             if !input_state.is_focused() {
                 state.is_edit_mode = false;
@@ -303,14 +299,7 @@ where
             return event::Status::Captured;
         }
 
-        update::<Message, Renderer>(
-            tree,
-            event,
-            layout,
-            cursor,
-            shell,
-            self.on_enter.clone(),
-        )
+        update::<Message, Renderer>(tree, event, layout, cursor, shell, self.on_enter.clone())
     }
 
     fn mouse_interaction(
@@ -372,10 +361,7 @@ where
     }
 }
 
-fn update<
-    Message: Clone,
-    Renderer: text::Renderer,
->(
+fn update<Message: Clone, Renderer: text::Renderer>(
     tree: &mut Tree,
     event: Event,
     layout: Layout<'_>,
@@ -406,19 +392,20 @@ fn update<
                 let bounds = layout.bounds();
 
                 if cursor.is_over(bounds)
-                    && let Some(cursor_position) = cursor.position() {
-                        let new_click = mouse::Click::new(
-                            cursor_position,
-                            mouse::Button::Left,
-                            state.previous_click,
-                        );
+                    && let Some(cursor_position) = cursor.position()
+                {
+                    let new_click = mouse::Click::new(
+                        cursor_position,
+                        mouse::Button::Left,
+                        state.previous_click,
+                    );
 
-                        state.previous_click = Some(new_click);
+                    state.previous_click = Some(new_click);
 
-                        if matches!(new_click.kind(), mouse::click::Kind::Double) {
-                            enter_edit_mode::<Message, Renderer>(tree, shell, on_enter);
-                        }
+                    if matches!(new_click.kind(), mouse::click::Kind::Double) {
+                        enter_edit_mode::<Message, Renderer>(tree, shell, on_enter);
                     }
+                }
 
                 return event::Status::Captured;
             }
