@@ -237,7 +237,7 @@ impl ConfigWindow {
                 label_message_button_shrink("Edit", Message::Noop),
                 menu_tpl_1(
                     menu_items!(
-                        (labeled_message_checkbox("Autoscroll", self.enable_autoscroll , Message::EnableAutoscroll))
+                        (labeled_message_checkbox("Autoscroll", self.enable_autoscroll, Message::EnableAutoscroll))
                         (label_message_button_fill("Reload Statics", Message::ReloadStatics))
                         (label_message_button_fill("Add blank song", Message::AddBlankSong(RelativeOffset::END)))
                     )
