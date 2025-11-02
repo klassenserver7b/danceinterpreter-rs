@@ -440,7 +440,7 @@ impl DanceInterpreter {
 
     fn try_scroll_to_song(&mut self) -> Task<Message> {
         if let Some(index) = self.data_provider.take_scroll_index() {
-            let offset_y = index as f32 / (self.data_provider.playlist_songs.len() - 1) as f32;
+            let offset_y = index as f32 / std::cmp::max(1, self.data_provider.playlist_songs.len() - 1) as f32;
 
             Task::done(SnapTo(RelativeOffset {
                 x: 0.0,
