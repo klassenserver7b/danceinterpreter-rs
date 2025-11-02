@@ -91,7 +91,8 @@ impl TraktorServer {
             &self.deck_files.3,
         ]
         .into_iter()
-        .filter(|&f| !f.is_empty()).map(|f| f.to_owned())
+        .filter(|&f| !f.is_empty())
+        .map(|f| f.to_owned())
         .collect();
         required_images.dedup();
 
@@ -154,7 +155,11 @@ impl TraktorServer {
         self.session_id.to_owned()
     }
 
-    async fn handle_update(&mut self, session_id: String, update: StateUpdate) -> impl warp::Reply + use<> {
+    async fn handle_update(
+        &mut self,
+        session_id: String,
+        update: StateUpdate,
+    ) -> impl warp::Reply + use<> {
         if session_id == self.session_id {
             match &update {
                 StateUpdate::DeckContent(ID::A, content) => {
@@ -268,8 +273,8 @@ impl TraktorServer {
             })
     }
 
-    fn json_body<T: DeserializeOwned + Send>(
-    ) -> impl Filter<Extract = (T,), Error = warp::Rejection> + Clone {
+    fn json_body<T: DeserializeOwned + Send>()
+    -> impl Filter<Extract = (T,), Error = warp::Rejection> + Clone {
         warp::body::content_length_limit(64 * 1024).and(warp::body::json())
     }
 
@@ -307,8 +312,8 @@ impl TraktorServer {
             })
     }
 
-    fn route_update_sub_routes(
-    ) -> impl Filter<Extract = ((String, StateUpdate),), Error = warp::Rejection> + Clone {
+    fn route_update_sub_routes()
+    -> impl Filter<Extract = ((String, StateUpdate),), Error = warp::Rejection> + Clone {
         warp::path!("mixer")
             .and(Self::json_body())
             .then(async move |req: UpdateRequest<_>| {
@@ -504,7 +509,11 @@ async fn server_main(
 }
 
 fn advertise_server(addr: SocketAddr) -> Service {
-    let addr_vec = if !addr.ip().is_unspecified() {[addr.ip()].to_vec()} else {Vec::new()};
+    let addr_vec = if !addr.ip().is_unspecified() {
+        [addr.ip()].to_vec()
+    } else {
+        Vec::new()
+    };
     let responder = Responder::new_with_ip_list(addr_vec).expect("could not create responder");
     let svc = responder.register(
         "_http._tcp",

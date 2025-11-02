@@ -10,8 +10,8 @@ use iced::alignment::Vertical;
 use iced::border::Radius;
 use iced::widget::scrollable::{Direction, RelativeOffset, Scrollbar};
 use iced::widget::{
-    button, checkbox, column as col, radio, row, scrollable, text, Button, Column, Row, Scrollable,
-    Space,
+    button, checkbox, column as col, radio, row, scrollable, text, Button, Column, Row,
+    Scrollable, Space,
 };
 use iced::{font, window, Border, Color, Element, Font, Length, Renderer, Size, Theme};
 use iced_aw::iced_fonts::required::{icon_to_string, RequiredIcons};
@@ -28,6 +28,7 @@ use std::sync::LazyLock;
 pub struct ConfigWindow {
     pub id: Option<window::Id>,
     pub size: Size,
+    pub enable_autoscroll: bool,
 }
 
 pub static PLAYLIST_SCROLLABLE_ID: LazyLock<scrollable::Id> = LazyLock::new(scrollable::Id::unique);
@@ -56,9 +57,10 @@ impl ConfigWindow {
         &self,
         dance_interpreter: &DanceInterpreter,
         playlist_index: usize,
-    ) -> (bool, bool, bool) {
+    ) -> (bool, bool, bool, bool) {
         let mut is_current = false;
         let mut is_next = false;
+        let mut is_traktor = false;
         let is_played = dance_interpreter
             .data_provider
             .playlist_played
@@ -75,7 +77,15 @@ impl ConfigWindow {
             is_next = playlist_index == i;
         }
 
-        (is_current, is_next, is_played)
+        if matches!(
+            dance_interpreter.data_provider.current,
+            SongDataSource::Traktor
+        ) && let Some(index) = dance_interpreter.data_provider.get_current_traktor_index()
+        {
+            is_traktor = playlist_index == index;
+        }
+
+        (is_current, is_next, is_traktor, is_played)
     }
 
     fn build_playlist_view(&'_ self, dance_interpreter: &DanceInterpreter) -> Column<'_, Message> {
@@ -97,8 +107,13 @@ impl ConfigWindow {
             .iter()
             .enumerate()
         {
-            let (is_current, is_next, is_played) = self.get_play_state(dance_interpreter, i);
-            let icon: Element<Message> = if is_current {
+            let (is_current, is_next, is_traktor, is_played) =
+                self.get_play_state(dance_interpreter, i);
+            let icon: Element<Message> = if is_traktor {
+                material_icon("agriculture")
+                    .width(Length::Fixed(24.0))
+                    .into()
+            } else if is_current {
                 material_icon("play_arrow")
                     .width(Length::Fixed(24.0))
                     .into()
@@ -222,6 +237,7 @@ impl ConfigWindow {
                 label_message_button_shrink("Edit", Message::Noop),
                 menu_tpl_1(
                     menu_items!(
+                        (labeled_message_checkbox("Autoscroll", self.enable_autoscroll, Message::EnableAutoscroll))
                         (label_message_button_fill("Reload Statics", Message::ReloadStatics))
                         (label_message_button_fill("Add blank song", Message::AddBlankSong(RelativeOffset::END)))
                     )
@@ -362,7 +378,10 @@ fn submenu_button(label: &'_ str) -> button::Button<'_, Message, iced::Theme, ic
     .width(Length::Fill)
 }
 
-fn label_message_button_opt(label: &'_ str, message: Option<Message>) -> button::Button<'_, Message> {
+fn label_message_button_opt(
+    label: &'_ str,
+    message: Option<Message>,
+) -> button::Button<'_, Message> {
     if let Some(message) = message {
         label_message_button(label, message)
     } else {
@@ -372,7 +391,10 @@ fn label_message_button_opt(label: &'_ str, message: Option<Message>) -> button:
     }
 }
 
-fn label_message_button_fill_opt(label: &'_ str, message: Option<Message>) -> button::Button<'_, Message> {
+fn label_message_button_fill_opt(
+    label: &'_ str,
+    message: Option<Message>,
+) -> button::Button<'_, Message> {
     label_message_button_opt(label, message).width(Length::Fill)
 }
 

@@ -1,6 +1,7 @@
 use crate::dataloading::songinfo::SongInfo;
-use std::cmp::PartialEq;
+use crate::traktor_api;
 use crate::traktor_api::TraktorDataProvider;
+use std::cmp::PartialEq;
 
 #[derive(Default, Debug, PartialEq, Clone)]
 pub enum SongDataSource {
@@ -39,6 +40,8 @@ pub struct SongDataProvider {
 
     pub current: SongDataSource,
     pub next: Option<SongDataSource>,
+
+    should_scroll: bool,
 }
 
 impl SongDataProvider {
@@ -58,8 +61,15 @@ impl SongDataProvider {
     }
 
     fn set_current_as_played(&mut self) {
-        let SongDataSource::Playlist(i) = self.current else {
-            return;
+        let i = match self.current {
+            SongDataSource::Playlist(i) => i,
+            SongDataSource::Traktor => {
+                let Some(index) = self.get_current_traktor_index() else {
+                    return;
+                };
+                index
+            }
+            _ => return,
         };
 
         if let Some(v) = self.playlist_played.get_mut(i) {
@@ -97,6 +107,8 @@ impl SongDataProvider {
     }
 
     pub fn prev(&mut self) {
+        self.should_scroll = true;
+
         let SongDataSource::Playlist(current_index) = self.current else {
             return;
         };
@@ -110,6 +122,8 @@ impl SongDataProvider {
     }
 
     pub fn next(&mut self) {
+        self.should_scroll = true;
+
         if let Some(next) = self.next.take() {
             self.set_current_as_played();
             self.current = next;
@@ -128,7 +142,6 @@ impl SongDataProvider {
         self.current = SongDataSource::Playlist(current_index + 1);
     }
 
-    #[allow(dead_code)]
     pub fn set_current(&mut self, n: SongDataSource) {
         self.set_current_as_played();
 
@@ -205,6 +218,32 @@ impl SongDataProvider {
                     song.dance = dance;
                 }
             }
+        }
+    }
+
+    pub fn process_traktor_message(&mut self, message: traktor_api::ServerMessage) {
+        self.set_current_as_played();
+        self.traktor_provider
+            .process_message(message, &self.playlist_songs);
+    }
+
+    pub fn get_current_traktor_index(&self) -> Option<usize> {
+        self.traktor_provider
+            .get_current_index(&self.playlist_songs)
+    }
+
+    pub fn take_scroll_index(&mut self) -> Option<usize> {
+        let should_scroll = self.should_scroll | self.traktor_provider.take_should_scroll();
+        self.should_scroll = false;
+
+        if !should_scroll {
+            return None;
+        }
+
+        match self.current {
+            SongDataSource::Traktor => self.get_current_traktor_index(),
+            SongDataSource::Playlist(i) => Some(i),
+            _ => None,
         }
     }
 }

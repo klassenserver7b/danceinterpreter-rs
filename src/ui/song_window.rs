@@ -100,20 +100,21 @@ impl SongWindow {
                     row![
                         horizontal_space(),
                         column![
-                        Text::new("Nächster Tanz")
-                            .size(next_dance_label_size)
-                            .height(Length::Fill)
-                            .align_x(Horizontal::Right)
-                            .align_y(Vertical::Bottom)
-                            .shaping(Shaping::Advanced),
-                        Text::new(&next_song_info.dance)
-                            .size(next_dance_size)
-                            .align_x(Horizontal::Right)
-                            .align_y(Vertical::Bottom)
-                            .shaping(Shaping::Advanced)
+                            Text::new("Nächster Tanz")
+                                .size(next_dance_label_size)
+                                .height(Length::Fill)
+                                .align_x(Horizontal::Right)
+                                .align_y(Vertical::Bottom)
+                                .shaping(Shaping::Advanced),
+                            Text::new(&next_song_info.dance)
+                                .size(next_dance_size)
+                                .align_x(Horizontal::Right)
+                                .align_y(Vertical::Bottom)
+                                .shaping(Shaping::Advanced)
+                        ]
+                        .width(Length::Shrink)
+                        .spacing(dance_spacing / 3.0)
                     ]
-                    .width(Length::Shrink)
-                    .spacing(dance_spacing / 3.0)]
                 ]
             } else {
                 stack![column_center]
