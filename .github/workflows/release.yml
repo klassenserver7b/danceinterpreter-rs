@@ -141,8 +141,9 @@ jobs:
           run: |
             cd $COVER_LOADER_PATH
             bun install
-            bun build --compile --target=bun-linux-x64 ./index.ts --outfile target/cover-loader
-            bun build --compile --target=bun-windows-x64-baseline ./index.ts --outfile target/cover-loader
+            bun build --compile --target=bun-linux-x64 ./index.ts --outfile target/cover-loader-linux-x64
+            bun build --compile --target=bun-linux-aarch64 ./index.ts --outfile target/cover-loader-linux-aarch64
+            bun build --compile --target=bun-windows-x64-baseline ./index.ts --outfile target/cover-loader-windows-x64
 
         - uses: actions/upload-artifact@v5.0.0
           with:
