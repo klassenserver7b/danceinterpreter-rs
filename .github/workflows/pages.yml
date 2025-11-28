@@ -41,7 +41,7 @@ jobs:
       with:
         shared-key: "danceinterpreter-doc"
     
-    - name: Cargo check
+    - name: Cargo doc
       uses: actions-rs/cargo@v1
       with:
         command: doc
