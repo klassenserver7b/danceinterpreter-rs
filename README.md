@@ -13,19 +13,30 @@ It currently contains three source modes
 
 # Installation
 
-The danceinterpreter is currently availible for all platforms which are supported by the rust language
-Altough only the [**Flathub**](https://github.com/klassenserver7b/danceinterpreter-rs/tree/flatpak-packaging?tab=readme-ov-file#flathub---linux-only---preferred) release is actively tested
+The danceinterpreter is currently only availible for Linux(x64, aarch64) and Windows(x64). 
+_MacOS support is technically possible but as long as it is not requested I don't want to waste actions minuites on those builds._
+_Any other OS/Arch could be possible if rust and my used libraries support it_
+The [**Flathub**](https://github.com/klassenserver7b/danceinterpreter-rs/tree/flatpak-packaging?tab=readme-ov-file#flathub---linux-only---preferred) release (**Linux x64**) is the **ONLY** one which is actively tested.
 
 
 ## Flathub - Linux only - preferred
 ### Installation
 [![https://flathub.org/apps/io.github.klassenserver7b.danceinterpreter-rs](https://flathub.org/api/badge?locale=en)](https://flathub.org/apps/io.github.klassenserver7b.danceinterpreter-rs)
+```BASH
+flatpak install flathub io.github.klassenserver7b.danceinterpreter-rs
+```
 
 ### Update
-Update via your distros software store or run `flatpak update io.github.klassenserver7b.danceinterpreter-rs`
+Update via your distros software store or run 
+```BASH
+flatpak update io.github.klassenserver7b.danceinterpreter-rs
+```
 
 ### Uninstall
-Uninstall via your distros software store or run `flatpak uninstall io.github.klassenserver7b.danceinterpreter-rs`
+Uninstall via your distros software store or run 
+```BASH
+flatpak uninstall io.github.klassenserver7b.danceinterpreter-rs
+```
 
 
 ## Cargo - all platforms
