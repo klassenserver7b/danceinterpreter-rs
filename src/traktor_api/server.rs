@@ -275,7 +275,7 @@ impl TraktorServer {
 
     fn json_body<T: DeserializeOwned + Send>()
     -> impl Filter<Extract = (T,), Error = warp::Rejection> + Clone {
-        warp::body::content_length_limit(64 * 1024).and(warp::body::json())
+        warp::body::json()
     }
 
     fn route_connect(
@@ -406,7 +406,7 @@ impl TraktorServer {
     ) -> impl Filter<Extract = (impl warp::Reply,), Error = warp::Rejection> + Clone {
         warp::post()
             .and(Self::with_state(state))
-            .and(warp::body::content_length_limit(16 * 1024 * 1024).and(warp::body::bytes()))
+            .and(warp::body::bytes())
             .and(warp::query::<HashMap<String, String>>())
             .then(
                 async |state: Arc<Mutex<Self>>, body: Bytes, query: HashMap<String, String>| {
@@ -464,7 +464,7 @@ impl TraktorServer {
         warp::path!("log")
             .and(warp::post())
             .and(Self::with_state(state))
-            .and(warp::body::content_length_limit(4 * 1024).and(warp::body::bytes()))
+            .and(warp::body::bytes())
             .then(async |state: Arc<Mutex<Self>>, body: Bytes| {
                 state
                     .lock()
