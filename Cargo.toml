@@ -11,7 +11,7 @@ id3 = "1.16.3"
 url = "2.5.7"
 percent-encoding = "2.3.2"
 iced = { version = "0.13.1", features = ["auto-detect-theme", "image", "debug", "multi-window", "svg", "lazy", "async-std", "canvas", "tokio"]  }
-iced_aw = { version = "0.12.2", features = ["default"] }
+iced_aw = { version = "0.13.0", features = ["default"] }
 rfd = "0.15.4"
 dirs = "6.0.0"
 dark-light = "=1.0.0"
