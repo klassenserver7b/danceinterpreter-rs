@@ -35,8 +35,8 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: test
-          args: --release          
-  
+          args: --release
+
   dist-rust:
     name: Rust-dist
     needs: [ test-rust ]
@@ -117,7 +117,7 @@ jobs:
             cp "target/${{ matrix.target }}/release/$BIN_NAME" "bins/"
           fi
 
-      - uses: actions/upload-artifact@v4.6.2
+      - uses: actions/upload-artifact@v6
         with:
           name: bins-rust-${{ matrix.build }}
           path: bins
@@ -148,7 +148,6 @@ jobs:
           with:
             name: bins-js
             path: ./traktor-api/cover-loader/target
-        
 
   publish:
     name: Publish
@@ -194,8 +193,3 @@ jobs:
           file_glob: true
           tag: ${{ steps.tagname.outputs.val }}
           overwrite: true
-
-      - name: Extract version
-        id: extract-version
-        run: |
-          printf "::set-output name=%s::%s\n" tag-name "${GITHUB_REF#refs/tags/}"
