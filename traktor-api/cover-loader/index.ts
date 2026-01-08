@@ -1,7 +1,7 @@
-import { $ } from "bun";
-import { parseArgs } from "util";
-import { parseWebStream } from "music-metadata";
-import { exit } from "process";
+import {$} from "bun";
+import {parseArgs} from "util";
+import {parseWebStream} from "music-metadata";
+import {exit} from "process";
 import GUTENMORGEN from "bonjour";
 
 const bonjour = GUTENMORGEN();

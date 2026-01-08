@@ -1,11 +1,9 @@
-use iced::advanced::graphics::futures::{boxed_stream, BoxStream, MaybeSend};
-use iced::advanced::subscription::{from_recipe, EventStream, Hasher, Recipe};
-use iced::futures::stream::FusedStream;
-use iced::futures::{ready, Stream};
+use iced::futures::stream::{BoxStream, FusedStream};
+use iced::futures::{ready, Stream, StreamExt};
 use iced::Subscription;
 use pin_project_lite::pin_project;
 use std::future::Future;
-use std::hash::Hash;
+use std::hash::{Hash, Hasher};
 use std::pin::Pin;
 use std::task::{Context, Poll};
 
@@ -92,13 +90,13 @@ where
     {
         type Output = T;
 
-        fn hash(&self, state: &mut Hasher) {
+        fn hash(&self, state: &mut dyn Hasher) {
             std::any::TypeId::of::<I>().hash(state);
             self.data.hash(state);
         }
 
         fn stream(self: Box<Self>, input: EventStream) -> BoxStream<Self::Output> {
-            boxed_stream((self.spawn)(&self.data, input))
+            BoxStream::boxed((self.spawn)(&self.data, input))
         }
     }
 

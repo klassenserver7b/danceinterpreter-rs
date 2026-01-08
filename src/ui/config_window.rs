@@ -5,7 +5,6 @@ use crate::traktor_api::{TraktorNextMode, TraktorSyncMode, TRAKTOR_SERVER_DEFAUL
 use crate::ui::material_icon;
 use crate::ui::widget::dynamic_text_input::DynamicTextInput;
 use crate::{DanceInterpreter, Message, Window};
-use iced::advanced::Widget;
 use iced::alignment::Vertical;
 use iced::border::Radius;
 use iced::widget::scrollable::{Direction, RelativeOffset, Scrollbar};
@@ -14,12 +13,10 @@ use iced::widget::{
     Scrollable, Space,
 };
 use iced::{font, window, Border, Color, Element, Font, Length, Renderer, Size, Theme};
-use iced_aw::iced_fonts::required::{icon_to_string, RequiredIcons};
-use iced_aw::iced_fonts::REQUIRED_FONT;
 use iced_aw::menu::Item;
 use iced_aw::style::{menu_bar::primary, Status};
 use iced_aw::widget::InnerBounds;
-use iced_aw::{menu, menu_bar, menu_items, quad, Menu, MenuBar};
+use iced_aw::{menu, menu_bar, menu_items, quad, Menu, MenuBar, ICED_AW_FONT};
 use network_interface::Addr::V4;
 use network_interface::{NetworkInterface, NetworkInterfaceConfig};
 use std::sync::LazyLock;
@@ -31,7 +28,8 @@ pub struct ConfigWindow {
     pub enable_autoscroll: bool,
 }
 
-pub static PLAYLIST_SCROLLABLE_ID: LazyLock<scrollable::Id> = LazyLock::new(scrollable::Id::unique);
+pub static PLAYLIST_SCROLLABLE_ID: LazyLock<iced::widget::Id> =
+    LazyLock::new(iced::widget::Id::unique);
 
 impl Window for ConfigWindow {
     fn on_create(&mut self, id: window::Id) {
@@ -94,8 +92,10 @@ impl ConfigWindow {
             text!("Title").width(Length::Fill),
             text!("Artist").width(Length::Fill),
             text!("Dance").width(Length::Fill),
-            Space::new(Length::Fill, Length::Shrink),
-            Space::new(Length::Fixed(10.0), Length::Shrink),
+            Space::new().width(Length::Fill).height(Length::Shrink),
+            Space::new()
+                .width(Length::Fixed(10.0))
+                .height(Length::Shrink),
         ]
         .spacing(5);
 
@@ -122,7 +122,10 @@ impl ConfigWindow {
             } else if is_played {
                 material_icon("check").width(Length::Fixed(24.0)).into()
             } else {
-                Space::new(Length::Fixed(24.0), Length::Shrink).into()
+                Space::new()
+                    .width(Length::Fixed(24.0))
+                    .height(Length::Shrink)
+                    .into()
             };
 
             let song_row = row![
@@ -137,7 +140,7 @@ impl ConfigWindow {
                     .width(Length::Fill)
                     .on_change(move |v| Message::SongDataEdit(i, SongDataEdit::Dance(v))),
                 row![
-                    Space::new(Length::Fill, Length::Shrink),
+                    Space::new().width(Length::Fill).height(Length::Shrink),
                     material_icon_message_button(
                         "smart_display",
                         Message::SongChanged(SongChange::PlaylistAbsolute(i))
@@ -366,7 +369,7 @@ fn submenu_button(label: &'_ str) -> button::Button<'_, Message, iced::Theme, ic
         row![
             text(label).width(Length::Fill).align_y(Vertical::Center),
             text(icon_to_string(RequiredIcons::CaretRightFill))
-                .font(REQUIRED_FONT)
+                .font(ICED_AW_FONT)
                 .width(Length::Shrink)
                 .align_y(Vertical::Center),
         ]
@@ -411,7 +414,8 @@ fn labeled_message_checkbox(
     checked: bool,
     message: fn(bool) -> Message,
 ) -> checkbox::Checkbox<'_, Message> {
-    checkbox(label, checked)
+    checkbox(checked)
+        .label(label)
         .on_toggle(message)
         .width(Length::Fill)
     //.style(checkbox::secondary)
@@ -435,7 +439,7 @@ fn labeled_message_checkbox_opt(
     if let Some(message) = message {
         labeled_message_checkbox(label, checked, message)
     } else {
-        checkbox(label, checked).width(Length::Fill)
+        checkbox(checked).label(label).width(Length::Fill)
         //.style(checkbox::secondary)
     }
 }

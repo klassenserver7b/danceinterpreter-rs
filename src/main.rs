@@ -17,14 +17,14 @@ use crate::traktor_api::{
 use crate::ui::config_window::{ConfigWindow, PLAYLIST_SCROLLABLE_ID};
 use crate::ui::song_window::SongWindow;
 use crate::Message::SnapTo;
-use iced::advanced::graphics::image::image_rs::ImageFormat;
 use iced::keyboard::key::Named;
-use iced::keyboard::{on_key_press, Key, Modifiers};
+use iced::keyboard::{Key, Modifiers};
+use iced::widget::operation::{scroll_by, snap_to};
 use iced::widget::scrollable::{AbsoluteOffset, RelativeOffset};
-use iced::widget::{horizontal_space, scrollable};
+use iced::widget::Space;
 use iced::window::icon::from_file_data;
-use iced::{exit, window, Element, Size, Subscription, Task, Theme};
-use iced_aw::iced_fonts::REQUIRED_FONT_BYTES;
+use iced::{exit, keyboard, window, Element, Length, Size, Subscription, Task, Theme};
+use iced_aw::ICED_AW_FONT_BYTES;
 use rfd::FileDialog;
 use std::path::PathBuf;
 
@@ -34,10 +34,10 @@ fn main() -> iced::Result {
         DanceInterpreter::update,
         DanceInterpreter::view,
     )
-    .theme(DanceInterpreter::theme)
-    .font(REQUIRED_FONT_BYTES)
-    .subscription(DanceInterpreter::subscription)
-    .run_with(DanceInterpreter::new)
+        .theme(DanceInterpreter::theme)
+        .font(ICED_AW_FONT_BYTES)
+        .subscription(DanceInterpreter::subscription)
+        .run_with(DanceInterpreter::new)
 }
 
 pub trait Window {
@@ -99,12 +99,12 @@ impl DanceInterpreter {
 
         let icon = from_file_data(
             match dark_light::detect() {
-                dark_light::Mode::Dark => include_bytes!(res_file!("icon_dark.png")),
+                Ok(dark_light::Mode::Dark) => include_bytes!(res_file!("icon_dark.png")),
                 _ => include_bytes!(res_file!("icon_light.png")),
             },
-            Some(ImageFormat::Png),
+            Some(ImageFormat:Png),
         )
-        .ok();
+            .ok();
 
         let (config_window, cw_opened) = Self::open_window(window::Settings {
             platform_specific: Self::get_platform_specific(),
@@ -172,7 +172,7 @@ impl DanceInterpreter {
         } else if self.song_window.id == Some(window_id) {
             self.song_window.view(self)
         } else {
-            horizontal_space().into()
+            Space::new().height(Length::Fill).into()
         }
     }
 
@@ -212,7 +212,7 @@ impl DanceInterpreter {
                     return ().into();
                 };
 
-                window::get_mode(song_window_id)
+                window::mode(song_window_id)
                     .map(|mode| Message::SetFullscreen(mode != window::Mode::Fullscreen))
             }
             Message::SetFullscreen(fullscreen) => {
@@ -220,7 +220,7 @@ impl DanceInterpreter {
                     return ().into();
                 };
 
-                window::change_mode(
+                window::set_mode(
                     song_window_id,
                     if fullscreen {
                         window::Mode::Fullscreen
@@ -330,7 +330,7 @@ impl DanceInterpreter {
                 ().into()
             }
 
-            Message::ScrollBy(frac) => scrollable::scroll_by(
+            Message::ScrollBy(frac) => scroll_by(
                 PLAYLIST_SCROLLABLE_ID.clone(),
                 AbsoluteOffset {
                     x: 0.0,
@@ -338,7 +338,7 @@ impl DanceInterpreter {
                 },
             ),
 
-            Message::SnapTo(offset) => scrollable::snap_to(PLAYLIST_SCROLLABLE_ID.clone(), offset),
+            Message::SnapTo(offset) => snap_to(PLAYLIST_SCROLLABLE_ID.clone(), offset),
 
             Message::TraktorMessage(msg) => {
                 self.data_provider.process_traktor_message(*msg);
@@ -455,7 +455,7 @@ impl DanceInterpreter {
         if self.song_window.id.is_some_and(|id| id == window_id) {
             Theme::Dark
         } else {
-            Theme::default()
+            Theme::Light
         }
     }
 
@@ -467,36 +467,47 @@ impl DanceInterpreter {
                 window::Event::FileDropped(path) => Message::FileDropped(path),
                 _ => Message::Noop,
             }),
-            on_key_press(|key: Key, _modifiers: Modifiers| match key {
-                Key::Named(Named::ArrowRight) | Key::Named(Named::Space) => {
-                    Some(Message::SongChanged(SongChange::Next))
-                }
-                Key::Named(Named::ArrowLeft) => Some(Message::SongChanged(SongChange::Previous)),
-                Key::Named(Named::End) => Some(Message::SongChanged(SongChange::StaticAbsolute(0))),
-                Key::Named(Named::F11) => Some(Message::ToggleFullscreen),
-                Key::Named(Named::F5) => Some(Message::ReloadStatics),
-                Key::Named(Named::PageUp) => Some(Message::ScrollBy(-10.0)),
-                Key::Named(Named::PageDown) => Some(Message::ScrollBy(10.0)),
-                _ => None,
-            }),
-            on_key_press(
-                |key: Key, modifiers: Modifiers| match (key.as_ref(), modifiers) {
+            keyboard::listen().filter_map(|event| {
+                let keyboard::Event::KeyPressed { key, .. } = event
+                else {
+                    return None;
+                };
+
+                match key {
+                    Key::Named(Named::ArrowRight) | Key::Named(Named::Space) => {
+                        Some(Message::SongChanged(SongChange::Next))
+                    }
+                    Key::Named(Named::ArrowLeft) => Some(Message::SongChanged(SongChange::Previous)),
+                    Key::Named(Named::End) => Some(Message::SongChanged(SongChange::StaticAbsolute(0))),
+                    Key::Named(Named::F11) => Some(Message::ToggleFullscreen),
+                    Key::Named(Named::F5) => Some(Message::ReloadStatics),
+                    Key::Named(Named::PageUp) => Some(Message::ScrollBy(-10.0)),
+                    Key::Named(Named::PageDown) => Some(Message::ScrollBy(10.0)),
+                    _ => None,
+                }}),
+
+            keyboard::listen().filter_map(|event| {
+                let keyboard::Event::KeyPressed { key, modifiers, .. } = event
+                else {
+                    return None;
+                };
+                match (key.as_ref(), modifiers) {
                     (Key::Character("n"), Modifiers::CTRL) => {
                         Some(Message::AddBlankSong(RelativeOffset::END))
                     }
                     (Key::Character("r"), Modifiers::CTRL) => Some(Message::ReloadStatics),
                     _ => None,
-                },
-            ),
+                }
+            })
         ];
 
         if let Some(addr) = self.data_provider.traktor_provider.get_socket_addr() {
-            subscriptions.push(
-                run_subscription_with(addr, |addr| traktor_api::run_server(*addr))
-                    .map(|m| Message::TraktorMessage(Box::new(m))),
-            );
-        }
+                    subscriptions.push(
+                        run_subscription_with(addr, |addr| traktor_api::run_server(*addr))
+                            .map(|m| Message::TraktorMessage(Box::new(m))),
+                    );
+                }
 
-        Subscription::batch(subscriptions)
-    }
-}
+                Subscription::batch(subscriptions)
+            }
+        }
