@@ -37,11 +37,11 @@ fn main() -> iced::Result {
         DanceInterpreter::update,
         DanceInterpreter::view,
     )
-    .title(DanceInterpreter::title)
-    .theme(DanceInterpreter::theme)
-    .font(ICED_AW_FONT_BYTES)
-    .subscription(DanceInterpreter::subscription)
-    .run()
+        .title(DanceInterpreter::title)
+        .theme(DanceInterpreter::theme)
+        .font(ICED_AW_FONT_BYTES)
+        .subscription(DanceInterpreter::subscription)
+        .run()
 }
 
 pub trait Window {
@@ -107,7 +107,7 @@ impl DanceInterpreter {
             include_bytes!(res_file!("icon_light.png")),
             Some(image::ImageFormat::Png),
         )
-        .ok();
+            .ok();
 
         let (config_window, cw_opened) = Self::open_window(window::Settings {
             platform_specific: Self::get_platform_specific(),

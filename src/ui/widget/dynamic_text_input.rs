@@ -83,7 +83,7 @@ where
     pub fn new(placeholder: &str, value: &str) -> Self
     where
         <Theme as iced::widget::text::Catalog>::Class<'a>:
-            From<iced::widget::text::StyleFn<'a, Theme>>,
+        From<iced::widget::text::StyleFn<'a, Theme>>,
     {
         let input = TextInput::new(placeholder, value).padding(0);
 
@@ -162,7 +162,7 @@ where
 }
 
 impl<'a, Message, Theme, Renderer> Widget<Message, Theme, Renderer>
-    for DynamicTextInput<'a, Message, Theme, Renderer>
+for DynamicTextInput<'a, Message, Theme, Renderer>
 where
     Renderer: text::Renderer,
     Message: Clone,
@@ -353,7 +353,7 @@ where
 }
 
 impl<'a, Message, Theme, Renderer> From<DynamicTextInput<'a, Message, Theme, Renderer>>
-    for Element<'a, Message, Theme, Renderer>
+for Element<'a, Message, Theme, Renderer>
 where
     Message: 'a + Clone,
     Theme: 'a,
