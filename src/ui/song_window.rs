@@ -2,8 +2,9 @@ use crate::Window;
 use crate::{DanceInterpreter, Message};
 use iced::advanced::text::Shaping;
 use iced::alignment::{Horizontal, Vertical};
+use iced::widget::space::horizontal;
 use iced::widget::text::LineHeight;
-use iced::widget::{column, horizontal_space, image, row, stack, Text};
+use iced::widget::{column, image, row, stack, Text};
 use iced::Size;
 use iced::{window, Element, Length};
 
@@ -39,7 +40,7 @@ impl Default for SongWindow {
 impl SongWindow {
     pub fn view<'a>(&self, state: &'a DanceInterpreter) -> Element<'a, Message> {
         let Some(song_info) = state.data_provider.get_current_song_info() else {
-            return horizontal_space().into();
+            return horizontal().into();
         };
 
         let dance_size = self.size.height / 8.0;
@@ -69,7 +70,7 @@ impl SongWindow {
                 .size(artist_size)
                 .shaping(Shaping::Advanced),
         ]
-        .spacing(song_spacing);
+            .spacing(song_spacing);
 
         let row_bottom = (if self.enable_image {
             if let Some(image_handle) = song_info.album_art.as_ref() {
@@ -83,9 +84,9 @@ impl SongWindow {
         } else {
             row![column_title_artist]
         })
-        .height(Length::Fill)
-        .align_y(Vertical::Top)
-        .spacing(song_spacing);
+            .height(Length::Fill)
+            .align_y(Vertical::Top)
+            .spacing(song_spacing);
 
         let column_center = column![text_dance, row_bottom]
             .width(Length::Fill)
@@ -98,7 +99,7 @@ impl SongWindow {
                 stack![
                     column_center,
                     row![
-                        horizontal_space(),
+                        horizontal(),
                         column![
                             Text::new("Nächster Tanz")
                                 .size(next_dance_label_size)
@@ -122,8 +123,8 @@ impl SongWindow {
         } else {
             stack![column_center]
         })
-        .width(Length::Fill)
-        .height(Length::Fill)
-        .into()
+            .width(Length::Fill)
+            .height(Length::Fill)
+            .into()
     }
 }

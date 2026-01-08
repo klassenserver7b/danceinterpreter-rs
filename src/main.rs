@@ -19,25 +19,29 @@ use crate::ui::song_window::SongWindow;
 use crate::Message::SnapTo;
 use iced::keyboard::key::Named;
 use iced::keyboard::{Key, Modifiers};
+use iced::theme::Mode;
 use iced::widget::operation::{scroll_by, snap_to};
 use iced::widget::scrollable::{AbsoluteOffset, RelativeOffset};
 use iced::widget::Space;
 use iced::window::icon::from_file_data;
-use iced::{exit, keyboard, window, Element, Length, Size, Subscription, Task, Theme};
+use iced::{
+    exit, keyboard, system, theme, window, Element, Length, Size, Subscription, Task, Theme,
+};
 use iced_aw::ICED_AW_FONT_BYTES;
 use rfd::FileDialog;
 use std::path::PathBuf;
 
 fn main() -> iced::Result {
     iced::daemon(
-        DanceInterpreter::title,
+        DanceInterpreter::new,
         DanceInterpreter::update,
         DanceInterpreter::view,
     )
-        .theme(DanceInterpreter::theme)
-        .font(ICED_AW_FONT_BYTES)
-        .subscription(DanceInterpreter::subscription)
-        .run_with(DanceInterpreter::new)
+    .title(DanceInterpreter::title)
+    .theme(DanceInterpreter::theme)
+    .font(ICED_AW_FONT_BYTES)
+    .subscription(DanceInterpreter::subscription)
+    .run()
 }
 
 pub trait Window {
@@ -60,6 +64,8 @@ pub enum Message {
     WindowOpened(window::Id),
     WindowResized((window::Id, Size)),
     WindowClosed(window::Id),
+
+    ThemeChanged(theme::Mode),
 
     ToggleFullscreen,
     SetFullscreen(bool),
@@ -98,13 +104,10 @@ impl DanceInterpreter {
         let mut tasks = Vec::new();
 
         let icon = from_file_data(
-            match dark_light::detect() {
-                Ok(dark_light::Mode::Dark) => include_bytes!(res_file!("icon_dark.png")),
-                _ => include_bytes!(res_file!("icon_light.png")),
-            },
-            Some(ImageFormat:Png),
+            include_bytes!(res_file!("icon_light.png")),
+            Some(image::ImageFormat::Png),
         )
-            .ok();
+        .ok();
 
         let (config_window, cw_opened) = Self::open_window(window::Settings {
             platform_specific: Self::get_platform_specific(),
@@ -126,6 +129,7 @@ impl DanceInterpreter {
 
         tasks.push(cw_opened);
         tasks.push(sw_opened);
+        tasks.push(system::theme().map(Message::ThemeChanged));
 
         tasks.push(
             iced::font::load(include_bytes!(res_file!("symbols.ttf"))).map(|_| Message::Noop),
@@ -172,7 +176,7 @@ impl DanceInterpreter {
         } else if self.song_window.id == Some(window_id) {
             self.song_window.view(self)
         } else {
-            Space::new().height(Length::Fill).into()
+            Space::new().width(Length::Fill).into()
         }
     }
 
@@ -207,6 +211,31 @@ impl DanceInterpreter {
                     ().into()
                 }
             }
+
+            Message::ThemeChanged(mode) => {
+                self.config_window.theme = match mode {
+                    Mode::Light => Theme::Light,
+                    Mode::Dark | Mode::None => Theme::Dark,
+                };
+
+                let icon = from_file_data(
+                    match mode {
+                        Mode::Light | Mode::None => include_bytes!(res_file!("icon_light.png")),
+                        Mode::Dark => include_bytes!(res_file!("icon_dark.png")),
+                    },
+                    Some(image::ImageFormat::Png),
+                );
+
+                if let Ok(icon) = icon {
+                    Task::batch([
+                        window::set_icon(self.song_window.id.unwrap(), icon.clone()),
+                        window::set_icon(self.config_window.id.unwrap(), icon),
+                    ])
+                } else {
+                    ().into()
+                }
+            }
+
             Message::ToggleFullscreen => {
                 let Some(song_window_id) = self.song_window.id else {
                     return ().into();
@@ -440,7 +469,8 @@ impl DanceInterpreter {
 
     fn try_scroll_to_song(&mut self) -> Task<Message> {
         if let Some(index) = self.data_provider.take_scroll_index() {
-            let offset_y = index as f32 / std::cmp::max(1, self.data_provider.playlist_songs.len() - 1) as f32;
+            let offset_y =
+                index as f32 / std::cmp::max(1, self.data_provider.playlist_songs.len() - 1) as f32;
 
             Task::done(SnapTo(RelativeOffset {
                 x: 0.0,
@@ -455,7 +485,7 @@ impl DanceInterpreter {
         if self.song_window.id.is_some_and(|id| id == window_id) {
             Theme::Dark
         } else {
-            Theme::Light
+            self.config_window.theme.clone()
         }
     }
 
@@ -468,8 +498,7 @@ impl DanceInterpreter {
                 _ => Message::Noop,
             }),
             keyboard::listen().filter_map(|event| {
-                let keyboard::Event::KeyPressed { key, .. } = event
-                else {
+                let keyboard::Event::KeyPressed { key, .. } = event else {
                     return None;
                 };
 
@@ -477,18 +506,21 @@ impl DanceInterpreter {
                     Key::Named(Named::ArrowRight) | Key::Named(Named::Space) => {
                         Some(Message::SongChanged(SongChange::Next))
                     }
-                    Key::Named(Named::ArrowLeft) => Some(Message::SongChanged(SongChange::Previous)),
-                    Key::Named(Named::End) => Some(Message::SongChanged(SongChange::StaticAbsolute(0))),
+                    Key::Named(Named::ArrowLeft) => {
+                        Some(Message::SongChanged(SongChange::Previous))
+                    }
+                    Key::Named(Named::End) => {
+                        Some(Message::SongChanged(SongChange::StaticAbsolute(0)))
+                    }
                     Key::Named(Named::F11) => Some(Message::ToggleFullscreen),
                     Key::Named(Named::F5) => Some(Message::ReloadStatics),
                     Key::Named(Named::PageUp) => Some(Message::ScrollBy(-10.0)),
                     Key::Named(Named::PageDown) => Some(Message::ScrollBy(10.0)),
                     _ => None,
-                }}),
-
+                }
+            }),
             keyboard::listen().filter_map(|event| {
-                let keyboard::Event::KeyPressed { key, modifiers, .. } = event
-                else {
+                let keyboard::Event::KeyPressed { key, modifiers, .. } = event else {
                     return None;
                 };
                 match (key.as_ref(), modifiers) {
@@ -498,16 +530,17 @@ impl DanceInterpreter {
                     (Key::Character("r"), Modifiers::CTRL) => Some(Message::ReloadStatics),
                     _ => None,
                 }
-            })
+            }),
+            system::theme_changes().map(Message::ThemeChanged),
         ];
 
         if let Some(addr) = self.data_provider.traktor_provider.get_socket_addr() {
-                    subscriptions.push(
-                        run_subscription_with(addr, |addr| traktor_api::run_server(*addr))
-                            .map(|m| Message::TraktorMessage(Box::new(m))),
-                    );
-                }
-
-                Subscription::batch(subscriptions)
-            }
+            subscriptions.push(
+                run_subscription_with(addr, |addr| traktor_api::run_server(*addr))
+                    .map(|m| Message::TraktorMessage(Box::new(m))),
+            );
         }
+
+        Subscription::batch(subscriptions)
+    }
+}

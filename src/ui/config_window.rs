@@ -5,6 +5,7 @@ use crate::traktor_api::{TraktorNextMode, TraktorSyncMode, TRAKTOR_SERVER_DEFAUL
 use crate::ui::material_icon;
 use crate::ui::widget::dynamic_text_input::DynamicTextInput;
 use crate::{DanceInterpreter, Message, Window};
+use iced::advanced::Widget;
 use iced::alignment::Vertical;
 use iced::border::Radius;
 use iced::widget::scrollable::{Direction, RelativeOffset, Scrollbar};
@@ -16,16 +17,27 @@ use iced::{font, window, Border, Color, Element, Font, Length, Renderer, Size, T
 use iced_aw::menu::Item;
 use iced_aw::style::{menu_bar::primary, Status};
 use iced_aw::widget::InnerBounds;
-use iced_aw::{menu, menu_bar, menu_items, quad, Menu, MenuBar, ICED_AW_FONT};
+use iced_aw::{iced_aw_font, menu, menu_bar, menu_items, quad, Menu, MenuBar};
 use network_interface::Addr::V4;
 use network_interface::{NetworkInterface, NetworkInterfaceConfig};
 use std::sync::LazyLock;
 
-#[derive(Default)]
 pub struct ConfigWindow {
     pub id: Option<window::Id>,
     pub size: Size,
     pub enable_autoscroll: bool,
+    pub theme: Theme,
+}
+
+impl Default for ConfigWindow {
+    fn default() -> Self {
+        Self {
+            id: None,
+            size: Size::default(),
+            enable_autoscroll: true,
+            theme: Theme::Dark,
+        }
+    }
 }
 
 pub static PLAYLIST_SCROLLABLE_ID: LazyLock<iced::widget::Id> =
@@ -97,7 +109,7 @@ impl ConfigWindow {
                 .width(Length::Fixed(10.0))
                 .height(Length::Shrink),
         ]
-        .spacing(5);
+            .spacing(5);
 
         let mut playlist_column: Column<'_, _, _, _> = col!().spacing(5);
 
@@ -157,7 +169,7 @@ impl ConfigWindow {
                 .spacing(5)
                 .width(Length::Fill),
             ]
-            .spacing(5);
+                .spacing(5);
 
             if !playlist_column.children().is_empty() {
                 playlist_column = playlist_column.push(separator());
@@ -230,94 +242,94 @@ impl ConfigWindow {
                 label_message_button_shrink("File", Message::Noop),
                 menu_tpl_1(
                     menu_items!(
-                        (label_message_button_fill("Open Playlist File", Message::OpenPlaylist))
-                        (label_message_button_fill("Exit", Message::WindowClosed(self.id.unwrap())))
+                        (label_message_button_fill("Open Playlist File", Message::OpenPlaylist)),
+                        (label_message_button_fill("Exit", Message::WindowClosed(self.id.unwrap()))),
                     )
                 )
                 .spacing(5.0)
-            )
+            ),
             (
                 label_message_button_shrink("Edit", Message::Noop),
                 menu_tpl_1(
                     menu_items!(
-                        (labeled_message_checkbox("Autoscroll", self.enable_autoscroll, Message::EnableAutoscroll))
-                        (label_message_button_fill("Reload Statics", Message::ReloadStatics))
-                        (label_message_button_fill("Add blank song", Message::AddBlankSong(RelativeOffset::END)))
+                        (labeled_message_checkbox("Autoscroll", self.enable_autoscroll, Message::EnableAutoscroll)),
+                        (label_message_button_fill("Reload Statics", Message::ReloadStatics)),
+                        (label_message_button_fill("Add blank song", Message::AddBlankSong(RelativeOffset::END))),
                     )
                 )
                 .spacing(5.0)
-            )
+            ),
             (
                 label_message_button_shrink("SongWindow", Message::Noop),
                 menu_tpl_1(
                     menu_items!(
-                        (labeled_message_checkbox("Show Thumbnails", dance_interpreter.song_window.enable_image, Message::EnableImage))
-                        (labeled_message_checkbox("Show Next Dance", dance_interpreter.song_window.enable_next_dance, Message::EnableNextDance))
+                        (labeled_message_checkbox("Show Thumbnails", dance_interpreter.song_window.enable_image, Message::EnableImage)),
+                        (labeled_message_checkbox("Show Next Dance", dance_interpreter.song_window.enable_next_dance, Message::EnableNextDance)),
                     )
                 )
                 .spacing(5.0)
-            )
+            ),
             (
                 label_message_button_shrink("Traktor", Message::Noop),
                 menu_tpl_1(
                     menu_items!(
-                        (labeled_message_checkbox("Enable Server", dance_interpreter.data_provider.traktor_provider.is_enabled, Message::TraktorEnableServer))
+                        (labeled_message_checkbox("Enable Server", dance_interpreter.data_provider.traktor_provider.is_enabled, Message::TraktorEnableServer)),
                         (
                             labeled_dynamic_text_input("Server Address", TRAKTOR_SERVER_DEFAULT_ADDR, dance_interpreter.data_provider.traktor_provider.address.as_str(),
                                 Message::TraktorChangeAddress, Some(Message::TraktorSubmitAddress)),
                             menu_tpl_2(get_network_interface_menu(dance_interpreter))
-                        )
-                        (separator())
+                        ),
+                        (separator()),
                         (labeled_message_checkbox_opt("Enable Debug Logging", dance_interpreter.data_provider.traktor_provider.debug_logging,
-                            dance_interpreter.data_provider.traktor_provider.is_enabled.then_some(Message::TraktorEnableDebugLogging)))
-                        (label_message_button_fill_opt("Reset Connection", dance_interpreter.data_provider.traktor_provider.is_enabled.then_some(Message::TraktorReconnect)))
-                        (separator())
+                            dance_interpreter.data_provider.traktor_provider.is_enabled.then_some(Message::TraktorEnableDebugLogging))),
+                        (label_message_button_fill_opt("Reset Connection", dance_interpreter.data_provider.traktor_provider.is_enabled.then_some(Message::TraktorReconnect))),
+                        (separator()),
                         (
                             submenu_button("Sync Mode"),
                             menu_tpl_2(
                                 menu_items!(
                                     (labeled_message_radio("None", true,
-                                        Some(dance_interpreter.data_provider.traktor_provider.sync_mode.is_none()), |_| Message::TraktorSetSyncMode(None)))
+                                        Some(dance_interpreter.data_provider.traktor_provider.sync_mode.is_none()), |_| Message::TraktorSetSyncMode(None))),
                                     (labeled_message_radio("X Fader", TraktorSyncMode::Relative,
-                                        dance_interpreter.data_provider.traktor_provider.sync_mode, |v| Message::TraktorSetSyncMode(Some(v))))
+                                        dance_interpreter.data_provider.traktor_provider.sync_mode, |v| Message::TraktorSetSyncMode(Some(v)))),
                                     (labeled_message_radio("By Track Number", TraktorSyncMode::AbsoluteByNumber,
-                                        dance_interpreter.data_provider.traktor_provider.sync_mode, |v| Message::TraktorSetSyncMode(Some(v))))
+                                        dance_interpreter.data_provider.traktor_provider.sync_mode, |v| Message::TraktorSetSyncMode(Some(v)))),
                                     (labeled_message_radio("By Title / Artist", TraktorSyncMode::AbsoluteByName,
-                                        dance_interpreter.data_provider.traktor_provider.sync_mode, |v| Message::TraktorSetSyncMode(Some(v))))
+                                        dance_interpreter.data_provider.traktor_provider.sync_mode, |v| Message::TraktorSetSyncMode(Some(v)))),
                                 )
                             )
-                        )
+                        ),
                         (
                             submenu_button("Next Song Mode"),
                             menu_tpl_2(
                                 menu_items!(
                                     (labeled_message_radio("None", true,
-                                        Some(dance_interpreter.data_provider.traktor_provider.next_mode.is_none()), |_| Message::TraktorSetNextMode(None)))
+                                        Some(dance_interpreter.data_provider.traktor_provider.next_mode.is_none()), |_| Message::TraktorSetNextMode(None))),
                                     (labeled_message_radio("From other Deck (by Position)", TraktorNextMode::DeckByPosition,
-                                        dance_interpreter.data_provider.traktor_provider.next_mode, |v| Message::TraktorSetNextMode(Some(v))))
+                                        dance_interpreter.data_provider.traktor_provider.next_mode, |v| Message::TraktorSetNextMode(Some(v)))),
                                     (labeled_message_radio("From other Deck (by Track Number)", TraktorNextMode::DeckByNumber,
-                                        dance_interpreter.data_provider.traktor_provider.next_mode, |v| Message::TraktorSetNextMode(Some(v))))
+                                        dance_interpreter.data_provider.traktor_provider.next_mode, |v| Message::TraktorSetNextMode(Some(v)))),
                                     (labeled_message_radio("From Playlist (by Track Number)", TraktorNextMode::PlaylistByNumber,
-                                        dance_interpreter.data_provider.traktor_provider.next_mode, |v| Message::TraktorSetNextMode(Some(v))))
+                                        dance_interpreter.data_provider.traktor_provider.next_mode, |v| Message::TraktorSetNextMode(Some(v)))),
                                     (labeled_message_radio("From Playlist (by Title / Artist)", TraktorNextMode::PlaylistByName,
-                                        dance_interpreter.data_provider.traktor_provider.next_mode, |v| Message::TraktorSetNextMode(Some(v))))
+                                        dance_interpreter.data_provider.traktor_provider.next_mode, |v| Message::TraktorSetNextMode(Some(v)))),
                                 )
                             )
-                        )
+                        ),
                         (
                             submenu_button("Next Song Mode (Fallback)"),
                             menu_tpl_2(
                                 menu_items!(
                                     (labeled_message_radio("None", true,
-                                        Some(dance_interpreter.data_provider.traktor_provider.next_mode_fallback.is_none()), |_| Message::TraktorSetNextModeFallback(None)))
+                                        Some(dance_interpreter.data_provider.traktor_provider.next_mode_fallback.is_none()), |_| Message::TraktorSetNextModeFallback(None))),
                                     (labeled_message_radio("From other Deck (by Position)", TraktorNextMode::DeckByPosition,
-                                        dance_interpreter.data_provider.traktor_provider.next_mode_fallback, |v| Message::TraktorSetNextModeFallback(Some(v))))
+                                        dance_interpreter.data_provider.traktor_provider.next_mode_fallback, |v| Message::TraktorSetNextModeFallback(Some(v)))),
                                     (labeled_message_radio("From other Deck (by Track Number)", TraktorNextMode::DeckByNumber,
-                                        dance_interpreter.data_provider.traktor_provider.next_mode_fallback, |v| Message::TraktorSetNextModeFallback(Some(v))))
+                                        dance_interpreter.data_provider.traktor_provider.next_mode_fallback, |v| Message::TraktorSetNextModeFallback(Some(v)))),
                                     (labeled_message_radio("From Playlist (by Track Number)", TraktorNextMode::PlaylistByNumber,
-                                        dance_interpreter.data_provider.traktor_provider.next_mode_fallback, |v| Message::TraktorSetNextModeFallback(Some(v))))
+                                        dance_interpreter.data_provider.traktor_provider.next_mode_fallback, |v| Message::TraktorSetNextModeFallback(Some(v)))),
                                     (labeled_message_radio("From Playlist (by Title / Artist)", TraktorNextMode::PlaylistByName,
-                                        dance_interpreter.data_provider.traktor_provider.next_mode_fallback, |v| Message::TraktorSetNextModeFallback(Some(v))))
+                                        dance_interpreter.data_provider.traktor_provider.next_mode_fallback, |v| Message::TraktorSetNextModeFallback(Some(v)))),
                                 )
                             )
                         )
@@ -368,17 +380,16 @@ fn submenu_button(label: &'_ str) -> button::Button<'_, Message, iced::Theme, ic
     button(
         row![
             text(label).width(Length::Fill).align_y(Vertical::Center),
-            text(icon_to_string(RequiredIcons::CaretRightFill))
-                .font(ICED_AW_FONT)
+            iced_aw_font::right_open()
                 .width(Length::Shrink)
                 .align_y(Vertical::Center),
         ]
-        .align_y(iced::Alignment::Center),
+            .align_y(iced::Alignment::Center),
     )
-    .padding([4, 8])
-    .style(button::text)
-    .on_press(Message::Noop)
-    .width(Length::Fill)
+        .padding([4, 8])
+        .style(button::text)
+        .on_press(Message::Noop)
+        .width(Length::Fill)
 }
 
 fn label_message_button_opt(

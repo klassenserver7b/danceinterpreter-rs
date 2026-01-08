@@ -1,9 +1,11 @@
-use iced::futures::stream::{BoxStream, FusedStream};
-use iced::futures::{ready, Stream, StreamExt};
+use iced::advanced::graphics::futures::{boxed_stream, BoxStream, MaybeSend};
+use iced::advanced::subscription::{from_recipe, EventStream, Hasher, Recipe};
+use iced::futures::stream::FusedStream;
+use iced::futures::{ready, Stream};
 use iced::Subscription;
 use pin_project_lite::pin_project;
 use std::future::Future;
-use std::hash::{Hash, Hasher};
+use std::hash::Hash;
 use std::pin::Pin;
 use std::task::{Context, Poll};
 
@@ -70,13 +72,13 @@ impl<Fut: Future, DropFn: FnOnce()> FusedStream for DroppingOnce<Fut, DropFn> {
 pub fn run_subscription_with<T, D, S>(data: D, builder: fn(&D) -> S) -> Subscription<T>
 where
     D: Hash + 'static,
-    S: Stream<Item = T> + MaybeSend + 'static,
+    S: Stream<Item=T> + MaybeSend + 'static,
     T: 'static,
 {
     struct Runner<I, F, S, T>
     where
         F: FnOnce(&I, EventStream) -> S,
-        S: Stream<Item = T>,
+        S: Stream<Item=T>,
     {
         data: I,
         spawn: F,
@@ -86,17 +88,17 @@ where
     where
         I: Hash + 'static,
         F: FnOnce(&I, EventStream) -> S,
-        S: Stream<Item = T> + MaybeSend + 'static,
+        S: Stream<Item=T> + MaybeSend + 'static,
     {
         type Output = T;
 
-        fn hash(&self, state: &mut dyn Hasher) {
+        fn hash(&self, state: &mut Hasher) {
             std::any::TypeId::of::<I>().hash(state);
             self.data.hash(state);
         }
 
         fn stream(self: Box<Self>, input: EventStream) -> BoxStream<Self::Output> {
-            BoxStream::boxed((self.spawn)(&self.data, input))
+            boxed_stream((self.spawn)(&self.data, input))
         }
     }
 

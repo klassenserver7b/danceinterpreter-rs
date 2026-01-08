@@ -83,7 +83,7 @@ where
     pub fn new(placeholder: &str, value: &str) -> Self
     where
         <Theme as iced::widget::text::Catalog>::Class<'a>:
-            From<iced::widget::text::StyleFn<'a, Theme>>,
+        From<iced::widget::text::StyleFn<'a, Theme>>,
     {
         let input = TextInput::new(placeholder, value).padding(0);
 
@@ -162,7 +162,7 @@ where
 }
 
 impl<'a, Message, Theme, Renderer> Widget<Message, Theme, Renderer>
-    for DynamicTextInput<'a, Message, Theme, Renderer>
+for DynamicTextInput<'a, Message, Theme, Renderer>
 where
     Renderer: text::Renderer,
     Message: Clone,
@@ -173,14 +173,14 @@ where
     }
 
     fn layout(
-        &self,
+        &mut self,
         tree: &mut Tree,
         renderer: &Renderer,
         limits: &layout::Limits,
     ) -> layout::Node {
         let state: &State = tree.state.downcast_ref();
 
-        self.get_widget(state.is_edit_mode).layout(
+        self.get_widget_mut(state.is_edit_mode).layout(
             &mut tree.children[state.get_child_index()],
             renderer,
             limits,
@@ -233,15 +233,14 @@ where
     }
 
     fn operate(
-        &self,
+        &mut self,
         tree: &mut Tree,
         layout: Layout<'_>,
         renderer: &Renderer,
         operation: &mut dyn Operation,
     ) {
         let state: &State = tree.state.downcast_ref();
-
-        self.get_widget(state.is_edit_mode).operate(
+        self.get_widget_mut(state.is_edit_mode).operate(
             &mut tree.children[state.get_child_index()],
             layout,
             renderer,
@@ -249,30 +248,18 @@ where
         );
     }
 
-    fn on_event(
+    fn update(
         &mut self,
         tree: &mut Tree,
-        event: Event,
-        layout: Layout<'_>,
-        cursor: mouse::Cursor,
-        renderer: &Renderer,
-        clipboard: &mut dyn Clipboard,
+        event: &Event,
+        _layout: Layout<'_>,
+        _cursor: mouse::Cursor,
+        _renderer: &Renderer,
+        _clipboard: &mut dyn Clipboard,
         shell: &mut Shell<'_, Message>,
-        viewport: &Rectangle,
-    ) -> event::Status {
+        _viewport: &Rectangle,
+    ) {
         let state: &mut State = tree.state.downcast_mut();
-        let content = self.get_widget_mut(state.is_edit_mode);
-
-        let content_captured = content.on_event(
-            &mut tree.children[state.get_child_index()],
-            event.clone(),
-            layout,
-            cursor,
-            renderer,
-            clipboard,
-            shell,
-            viewport,
-        ) == event::Status::Captured;
 
         if state.is_edit_mode {
             let input_state: &mut text_input::State<Renderer::Paragraph> =
@@ -282,7 +269,7 @@ where
                 && let Event::Keyboard(keyboard::Event::KeyPressed { key, .. }) = event.clone()
                 && key == Key::Named(Named::Enter) {
                 input_state.unfocus();
-                }
+            }
 
             if !input_state.is_focused() {
                 state.is_edit_mode = false;
@@ -294,12 +281,6 @@ where
                 shell.invalidate_layout();
             }
         }
-
-        if content_captured {
-            return event::Status::Captured;
-        }
-
-        update::<Message, Renderer>(tree, event, layout, cursor, shell, self.on_enter.clone())
     }
 
     fn mouse_interaction(
@@ -331,8 +312,9 @@ where
     fn overlay<'b>(
         &'b mut self,
         tree: &'b mut Tree,
-        layout: Layout<'_>,
+        layout: Layout<'b>,
         renderer: &Renderer,
+        viewport: &Rectangle,
         translation: Vector,
     ) -> Option<overlay::Element<'b, Message, Theme, Renderer>> {
         let state: &State = tree.state.downcast_ref();
@@ -341,13 +323,14 @@ where
             &mut tree.children[state.get_child_index()],
             layout,
             renderer,
+            viewport,
             translation,
         )
     }
 }
 
 impl<'a, Message, Theme, Renderer> From<DynamicTextInput<'a, Message, Theme, Renderer>>
-    for Element<'a, Message, Theme, Renderer>
+for Element<'a, Message, Theme, Renderer>
 where
     Message: 'a + Clone,
     Theme: 'a,
