@@ -1,4 +1,4 @@
-use iced::advanced::graphics::core::{event, touch, Element};
+use iced::advanced::graphics::core::{touch, Element};
 use iced::advanced::text::Wrapping;
 use iced::advanced::widget::{tree, Operation, Tree};
 use iced::advanced::{layout, mouse, overlay, renderer, text, Clipboard, Layout, Shell, Widget};
@@ -83,7 +83,7 @@ where
     pub fn new(placeholder: &str, value: &str) -> Self
     where
         <Theme as iced::widget::text::Catalog>::Class<'a>:
-        From<iced::widget::text::StyleFn<'a, Theme>>,
+            From<iced::widget::text::StyleFn<'a, Theme>>,
     {
         let input = TextInput::new(placeholder, value).padding(0);
 
@@ -162,7 +162,7 @@ where
 }
 
 impl<'a, Message, Theme, Renderer> Widget<Message, Theme, Renderer>
-for DynamicTextInput<'a, Message, Theme, Renderer>
+    for DynamicTextInput<'a, Message, Theme, Renderer>
 where
     Renderer: text::Renderer,
     Message: Clone,
@@ -252,14 +252,26 @@ where
         &mut self,
         tree: &mut Tree,
         event: &Event,
-        _layout: Layout<'_>,
-        _cursor: mouse::Cursor,
-        _renderer: &Renderer,
-        _clipboard: &mut dyn Clipboard,
+        layout: Layout<'_>,
+        cursor: mouse::Cursor,
+        renderer: &Renderer,
+        clipboard: &mut dyn Clipboard,
         shell: &mut Shell<'_, Message>,
-        _viewport: &Rectangle,
+        viewport: &Rectangle,
     ) {
         let state: &mut State = tree.state.downcast_mut();
+        let content = self.get_widget_mut(state.is_edit_mode);
+
+        content.update(
+            &mut tree.children[state.get_child_index()],
+            &event.clone(),
+            layout,
+            cursor,
+            renderer,
+            clipboard,
+            shell,
+            viewport,
+        );
 
         if state.is_edit_mode {
             let input_state: &mut text_input::State<Renderer::Paragraph> =
@@ -267,8 +279,10 @@ where
 
             if input_state.is_focused()
                 && let Event::Keyboard(keyboard::Event::KeyPressed { key, .. }) = event.clone()
-                && key == Key::Named(Named::Enter) {
+                && key == Key::Named(Named::Enter)
+            {
                 input_state.unfocus();
+                shell.capture_event();
             }
 
             if !input_state.is_focused() {
@@ -281,6 +295,15 @@ where
                 shell.invalidate_layout();
             }
         }
+
+        handle_enter_event::<Message, Renderer>(
+            tree,
+            event,
+            layout,
+            cursor,
+            shell,
+            self.on_enter.clone(),
+        )
     }
 
     fn mouse_interaction(
@@ -330,7 +353,7 @@ where
 }
 
 impl<'a, Message, Theme, Renderer> From<DynamicTextInput<'a, Message, Theme, Renderer>>
-for Element<'a, Message, Theme, Renderer>
+    for Element<'a, Message, Theme, Renderer>
 where
     Message: 'a + Clone,
     Theme: 'a,
@@ -344,14 +367,14 @@ where
     }
 }
 
-fn update<Message: Clone, Renderer: text::Renderer>(
+fn handle_enter_event<Message: Clone, Renderer: text::Renderer>(
     tree: &mut Tree,
-    event: Event,
+    event: &Event,
     layout: Layout<'_>,
     cursor: mouse::Cursor,
     shell: &mut Shell<'_, Message>,
     on_enter: Option<Message>,
-) -> event::Status {
+) {
     let state: &mut State = tree.state.downcast_mut();
 
     match event {
@@ -364,7 +387,7 @@ fn update<Message: Clone, Renderer: text::Renderer>(
 
                 state.is_pressed = true;
 
-                return event::Status::Captured;
+                shell.capture_event();
             }
         }
         Event::Mouse(mouse::Event::ButtonReleased(mouse::Button::Left))
@@ -390,7 +413,7 @@ fn update<Message: Clone, Renderer: text::Renderer>(
                     }
                 }
 
-                return event::Status::Captured;
+                shell.capture_event();
             }
         }
         Event::Touch(touch::Event::FingerLost { .. }) => {
@@ -398,8 +421,6 @@ fn update<Message: Clone, Renderer: text::Renderer>(
         }
         _ => {}
     }
-
-    event::Status::Ignored
 }
 
 fn enter_edit_mode<Message: Clone, Renderer: text::Renderer>(
