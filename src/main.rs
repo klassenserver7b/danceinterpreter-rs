@@ -22,10 +22,10 @@ use iced::keyboard::{Key, Modifiers};
 use iced::theme::Mode;
 use iced::widget::operation::{scroll_by, snap_to};
 use iced::widget::scrollable::{AbsoluteOffset, RelativeOffset};
-use iced::widget::Space;
+use iced::widget::space::horizontal;
 use iced::window::icon::from_file_data;
 use iced::{
-    exit, keyboard, system, theme, window, Element, Length, Size, Subscription, Task, Theme,
+    exit, keyboard, system, theme, window, Element, Size, Subscription, Task, Theme,
 };
 use iced_aw::ICED_AW_FONT_BYTES;
 use rfd::FileDialog;
@@ -176,7 +176,7 @@ impl DanceInterpreter {
         } else if self.song_window.id == Some(window_id) {
             self.song_window.view(self)
         } else {
-            Space::new().width(Length::Fill).into()
+            horizontal().into()
         }
     }
 
