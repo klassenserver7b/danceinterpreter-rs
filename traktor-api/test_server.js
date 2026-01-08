@@ -98,13 +98,13 @@ const server = Bun.serve({
                 if (server.upgrade(req))
                     return;
 
-                return new Response("expected websocket connection", { status: 400 });
+                return new Response("expected websocket connection", {status: 400});
             },
             POST: async req => {
-                const { searchParams } = URL.parse(req.url);
+                const {searchParams} = URL.parse(req.url);
                 const path = searchParams.get("path");
                 if (!path)
-                    return new Response("'path' query param missing", { status: 400 });
+                    return new Response("'path' query param missing", {status: 400});
 
                 const data = await req.blob();
                 loadedImages.push(path);
@@ -134,7 +134,7 @@ const server = Bun.serve({
         console.log(`${req.method}\t${req.url}`);
         if (req.body) console.log(await req.text());
 
-        return new Response("Not Found", { status: 404 });
+        return new Response("Not Found", {status: 404});
     },
 
     websocket: {

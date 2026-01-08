@@ -1,94 +1,100 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <component type="desktop-application">
-  <id>io.github.klassenserver7b.danceinterpreter-rs</id>
-  <metadata_license>CC0</metadata_license>
-  <project_license>GPL-3.0+</project_license>
-  <name>Danceinterpreter</name>
-  <summary>Utility for displaying song infos</summary>
+    <id>io.github.klassenserver7b.danceinterpreter-rs</id>
+    <metadata_license>CC0</metadata_license>
+    <project_license>GPL-3.0+</project_license>
+    <name>Danceinterpreter</name>
+    <summary>Utility for displaying song infos</summary>
 
-  <description>
-    <p>The Danceinterpreter is a utility to display songs and their according dances at ballroom dance events</p>
-    <p>It currently contains three source modes</p>
-    <ol>
-      <li>M3U / M3U8 files with references to local mp3 files</li>
-      <li>A connection to a running Traktor Pro instance</li>
-      <li>Manually added songs and static dance labels</li>
-    </ol>
-  </description>
+    <description>
+        <p>The Danceinterpreter is a utility to display songs and their according dances at ballroom dance events</p>
+        <p>It currently contains three source modes</p>
+        <ol>
+            <li>M3U / M3U8 files with references to local mp3 files</li>
+            <li>A connection to a running Traktor Pro instance</li>
+            <li>Manually added songs and static dance labels</li>
+        </ol>
+    </description>
 
-  <screenshots>
-    <screenshot type="default">
-      <image type="source">https://github.com/user-attachments/assets/896e5cf3-832b-4579-aba5-398d5075aeee</image>
-      <caption>Main Window</caption>
-    </screenshot>
-    <screenshot>
-      <image type="source">https://github.com/user-attachments/assets/f7d7c43e-31cb-4c9e-a593-1a664d9190b4</image>
-      <caption>Dance Window</caption>
-    </screenshot>
-  </screenshots>
+    <screenshots>
+        <screenshot type="default">
+            <image type="source">https://github.com/user-attachments/assets/896e5cf3-832b-4579-aba5-398d5075aeee</image>
+            <caption>Main Window</caption>
+        </screenshot>
+        <screenshot>
+            <image type="source">https://github.com/user-attachments/assets/f7d7c43e-31cb-4c9e-a593-1a664d9190b4</image>
+            <caption>Dance Window</caption>
+        </screenshot>
+    </screenshots>
 
-  <url type="homepage">https://github.com/klassenserver7b/danceinterpreter-rs</url>
-  <url type="vcs-browser">https://github.com/klassenserver7b/danceinterpreter-rs</url>
-  <url type="bugtracker">https://github.com/klassenserver7b/danceinterpreter-rs/issues</url>
+    <url type="homepage">https://github.com/klassenserver7b/danceinterpreter-rs</url>
+    <url type="vcs-browser">https://github.com/klassenserver7b/danceinterpreter-rs</url>
+    <url type="bugtracker">https://github.com/klassenserver7b/danceinterpreter-rs/issues</url>
 
-  <branding>
-    <color type="primary" scheme_preference="light">#3aa4e6</color>
-    <color type="primary" scheme_preference="dark">#0d4062</color>
-  </branding>
+    <branding>
+        <color type="primary" scheme_preference="light">#3aa4e6</color>
+        <color type="primary" scheme_preference="dark">#0d4062</color>
+    </branding>
 
-  <!--
-  Open Age Rating Service
-  https://hughsie.github.io/oars/index.html
-  -->
-  <content_rating type="oars-1.1" />
+    <!--
+    Open Age Rating Service
+    https://hughsie.github.io/oars/index.html
+    -->
+    <content_rating type="oars-1.1"/>
 
-  <releases>
-    <release version="0.6.7" date="2025-11-02">
-      <url type="details">https://github.com/klassenserver7b/danceinterpreter-rs/releases/tag/v0.6.7</url>
-      <description>
-        <p>Added autoscrolling, Added played indicator for Traktor</p>
-      </description>
-    </release>
-    <release version="0.6.6" date="2025-10-17">
-      <url type="details">https://github.com/klassenserver7b/danceinterpreter-rs/releases/tag/v0.6.6</url>
-      <description>
-        <p>Fixed some autodiscovery bugs and improved memory usage</p>
-      </description>
-    </release>
-    <release version="0.6.5" date="2025-08-25">
-      <url type="details">https://github.com/klassenserver7b/danceinterpreter-rs/releases/tag/v0.6.5</url>
-      <description>
-        <p>Added autodiscovery for traktor http server and the cover loader</p>
-      </description>
-    </release>
-    <release version="0.6.0" date="2025-08-02">
-      <url type="details">https://github.com/klassenserver7b/danceinterpreter-rs/releases/tag/v0.6.0</url>
-      <description>
-        <p>Added selection menu for the network interface the traktor server should bind on</p>
-      </description>
-    </release>
-    <release version="0.5.0" date="2025-05-16">
-      <url type="details">https://github.com/klassenserver7b/danceinterpreter-rs/releases/tag/v0.5.0</url>
-      <description>
-        <p>Added NextDance to Traktor mode</p>
-        <p>Enhanced track selection in Traktor mode</p>
-      </description>
-    </release>
-    <release version="0.4.0" date="2025-05-07">
-      <url type="details">https://github.com/klassenserver7b/danceinterpreter-rs/releases/tag/v0.4.0</url>
-      <description>
-        <p>Rust rewrite of Danceinterpreter</p>
-        <p>All features except Spotify from https://github.com/klassenserver7b/danceinterpreter</p>
-        <p>Added Traktor Support</p>
-      </description>
-    </release>
-  </releases>
+    <releases>
+        <release version="0.6.8" date="2026-01-08">
+            <url type="details">https://github.com/klassenserver7b/danceinterpreter-rs/releases/tag/v0.6.8</url>
+            <description>
+                <p>Updated iced and iced_aw base</p>
+            </description>
+        </release>
+        <release version="0.6.7" date="2025-11-02">
+            <url type="details">https://github.com/klassenserver7b/danceinterpreter-rs/releases/tag/v0.6.7</url>
+            <description>
+                <p>Added autoscrolling, Added played indicator for Traktor</p>
+            </description>
+        </release>
+        <release version="0.6.6" date="2025-10-17">
+            <url type="details">https://github.com/klassenserver7b/danceinterpreter-rs/releases/tag/v0.6.6</url>
+            <description>
+                <p>Fixed some autodiscovery bugs and improved memory usage</p>
+            </description>
+        </release>
+        <release version="0.6.5" date="2025-08-25">
+            <url type="details">https://github.com/klassenserver7b/danceinterpreter-rs/releases/tag/v0.6.5</url>
+            <description>
+                <p>Added autodiscovery for traktor http server and the cover loader</p>
+            </description>
+        </release>
+        <release version="0.6.0" date="2025-08-02">
+            <url type="details">https://github.com/klassenserver7b/danceinterpreter-rs/releases/tag/v0.6.0</url>
+            <description>
+                <p>Added selection menu for the network interface the traktor server should bind on</p>
+            </description>
+        </release>
+        <release version="0.5.0" date="2025-05-16">
+            <url type="details">https://github.com/klassenserver7b/danceinterpreter-rs/releases/tag/v0.5.0</url>
+            <description>
+                <p>Added NextDance to Traktor mode</p>
+                <p>Enhanced track selection in Traktor mode</p>
+            </description>
+        </release>
+        <release version="0.4.0" date="2025-05-07">
+            <url type="details">https://github.com/klassenserver7b/danceinterpreter-rs/releases/tag/v0.4.0</url>
+            <description>
+                <p>Rust rewrite of Danceinterpreter</p>
+                <p>All features except Spotify from https://github.com/klassenserver7b/danceinterpreter</p>
+                <p>Added Traktor Support</p>
+            </description>
+        </release>
+    </releases>
 
-  <developer id="io.github">
-    <name>Klassenserver7b</name>
-  </developer>
+    <developer id="io.github">
+        <name>Klassenserver7b</name>
+    </developer>
 
-  <update_contact>klassenserver7bwin10@gmail.com</update_contact>
-  <launchable type="desktop-id">io.github.klassenserver7b.danceinterpreter-rs.desktop</launchable>
+    <update_contact>klassenserver7bwin10@gmail.com</update_contact>
+    <launchable type="desktop-id">io.github.klassenserver7b.danceinterpreter-rs.desktop</launchable>
 
 </component>
