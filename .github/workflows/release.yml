@@ -117,7 +117,7 @@ jobs:
             cp "target/${{ matrix.target }}/release/$BIN_NAME" "bins/"
           fi
 
-      - uses: actions/upload-artifact@v5.0.0
+      - uses: actions/upload-artifact@v6.0.0
         with:
           name: bins-rust-${{ matrix.build }}
           path: bins
@@ -145,7 +145,7 @@ jobs:
           bun build --compile --target=bun-linux-aarch64 ./index.ts --outfile target/cover-loader-linux-aarch64
           bun build --compile --target=bun-windows-x64-baseline ./index.ts --outfile target/cover-loader-windows-x64
 
-      - uses: actions/upload-artifact@v5.0.0
+      - uses: actions/upload-artifact@v6.0.0
         with:
           name: bins-js
           path: ./traktor-api/cover-loader/target
@@ -156,7 +156,7 @@ jobs:
     needs: [ dist-rust, dist-js ]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/download-artifact@v6.0.0
+      - uses: actions/download-artifact@v7.0.0
       - run: ls -al bins-*
 
       - name: Calculate tag name
