@@ -123,7 +123,7 @@ impl TraktorServer {
         })
     }
 
-    async fn handle_init(&mut self, request: InitializeRequest) -> impl warp::Reply + use < > {
+    async fn handle_init(&mut self, request: InitializeRequest) -> impl warp::Reply + use<> {
         if request.session_id == self.session_id {
             let time_offset_ms = SystemTime::now()
                 .duration_since(UNIX_EPOCH)
