@@ -63,7 +63,7 @@ impl TraktorServer {
         let _ = self.output.send(message).await;
     }
 
-    async fn send_messages(&mut self, messages: impl IntoIterator<Item = ServerMessage>) {
+    async fn send_messages(&mut self, messages: impl IntoIterator<Item=ServerMessage>) {
         let _ = self
             .output
             .send_all(&mut stream::iter(messages).map(Ok))
@@ -90,10 +90,10 @@ impl TraktorServer {
             &self.deck_files.2,
             &self.deck_files.3,
         ]
-        .into_iter()
-        .filter(|&f| !f.is_empty())
-        .map(|f| f.to_owned())
-        .collect();
+            .into_iter()
+            .filter(|&f| !f.is_empty())
+            .map(|f| f.to_owned())
+            .collect();
         required_images.dedup();
 
         required_images
@@ -140,7 +140,7 @@ impl TraktorServer {
                 time_offset_ms,
                 initial_state: Box::new(request.state),
             })
-            .await;
+                .await;
 
             let mut messages = self
                 .queue
@@ -159,7 +159,7 @@ impl TraktorServer {
         &mut self,
         session_id: String,
         update: StateUpdate,
-    ) -> impl warp::Reply + use<> {
+    ) -> impl warp::Reply + use < > {
         if session_id == self.session_id {
             match &update {
                 StateUpdate::DeckContent(ID::A, content) => {
@@ -230,7 +230,7 @@ impl TraktorServer {
         self.cover_sockets.remove(&id);
     }
 
-    async fn handle_log(&mut self, msg: String) -> impl warp::Reply + use<> {
+    async fn handle_log(&mut self, msg: String) -> impl warp::Reply + use < > {
         self.send_message(ServerMessage::Log(msg)).await;
         StatusCode::CREATED
     }
@@ -239,7 +239,7 @@ impl TraktorServer {
 impl TraktorServer {
     pub fn routes(
         state: Arc<Mutex<Self>>,
-    ) -> impl Filter<Extract = (impl warp::Reply,), Error = warp::Rejection> + Clone + use<> {
+    ) -> impl Filter<Extract=(impl warp::Reply,), Error=warp::Rejection> + Clone + use < > {
         Self::is_started(state.clone())
             .and(
                 Self::route_connect(state.clone())
@@ -253,13 +253,13 @@ impl TraktorServer {
 
     fn with_state(
         state: Arc<Mutex<Self>>,
-    ) -> impl Filter<Extract = (Arc<Mutex<Self>>,), Error = Infallible> + Clone {
+    ) -> impl Filter<Extract=(Arc<Mutex<Self>>,), Error=Infallible> + Clone {
         warp::any().map(move || state.clone())
     }
 
     fn is_started(
         state: Arc<Mutex<Self>>,
-    ) -> impl Filter<Extract = ((),), Error = warp::Rejection> + Clone {
+    ) -> impl Filter<Extract=((),), Error=warp::Rejection> + Clone {
         warp::any()
             .and(Self::with_state(state))
             .and_then(async |state: Arc<Mutex<Self>>| {
@@ -274,13 +274,13 @@ impl TraktorServer {
     }
 
     fn json_body<T: DeserializeOwned + Send>()
-    -> impl Filter<Extract = (T,), Error = warp::Rejection> + Clone {
+        -> impl Filter<Extract=(T,), Error=warp::Rejection> + Clone {
         warp::body::json()
     }
 
     fn route_connect(
         state: Arc<Mutex<Self>>,
-    ) -> impl Filter<Extract = (impl warp::Reply,), Error = warp::Rejection> + Clone {
+    ) -> impl Filter<Extract=(impl warp::Reply,), Error=warp::Rejection> + Clone {
         warp::path!("connect")
             .and(Self::with_state(state))
             .then(async |state: Arc<Mutex<Self>>| state.lock().await.handle_connect().await)
@@ -288,7 +288,7 @@ impl TraktorServer {
 
     fn route_init(
         state: Arc<Mutex<Self>>,
-    ) -> impl Filter<Extract = (impl warp::Reply,), Error = warp::Rejection> + Clone {
+    ) -> impl Filter<Extract=(impl warp::Reply,), Error=warp::Rejection> + Clone {
         warp::path!("init")
             .and(warp::post())
             .and(Self::with_state(state))
@@ -302,7 +302,7 @@ impl TraktorServer {
 
     fn route_update(
         state: Arc<Mutex<Self>>,
-    ) -> impl Filter<Extract = (impl warp::Reply,), Error = warp::Rejection> + Clone {
+    ) -> impl Filter<Extract=(impl warp::Reply,), Error=warp::Rejection> + Clone {
         warp::path("update")
             .and(warp::post())
             .and(Self::with_state(state))
@@ -313,7 +313,7 @@ impl TraktorServer {
     }
 
     fn route_update_sub_routes()
-    -> impl Filter<Extract = ((String, StateUpdate),), Error = warp::Rejection> + Clone {
+        -> impl Filter<Extract=((String, StateUpdate),), Error=warp::Rejection> + Clone {
         warp::path!("mixer")
             .and(Self::json_body())
             .then(async move |req: UpdateRequest<_>| {
@@ -395,7 +395,7 @@ impl TraktorServer {
 
     fn route_cover(
         state: Arc<Mutex<Self>>,
-    ) -> impl Filter<Extract = (impl warp::Reply,), Error = warp::Rejection> + Clone {
+    ) -> impl Filter<Extract=(impl warp::Reply,), Error=warp::Rejection> + Clone {
         warp::path!("cover").and(
             Self::route_cover_upload(state.clone()).or(Self::route_cover_socket(state.clone())),
         )
@@ -403,7 +403,7 @@ impl TraktorServer {
 
     fn route_cover_upload(
         state: Arc<Mutex<Self>>,
-    ) -> impl Filter<Extract = (impl warp::Reply,), Error = warp::Rejection> + Clone {
+    ) -> impl Filter<Extract=(impl warp::Reply,), Error=warp::Rejection> + Clone {
         warp::post()
             .and(Self::with_state(state))
             .and(warp::body::bytes())
@@ -420,7 +420,7 @@ impl TraktorServer {
 
     fn route_cover_socket(
         state: Arc<Mutex<Self>>,
-    ) -> impl Filter<Extract = (impl warp::Reply,), Error = warp::Rejection> + Clone {
+    ) -> impl Filter<Extract=(impl warp::Reply,), Error=warp::Rejection> + Clone {
         warp::ws()
             .and(Self::with_state(state))
             .map(|ws: warp::ws::Ws, state: Arc<Mutex<Self>>| {
@@ -460,7 +460,7 @@ impl TraktorServer {
 
     fn route_log(
         state: Arc<Mutex<Self>>,
-    ) -> impl Filter<Extract = (impl warp::Reply,), Error = warp::Rejection> + Clone {
+    ) -> impl Filter<Extract=(impl warp::Reply,), Error=warp::Rejection> + Clone {
         warp::path!("log")
             .and(warp::post())
             .and(Self::with_state(state))
@@ -525,7 +525,7 @@ fn advertise_server(addr: SocketAddr) -> Service {
     svc
 }
 
-pub fn run_server(addr: SocketAddr) -> impl Stream<Item = ServerMessage> {
+pub fn run_server(addr: SocketAddr) -> impl Stream<Item=ServerMessage> {
     let (output, output_receive) = iced::futures::channel::mpsc::unbounded();
     let (input_send, input) = iced::futures::channel::mpsc::unbounded();
     let (cancel, cancelled) = oneshot::channel();
@@ -537,7 +537,7 @@ pub fn run_server(addr: SocketAddr) -> impl Stream<Item = ServerMessage> {
             let _ = cancel.send(());
         },
     )
-    .filter_map(|_| async { None });
+        .filter_map(|_| async { None });
 
     stream::select(output_receive, runner)
 }

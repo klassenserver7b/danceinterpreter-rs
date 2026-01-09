@@ -35,7 +35,7 @@ jobs:
         uses: actions-rs/cargo@v1
         with:
           command: test
-          args: --release          
+          args: --release
   
   dist-rust:
     name: Rust-dist
@@ -43,7 +43,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false # don't fail other jobs if one fails
-      matrix:  # Remove MacOS because 10x cost multiplier <<<[ x86_64-linux, aarch64-linux, x86_64-windows, aarch64-macos ]>>>
+      matrix: # Remove MacOS because 10x cost multiplier <<<[ x86_64-linux, aarch64-linux, x86_64-windows, aarch64-macos ]>>>
         build: [ x86_64-linux, aarch64-linux, x86_64-windows ]
         include:
           - build: x86_64-linux
@@ -91,8 +91,8 @@ jobs:
       - name: Build release binary (windows)
         if: matrix.build == 'x86_64-windows'
         run: |
-            $env:RUSTFLAGS = "-Csymbol-mangling-version=v0"
-            cargo build --release --target ${{ matrix.target }}
+          $env:RUSTFLAGS = "-Csymbol-mangling-version=v0"
+          cargo build --release --target ${{ matrix.target }}
 
       - name: Strip release binary (linux and macos)
         if: matrix.build == 'x86_64-linux' || matrix.build == 'x86_64-macos'
@@ -123,34 +123,34 @@ jobs:
           path: bins
 
   dist-js:
-      name: JS-dist
-      runs-on: ubuntu-latest
-      steps:
-        - name: Checkout sources
-          uses: actions/checkout@v6
-          with:
-            submodules: true
+    name: JS-dist
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v6
+        with:
+          submodules: true
 
-        - name: Setup Bun
-          uses: oven-sh/setup-bun@v2
-          with:
-            bun-version: "latest"
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "latest"
 
-        - name: Compile Binaries
-          shell: bash
-          run: |
-            cd $COVER_LOADER_PATH
-            bun install
-            bun build --compile --target=bun-linux-x64 ./index.ts --outfile target/cover-loader-linux-x64
-            bun build --compile --target=bun-linux-aarch64 ./index.ts --outfile target/cover-loader-linux-aarch64
-            bun build --compile --target=bun-windows-x64-baseline ./index.ts --outfile target/cover-loader-windows-x64
+      - name: Compile Binaries
+        shell: bash
+        run: |
+          cd $COVER_LOADER_PATH
+          bun install
+          bun build --compile --target=bun-linux-x64 ./index.ts --outfile target/cover-loader-linux-x64
+          bun build --compile --target=bun-linux-aarch64 ./index.ts --outfile target/cover-loader-linux-aarch64
+          bun build --compile --target=bun-windows-x64-baseline ./index.ts --outfile target/cover-loader-windows-x64
 
-        - uses: actions/upload-artifact@v5.0.0
-          with:
-            name: bins-js
-            path: ./traktor-api/cover-loader/target
-        
-
+      - uses: actions/upload-artifact@v5.0.0
+        with:
+          name: bins-js
+          path: ./traktor-api/cover-loader/target
+  
+  
   publish:
     name: Publish
     needs: [ dist-rust, dist-js ]

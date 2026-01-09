@@ -271,14 +271,14 @@ impl TraktorDataProvider {
                     &state.channels.2,
                     &state.channels.3,
                 ]
-                .into_iter()
-                .position(|c| {
-                    if is_on_left {
-                        c.x_fader_right
-                    } else {
-                        c.x_fader_left
-                    }
-                });
+                    .into_iter()
+                    .position(|c| {
+                        if is_on_left {
+                            c.x_fader_right
+                        } else {
+                            c.x_fader_left
+                        }
+                    });
 
                 let deck = other_side.and_then(|o| match o {
                     0 => Some(&state.decks.0),
@@ -298,8 +298,8 @@ impl TraktorDataProvider {
                     &state.decks.2,
                     &state.decks.3,
                 ]
-                .into_iter()
-                .find(|d| d.content.number == current_song_info.track_number + 1);
+                    .into_iter()
+                    .find(|d| d.content.number == current_song_info.track_number + 1);
 
                 deck.map(|d| self.copy_song_info_from_deck(&d.content, playlist))
             }
@@ -359,10 +359,10 @@ impl TraktorDataProvider {
             &state.decks.2.content.file_path,
             &state.decks.3.content.file_path,
         ]
-        .into_iter()
-        .filter(|&f| !f.is_empty())
-        .map(|f| f.to_owned())
-        .collect();
+            .into_iter()
+            .filter(|&f| !f.is_empty())
+            .map(|f| f.to_owned())
+            .collect();
         files.dedup();
 
         files
