@@ -45,11 +45,14 @@ fn main() -> iced::Result {
 }
 
 pub trait Window {
-    fn on_create(&mut self, id: window::Id);
+    fn new(id: window::Id) -> Self;
+
     fn on_resize(&mut self, size: Size);
+    fn on_close(&mut self);
+
+    fn is_closed(&self) -> bool;
 }
 
-#[derive(Default)]
 struct DanceInterpreter {
     config_window: ConfigWindow,
     song_window: SongWindow,
@@ -124,7 +127,7 @@ impl DanceInterpreter {
             config_window,
             song_window,
 
-            ..Self::default()
+            data_provider: SongDataProvider::default(),
         };
 
         tasks.push(cw_opened);
@@ -140,13 +143,9 @@ impl DanceInterpreter {
         (state, Task::batch(tasks))
     }
 
-    fn open_window<T: Window + Default>(settings: window::Settings) -> (T, Task<Message>) {
+    fn open_window<T: Window>(settings: window::Settings) -> (T, Task<Message>) {
         let (id, open) = window::open(settings);
-
-        let mut window = T::default();
-        window.on_create(id);
-
-        (window, open.map(Message::WindowOpened))
+        (T::new(id), open.map(Message::WindowOpened))
     }
 
     fn get_platform_specific() -> window::settings::PlatformSpecific {
@@ -161,9 +160,9 @@ impl DanceInterpreter {
     }
 
     pub fn title(&self, window_id: window::Id) -> String {
-        if self.config_window.id == Some(window_id) {
+        if self.config_window.id == window_id {
             "Config Window".to_string()
-        } else if self.song_window.id == Some(window_id) {
+        } else if self.song_window.id == window_id {
             "Song Window".to_string()
         } else {
             String::new()
@@ -171,9 +170,9 @@ impl DanceInterpreter {
     }
 
     pub fn view(&self, window_id: window::Id) -> Element<'_, Message> {
-        if self.config_window.id == Some(window_id) {
+        if self.config_window.id == window_id {
             self.config_window.view(self)
-        } else if self.song_window.id == Some(window_id) {
+        } else if self.song_window.id == window_id {
             self.song_window.view(self)
         } else {
             horizontal().into()
@@ -184,28 +183,30 @@ impl DanceInterpreter {
         match message {
             Message::WindowOpened(_) => ().into(),
             Message::WindowResized((window_id, size)) => {
-                if self.config_window.id == Some(window_id) {
+                if self.config_window.id == window_id {
                     self.config_window.on_resize(size);
-                } else if self.song_window.id == Some(window_id) {
+                } else if self.song_window.id == window_id {
                     self.song_window.on_resize(size);
                 }
 
                 ().into()
             }
             Message::WindowClosed(window_id) => {
-                if self.config_window.id == Some(window_id) {
-                    self.config_window.id = None;
+                if self.config_window.id == window_id {
+                    self.config_window.on_close();
 
-                    match self.song_window.id {
-                        Some(window_id) => window::close(window_id),
-                        None => exit(),
+                    if self.song_window.is_closed() {
+                        exit()
+                    } else {
+                        window::close(self.song_window.id)
                     }
-                } else if self.song_window.id == Some(window_id) {
-                    self.song_window.id = None;
+                } else if self.song_window.id == window_id {
+                    self.song_window.on_close();
 
-                    match self.config_window.id {
-                        Some(window_id) => window::close(window_id),
-                        None => exit(),
+                    if self.config_window.is_closed() {
+                        exit()
+                    } else {
+                        window::close(self.config_window.id)
                     }
                 } else {
                     ().into()
@@ -228,8 +229,8 @@ impl DanceInterpreter {
 
                 if let Ok(icon) = icon {
                     Task::batch([
-                        window::set_icon(self.song_window.id.unwrap(), icon.clone()),
-                        window::set_icon(self.config_window.id.unwrap(), icon),
+                        window::set_icon(self.song_window.id, icon.clone()),
+                        window::set_icon(self.config_window.id, icon),
                     ])
                 } else {
                     ().into()
@@ -237,17 +238,13 @@ impl DanceInterpreter {
             }
 
             Message::ToggleFullscreen => {
-                let Some(song_window_id) = self.song_window.id else {
-                    return ().into();
-                };
+                let song_window_id = self.song_window.id;
 
                 window::mode(song_window_id)
                     .map(|mode| Message::SetFullscreen(mode != window::Mode::Fullscreen))
             }
             Message::SetFullscreen(fullscreen) => {
-                let Some(song_window_id) = self.song_window.id else {
-                    return ().into();
-                };
+                let song_window_id = self.song_window.id;
 
                 window::set_mode(
                     song_window_id,
@@ -482,7 +479,7 @@ impl DanceInterpreter {
     }
 
     fn theme(&self, window_id: window::Id) -> Theme {
-        if self.song_window.id.is_some_and(|id| id == window_id) {
+        if self.song_window.id == window_id {
             Theme::Dark
         } else {
             self.config_window.theme.clone()

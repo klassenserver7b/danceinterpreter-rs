@@ -23,33 +23,39 @@ use network_interface::{NetworkInterface, NetworkInterfaceConfig};
 use std::sync::LazyLock;
 
 pub struct ConfigWindow {
-    pub id: Option<window::Id>,
+    pub id: window::Id,
+    pub closed: bool,
     pub size: Size,
+
     pub enable_autoscroll: bool,
     pub theme: Theme,
-}
-
-impl Default for ConfigWindow {
-    fn default() -> Self {
-        Self {
-            id: None,
-            size: Size::default(),
-            enable_autoscroll: true,
-            theme: Theme::Dark,
-        }
-    }
 }
 
 pub static PLAYLIST_SCROLLABLE_ID: LazyLock<iced::widget::Id> =
     LazyLock::new(iced::widget::Id::unique);
 
 impl Window for ConfigWindow {
-    fn on_create(&mut self, id: window::Id) {
-        self.id = Some(id);
+    fn new(id: window::Id) -> Self {
+        Self {
+            id,
+            closed: false,
+            size: Size::default(),
+
+            enable_autoscroll: true,
+            theme: Theme::Dark,
+        }
     }
 
     fn on_resize(&mut self, size: Size) {
         self.size = size;
+    }
+
+    fn on_close(&mut self) {
+        self.closed = true;
+    }
+
+    fn is_closed(&self) -> bool {
+        self.closed
     }
 }
 
@@ -243,7 +249,7 @@ impl ConfigWindow {
                 menu_tpl_1(
                     menu_items!(
                         (label_message_button_fill("Open Playlist File", Message::OpenPlaylist)),
-                        (label_message_button_fill("Exit", Message::WindowClosed(self.id.unwrap()))),
+                        (label_message_button_fill("Exit", Message::WindowClosed(self.id))),
                     )
                 )
                 .spacing(5.0)

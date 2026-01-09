@@ -9,7 +9,8 @@ use iced::Size;
 use iced::{window, Element, Length};
 
 pub struct SongWindow {
-    pub id: Option<window::Id>,
+    pub id: window::Id,
+    pub closed: bool,
     pub size: Size,
 
     pub enable_image: bool,
@@ -17,23 +18,27 @@ pub struct SongWindow {
 }
 
 impl Window for SongWindow {
-    fn on_create(&mut self, id: window::Id) {
-        self.id = Some(id);
+    fn new(id: window::Id) -> Self {
+        Self {
+            id,
+            closed: false,
+            size: Size::default(),
+            
+            enable_image: true,
+            enable_next_dance: true,
+        }
     }
 
     fn on_resize(&mut self, size: Size) {
         self.size = size;
     }
-}
 
-impl Default for SongWindow {
-    fn default() -> Self {
-        Self {
-            id: None,
-            size: Size::new(1.0, 1.0),
-            enable_image: true,
-            enable_next_dance: true,
-        }
+    fn on_close(&mut self) {
+        self.closed = true;
+    }
+
+    fn is_closed(&self) -> bool {
+        self.closed
     }
 }
 
