@@ -264,7 +264,7 @@ where
 
         content.update(
             &mut tree.children[state.get_child_index()],
-            &event.clone(),
+            event,
             layout,
             cursor,
             renderer,
@@ -293,6 +293,7 @@ where
                 }
 
                 shell.invalidate_layout();
+                shell.request_redraw();
             }
         }
 
@@ -442,4 +443,6 @@ fn enter_edit_mode<Message: Clone, Renderer: text::Renderer>(
 
     input_state.focus();
     input_state.select_all();
+
+    shell.request_redraw();
 }
