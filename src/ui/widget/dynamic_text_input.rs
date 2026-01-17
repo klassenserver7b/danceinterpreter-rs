@@ -1,4 +1,4 @@
-use iced::advanced::graphics::core::{event, touch, Element};
+use iced::advanced::graphics::core::{touch, Element};
 use iced::advanced::text::Wrapping;
 use iced::advanced::widget::{tree, Operation, Tree};
 use iced::advanced::{layout, mouse, overlay, renderer, text, Clipboard, Layout, Shell, Widget};
@@ -63,11 +63,7 @@ struct State {
 
 impl State {
     fn get_child_index(&self) -> usize {
-        if self.is_edit_mode {
-            1
-        } else {
-            0
-        }
+        if self.is_edit_mode { 1 } else { 0 }
     }
 }
 
@@ -87,7 +83,7 @@ where
     pub fn new(placeholder: &str, value: &str) -> Self
     where
         <Theme as iced::widget::text::Catalog>::Class<'a>:
-            From<iced::widget::text::StyleFn<'a, Theme>>,
+        From<iced::widget::text::StyleFn<'a, Theme>>,
     {
         let input = TextInput::new(placeholder, value).padding(0);
 
@@ -166,7 +162,7 @@ where
 }
 
 impl<'a, Message, Theme, Renderer> Widget<Message, Theme, Renderer>
-    for DynamicTextInput<'a, Message, Theme, Renderer>
+for DynamicTextInput<'a, Message, Theme, Renderer>
 where
     Renderer: text::Renderer,
     Message: Clone,
@@ -177,14 +173,14 @@ where
     }
 
     fn layout(
-        &self,
+        &mut self,
         tree: &mut Tree,
         renderer: &Renderer,
         limits: &layout::Limits,
     ) -> layout::Node {
         let state: &State = tree.state.downcast_ref();
 
-        self.get_widget(state.is_edit_mode).layout(
+        self.get_widget_mut(state.is_edit_mode).layout(
             &mut tree.children[state.get_child_index()],
             renderer,
             limits,
@@ -237,15 +233,14 @@ where
     }
 
     fn operate(
-        &self,
+        &mut self,
         tree: &mut Tree,
         layout: Layout<'_>,
         renderer: &Renderer,
         operation: &mut dyn Operation,
     ) {
         let state: &State = tree.state.downcast_ref();
-
-        self.get_widget(state.is_edit_mode).operate(
+        self.get_widget_mut(state.is_edit_mode).operate(
             &mut tree.children[state.get_child_index()],
             layout,
             renderer,
@@ -253,41 +248,41 @@ where
         );
     }
 
-    fn on_event(
+    fn update(
         &mut self,
         tree: &mut Tree,
-        event: Event,
+        event: &Event,
         layout: Layout<'_>,
         cursor: mouse::Cursor,
         renderer: &Renderer,
         clipboard: &mut dyn Clipboard,
         shell: &mut Shell<'_, Message>,
         viewport: &Rectangle,
-    ) -> event::Status {
+    ) {
         let state: &mut State = tree.state.downcast_mut();
         let content = self.get_widget_mut(state.is_edit_mode);
 
-        let content_captured = content.on_event(
+        content.update(
             &mut tree.children[state.get_child_index()],
-            event.clone(),
+            event,
             layout,
             cursor,
             renderer,
             clipboard,
             shell,
             viewport,
-        ) == event::Status::Captured;
+        );
 
         if state.is_edit_mode {
             let input_state: &mut text_input::State<Renderer::Paragraph> =
                 tree.children[state.get_child_index()].state.downcast_mut();
 
-            if input_state.is_focused() {
-                if let Event::Keyboard(keyboard::Event::KeyPressed { key, .. }) = event.clone() {
-                    if key == Key::Named(Named::Enter) {
-                        input_state.unfocus();
-                    }
-                }
+            if input_state.is_focused()
+                && let Event::Keyboard(keyboard::Event::KeyPressed { key, .. }) = event.clone()
+                && key == Key::Named(Named::Enter)
+            {
+                input_state.unfocus();
+                shell.capture_event();
             }
 
             if !input_state.is_focused() {
@@ -298,14 +293,11 @@ where
                 }
 
                 shell.invalidate_layout();
+                shell.request_redraw();
             }
         }
 
-        if content_captured {
-            return event::Status::Captured;
-        }
-
-        update::<Message, Renderer>(
+        handle_enter_event::<Message, Renderer>(
             tree,
             event,
             layout,
@@ -344,8 +336,9 @@ where
     fn overlay<'b>(
         &'b mut self,
         tree: &'b mut Tree,
-        layout: Layout<'_>,
+        layout: Layout<'b>,
         renderer: &Renderer,
+        viewport: &Rectangle,
         translation: Vector,
     ) -> Option<overlay::Element<'b, Message, Theme, Renderer>> {
         let state: &State = tree.state.downcast_ref();
@@ -354,13 +347,14 @@ where
             &mut tree.children[state.get_child_index()],
             layout,
             renderer,
+            viewport,
             translation,
         )
     }
 }
 
 impl<'a, Message, Theme, Renderer> From<DynamicTextInput<'a, Message, Theme, Renderer>>
-    for Element<'a, Message, Theme, Renderer>
+for Element<'a, Message, Theme, Renderer>
 where
     Message: 'a + Clone,
     Theme: 'a,
@@ -374,17 +368,14 @@ where
     }
 }
 
-fn update<
-    Message: Clone,
-    Renderer: text::Renderer,
->(
+fn handle_enter_event<Message: Clone, Renderer: text::Renderer>(
     tree: &mut Tree,
-    event: Event,
+    event: &Event,
     layout: Layout<'_>,
     cursor: mouse::Cursor,
     shell: &mut Shell<'_, Message>,
     on_enter: Option<Message>,
-) -> event::Status {
+) {
     let state: &mut State = tree.state.downcast_mut();
 
     match event {
@@ -397,7 +388,7 @@ fn update<
 
                 state.is_pressed = true;
 
-                return event::Status::Captured;
+                shell.capture_event();
             }
         }
         Event::Mouse(mouse::Event::ButtonReleased(mouse::Button::Left))
@@ -407,23 +398,23 @@ fn update<
 
                 let bounds = layout.bounds();
 
-                if cursor.is_over(bounds) {
-                    if let Some(cursor_position) = cursor.position() {
-                        let new_click = mouse::Click::new(
-                            cursor_position,
-                            mouse::Button::Left,
-                            state.previous_click,
-                        );
+                if cursor.is_over(bounds)
+                    && let Some(cursor_position) = cursor.position()
+                {
+                    let new_click = mouse::Click::new(
+                        cursor_position,
+                        mouse::Button::Left,
+                        state.previous_click,
+                    );
 
-                        state.previous_click = Some(new_click);
+                    state.previous_click = Some(new_click);
 
-                        if matches!(new_click.kind(), mouse::click::Kind::Double) {
-                            enter_edit_mode::<Message, Renderer>(tree, shell, on_enter);
-                        }
+                    if matches!(new_click.kind(), mouse::click::Kind::Double) {
+                        enter_edit_mode::<Message, Renderer>(tree, shell, on_enter);
                     }
                 }
 
-                return event::Status::Captured;
+                shell.capture_event();
             }
         }
         Event::Touch(touch::Event::FingerLost { .. }) => {
@@ -431,8 +422,6 @@ fn update<
         }
         _ => {}
     }
-
-    event::Status::Ignored
 }
 
 fn enter_edit_mode<Message: Clone, Renderer: text::Renderer>(
@@ -454,4 +443,6 @@ fn enter_edit_mode<Message: Clone, Renderer: text::Renderer>(
 
     input_state.focus();
     input_state.select_all();
+
+    shell.request_redraw();
 }

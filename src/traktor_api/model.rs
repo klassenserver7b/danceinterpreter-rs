@@ -12,7 +12,7 @@ pub enum ServerMessage {
     Ready(mpsc::UnboundedSender<AppMessage>),
     Connect {
         time_offset_ms: i64,
-        initial_state: State,
+        initial_state: Box<State>,
     },
     Update(StateUpdate),
     CoverImage {
@@ -34,7 +34,7 @@ pub enum ID {
 pub enum StateUpdate {
     Mixer(MixerState),
     Channel(ID, ChannelState),
-    DeckContent(ID, DeckContentState),
+    DeckContent(ID, Box<DeckContentState>),
     DeckPlayState(ID, DeckPlayState),
 }
 
@@ -67,16 +67,16 @@ impl State {
             },
             StateUpdate::DeckContent(id, deck_content) => match id {
                 ID::A => {
-                    self.decks.0.content = deck_content;
+                    self.decks.0.content = *deck_content;
                 }
                 ID::B => {
-                    self.decks.1.content = deck_content;
+                    self.decks.1.content = *deck_content;
                 }
                 ID::C => {
-                    self.decks.2.content = deck_content;
+                    self.decks.2.content = *deck_content;
                 }
                 ID::D => {
-                    self.decks.3.content = deck_content;
+                    self.decks.3.content = *deck_content;
                 }
             },
             StateUpdate::DeckPlayState(id, deck_play_state) => match id {

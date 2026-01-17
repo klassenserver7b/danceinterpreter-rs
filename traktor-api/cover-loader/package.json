@@ -1,18 +1,18 @@
 {
-  "name": "cover-loader",
-  "module": "index.ts",
-  "type": "module",
-  "private": true,
-  "devDependencies": {
-    "@types/bun": "latest"
-  },
-  "peerDependencies": {
-    "typescript": "^5"
-  },
-  "dependencies": {
-    "@types/bonjour": "^3.5.13",
-    "@types/mdns": "^0.0.38",
-    "bonjour": "^3.5.0",
-    "music-metadata": "^11.0.2"
-  }
+	"name": "cover-loader",
+	"module": "index.ts",
+	"type": "module",
+	"private": true,
+	"devDependencies": {
+		"@types/bun": "latest"
+	},
+	"peerDependencies": {
+		"typescript": "^5"
+	},
+	"dependencies": {
+		"@types/bonjour": "^3.5.13",
+		"@types/mdns": "^0.0.38",
+		"bonjour": "^3.5.0",
+		"music-metadata": "^11.0.2"
+	}
 }

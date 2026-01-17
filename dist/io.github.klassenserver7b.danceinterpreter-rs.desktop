@@ -6,6 +6,6 @@ Type=Application
 Exec=danceinterpreter-rs
 Terminal=false
 Categories=Utility;X-Multimedia
-Keywords=Rust;Flatpak;Dancing;Presentation
+Keywords=Rust;Flatpak;Dancing;Dance;Presentation
 Icon=io.github.klassenserver7b.danceinterpreter-rs
 StartupNotify=true
