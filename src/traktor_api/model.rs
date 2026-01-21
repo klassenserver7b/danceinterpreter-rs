@@ -22,9 +22,9 @@ pub enum ServerMessage {
     Log(String),
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Copy, Clone)]
 pub enum ID {
-    A,
+    A = 0,
     B,
     C,
     D,
@@ -41,58 +41,17 @@ pub enum StateUpdate {
 #[derive(Debug, Clone)]
 pub struct State {
     pub mixer: MixerState,
-    pub channels: (ChannelState, ChannelState, ChannelState, ChannelState),
-    pub decks: (DeckState, DeckState, DeckState, DeckState),
+    pub channels: [ChannelState; 4],
+    pub decks: [DeckState; 4],
 }
 
 impl State {
     pub fn apply_update(&mut self, update: StateUpdate) {
         match update {
-            StateUpdate::Mixer(mixer) => {
-                self.mixer = mixer;
-            }
-            StateUpdate::Channel(id, channel) => match id {
-                ID::A => {
-                    self.channels.0 = channel;
-                }
-                ID::B => {
-                    self.channels.1 = channel;
-                }
-                ID::C => {
-                    self.channels.2 = channel;
-                }
-                ID::D => {
-                    self.channels.3 = channel;
-                }
-            },
-            StateUpdate::DeckContent(id, deck_content) => match id {
-                ID::A => {
-                    self.decks.0.content = *deck_content;
-                }
-                ID::B => {
-                    self.decks.1.content = *deck_content;
-                }
-                ID::C => {
-                    self.decks.2.content = *deck_content;
-                }
-                ID::D => {
-                    self.decks.3.content = *deck_content;
-                }
-            },
-            StateUpdate::DeckPlayState(id, deck_play_state) => match id {
-                ID::A => {
-                    self.decks.0.play_state = deck_play_state;
-                }
-                ID::B => {
-                    self.decks.1.play_state = deck_play_state;
-                }
-                ID::C => {
-                    self.decks.2.play_state = deck_play_state;
-                }
-                ID::D => {
-                    self.decks.3.play_state = deck_play_state;
-                }
-            },
+            StateUpdate::Mixer(mixer) => self.mixer = mixer,
+            StateUpdate::Channel(id, channel) => self.channels[id as usize] = channel,
+            StateUpdate::DeckContent(id, deck_content) => self.decks[id as usize].content = *deck_content,
+            StateUpdate::DeckPlayState(id, deck_play_state) => self.decks[id as usize].play_state = deck_play_state,
         }
     }
 }
@@ -123,13 +82,13 @@ impl<'de> Deserialize<'de> for State {
 
         Ok(State {
             mixer: flattened_state.mixer,
-            channels: (
+            channels: [
                 flattened_state.channel0,
                 flattened_state.channel1,
                 flattened_state.channel2,
                 flattened_state.channel3,
-            ),
-            decks: (
+            ],
+            decks: [
                 DeckState {
                     content: flattened_state.deck0content,
                     play_state: flattened_state.deck0playstate,
@@ -146,7 +105,7 @@ impl<'de> Deserialize<'de> for State {
                     content: flattened_state.deck3content,
                     play_state: flattened_state.deck3playstate,
                 },
-            ),
+            ],
         })
     }
 }
