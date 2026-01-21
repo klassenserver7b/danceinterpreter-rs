@@ -167,12 +167,9 @@ impl TraktorDataProvider {
             return;
         };
 
-        let scores = [
-            self.get_deck_score(&state.decks.0, &state.channels.0, &state.mixer),
-            self.get_deck_score(&state.decks.1, &state.channels.1, &state.mixer),
-            self.get_deck_score(&state.decks.2, &state.channels.2, &state.mixer),
-            self.get_deck_score(&state.decks.3, &state.channels.3, &state.mixer),
-        ];
+        let scores = (0..4)
+            .map(|i| self.get_deck_score(&state.decks[i], &state.channels[i], &state.mixer))
+            .collect::<Vec<f64>>();
 
         let Some(max) = scores
             .iter()
@@ -187,21 +184,8 @@ impl TraktorDataProvider {
             return;
         };
 
-        let content = match max_index {
-            0 => &state.decks.0.content,
-            1 => &state.decks.1.content,
-            2 => &state.decks.2.content,
-            3 => &state.decks.3.content,
-            _ => return,
-        };
-
-        let channel = match max_index {
-            0 => &state.channels.0,
-            1 => &state.channels.1,
-            2 => &state.channels.2,
-            3 => &state.channels.3,
-            _ => return,
-        };
+        let content = &state.decks[max_index].content;
+        let channel = &state.channels[max_index];
 
         let current_song_info = self.copy_song_info_from_deck(content, playlist);
         self.cached_song_info = Some(current_song_info.clone());
@@ -265,40 +249,22 @@ impl TraktorDataProvider {
                     return None;
                 };
 
-                let other_side = vec![
-                    &state.channels.0,
-                    &state.channels.1,
-                    &state.channels.2,
-                    &state.channels.3,
-                ]
-                    .into_iter()
-                    .position(|c| {
-                        if is_on_left {
-                            c.x_fader_right
-                        } else {
-                            c.x_fader_left
-                        }
-                    });
-
-                let deck = other_side.and_then(|o| match o {
-                    0 => Some(&state.decks.0),
-                    1 => Some(&state.decks.1),
-                    2 => Some(&state.decks.2),
-                    3 => Some(&state.decks.3),
-                    _ => None,
+                let other_side = state.channels.iter().position(|c| {
+                    if is_on_left {
+                        c.x_fader_right
+                    } else {
+                        c.x_fader_left
+                    }
                 });
 
+                let deck = other_side.map(|o| &state.decks[o]);
                 deck.filter(|d| d.play_state.position < 0.5 * d.content.track_length)
                     .map(|d| self.copy_song_info_from_deck(&d.content, playlist))
             }
             TraktorNextMode::DeckByNumber => {
-                let deck = vec![
-                    &state.decks.0,
-                    &state.decks.1,
-                    &state.decks.2,
-                    &state.decks.3,
-                ]
-                    .into_iter()
+                let deck = state
+                    .decks
+                    .iter()
                     .find(|d| d.content.number == current_song_info.track_number + 1);
 
                 deck.map(|d| self.copy_song_info_from_deck(&d.content, playlist))
@@ -353,13 +319,10 @@ impl TraktorDataProvider {
             return Vec::new();
         };
 
-        let mut files: Vec<String> = vec![
-            &state.decks.0.content.file_path,
-            &state.decks.1.content.file_path,
-            &state.decks.2.content.file_path,
-            &state.decks.3.content.file_path,
-        ]
-            .into_iter()
+        let mut files: Vec<String> = state
+            .decks
+            .iter()
+            .map(|d| &d.content.file_path)
             .filter(|&f| !f.is_empty())
             .map(|f| f.to_owned())
             .collect();
