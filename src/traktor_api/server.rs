@@ -31,7 +31,7 @@ struct TraktorServer {
     is_initialized: bool,
     queue: Vec<StateUpdate>,
 
-    deck_files: (String, String, String, String),
+    deck_files: [String; 4],
     loaded_images: Vec<String>,
     pending_images: Vec<String>,
 
@@ -84,13 +84,8 @@ impl TraktorServer {
     }
 
     fn get_required_images(&self) -> Vec<String> {
-        let mut required_images: Vec<String> = vec![
-            &self.deck_files.0,
-            &self.deck_files.1,
-            &self.deck_files.2,
-            &self.deck_files.3,
-        ]
-            .into_iter()
+        let mut required_images: Vec<String> = self.deck_files
+            .iter()
             .filter(|&f| !f.is_empty())
             .map(|f| f.to_owned())
             .collect();
@@ -130,10 +125,9 @@ impl TraktorServer {
                 .map(|d| (request.timestamp as i64) - (d.as_millis() as i64))
                 .unwrap_or(0);
 
-            self.deck_files.0 = request.state.decks.0.content.file_path.clone();
-            self.deck_files.1 = request.state.decks.1.content.file_path.clone();
-            self.deck_files.2 = request.state.decks.2.content.file_path.clone();
-            self.deck_files.3 = request.state.decks.3.content.file_path.clone();
+            for i in 0..4 {
+                self.deck_files[i] = request.state.decks[i].content.file_path.clone();
+            }
             self.on_update_deck_files().await;
 
             self.send_message(ServerMessage::Connect {
@@ -162,17 +156,8 @@ impl TraktorServer {
     ) -> impl warp::Reply + use < > {
         if session_id == self.session_id {
             match &update {
-                StateUpdate::DeckContent(ID::A, content) => {
-                    self.deck_files.0 = content.file_path.clone()
-                }
-                StateUpdate::DeckContent(ID::B, content) => {
-                    self.deck_files.1 = content.file_path.clone()
-                }
-                StateUpdate::DeckContent(ID::C, content) => {
-                    self.deck_files.2 = content.file_path.clone()
-                }
-                StateUpdate::DeckContent(ID::D, content) => {
-                    self.deck_files.3 = content.file_path.clone()
+                StateUpdate::DeckContent(id, content) => {
+                    self.deck_files[*id as usize] = content.file_path.clone()
                 }
                 _ => {}
             }
