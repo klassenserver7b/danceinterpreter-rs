@@ -347,16 +347,12 @@ impl TraktorDataProvider {
                 time_offset_ms,
                 initial_state,
             } => {
-                println!("{:?}", initial_state);
-
                 self.time_offset_ms = time_offset_ms;
                 self.sync_x_fader_is_left = initial_state.mixer.x_fader < 0.5;
                 self.state = Some(*initial_state);
                 self.update_song_info(playlist);
             }
             ServerMessage::Update(update) => {
-                println!("{:?}", update);
-
                 if let Some(state) = self.state.as_mut() {
                     if matches!(self.sync_mode, Some(TraktorSyncMode::Relative))
                         && let StateUpdate::Mixer(new_mixer_state) = &update
