@@ -19,7 +19,6 @@ use crate::ui::song_window::SongWindow;
 use crate::Message::SnapTo;
 use iced::keyboard::key::Named;
 use iced::keyboard::{Key, Modifiers};
-use iced::theme::Mode;
 use iced::widget::operation::{scroll_by, snap_to};
 use iced::widget::scrollable::{AbsoluteOffset, RelativeOffset};
 use iced::widget::space::horizontal;
@@ -215,14 +214,14 @@ impl DanceInterpreter {
 
             Message::ThemeChanged(mode) => {
                 self.config_window.theme = match mode {
-                    Mode::Light => Theme::Light,
-                    Mode::Dark | Mode::None => Theme::Dark,
+                    theme::Mode::Light => Theme::Light,
+                    theme::Mode::Dark | theme::Mode::None => Theme::Dark,
                 };
 
                 let icon = from_file_data(
                     match mode {
-                        Mode::Light | Mode::None => include_bytes!(res_file!("icon_light.png")),
-                        Mode::Dark => include_bytes!(res_file!("icon_dark.png")),
+                        theme::Mode::Light | theme::Mode::None => include_bytes!(res_file!("icon_light.png")),
+                        theme::Mode::Dark => include_bytes!(res_file!("icon_dark.png")),
                     },
                     Some(image::ImageFormat::Png),
                 );
