@@ -22,7 +22,7 @@ uuid = { version = "1.19", features = ["v4"] }
 bytes = "1.11"
 network-interface = "2.0"
 libmdns = "0.10"
-image = "0.25.9"
+image = "0.25.10"
 
 [features]
 debug = ["iced/hot"]
