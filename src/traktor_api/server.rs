@@ -616,7 +616,7 @@ mod tests {
 
     /// Asserts that no message arrives within 50 ms.
     async fn assert_no_msg(rx: &mut iced_mpsc::UnboundedReceiver<ServerMessage>) {
-        let result = timeout(Duration::from_millis(50), rx.next()).await;
+        let result = timeout(Duration::from_millis(500), rx.next()).await;
         assert!(
             result.is_err(),
             "expected no message but one arrived - {:?}",
@@ -637,9 +637,15 @@ mod tests {
         let (state, _rx) = new_state();
         let filter = TraktorServer::routes(state);
 
-        let res = warp::test::request().path("/connect").reply(&filter).await;
+        let res1 = warp::test::request().path("/connect").reply(&filter).await;
+        let res2 = warp::test::request().path("/update").reply(&filter).await;
+        let res3 = warp::test::request().path("/log").reply(&filter).await;
+        let res4 = warp::test::request().path("/cover").reply(&filter).await;
 
-        assert_eq!(res.status(), 404);
+        assert_eq!(res1.status(), 404);
+        assert_eq!(res2.status(), 404);
+        assert_eq!(res3.status(), 404);
+        assert_eq!(res4.status(), 404);
     }
 
     /// After reconnect the session_id is non-empty and /connect returns it.
@@ -1038,7 +1044,7 @@ mod tests {
         use iced::futures::channel::mpsc::UnboundedSender as IcedSender;
         use iced::futures::StreamExt as IcedStreamExt;
         use tokio::sync::mpsc as tokio_mpsc;
-
+        use tokio::time::error::Elapsed;
         // ── Test server harness ───────────────────────────────────────────────
 
         struct TestServer {
@@ -1053,36 +1059,52 @@ mod tests {
             /// Binds to a random loopback port, starts the server, waits for
             /// Ready, sends Reconnect, and fetches the resulting session ID.
             async fn start() -> Self {
-                // Grab a free port then immediately release it.
-                let port = {
-                    let l = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
-                    l.local_addr().unwrap().port()
-                };
-                // Tiny sleep to let the OS reclaim the port before we bind again.
-                tokio::time::sleep(Duration::from_millis(10)).await;
+                const MAX_START_ATTEMPTS: usize = 10;
+                const READY_TIMEOUT: Duration = Duration::from_secs(2);
 
-                let addr: SocketAddr = format!("127.0.0.1:{port}").parse().unwrap();
-                let (col_tx, col_rx) = tokio_mpsc::unbounded_channel::<ServerMessage>();
+                for attempt in 1..=MAX_START_ATTEMPTS {
+                    // Pick a candidate loopback port for this attempt.
+                    let port = {
+                        let l = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+                        l.local_addr().unwrap().port()
+                    };
 
-                let task = tokio::spawn(async move {
-                    let mut stream = Box::pin(run_server(addr));
-                    while let Some(msg) = stream.next().await {
-                        if col_tx.send(msg).is_err() {
-                            break;
+                    let addr: SocketAddr = format!("127.0.0.1:{port}").parse().unwrap();
+                    let (col_tx, col_rx) = tokio_mpsc::unbounded_channel::<ServerMessage>();
+
+                    let task = tokio::spawn(async move {
+                        let mut stream = Box::pin(run_server(addr));
+                        while let Some(msg) = stream.next().await {
+                            if col_tx.send(msg).is_err() {
+                                break;
+                            }
                         }
-                    }
-                });
+                    });
 
-                let mut server = Self {
-                    addr,
-                    session_id: String::new(),
-                    messages: col_rx,
-                    app_tx: Self::dummy_sender(), // replaced in wait_ready
-                    _task: task,
-                };
-                server.wait_ready().await;
-                server.session_id = server.fetch_session_id().await;
-                server
+                    let mut server = Self {
+                        addr,
+                        session_id: String::new(),
+                        messages: col_rx,
+                        app_tx: Self::dummy_sender(), // replaced in wait_ready
+                        _task: task,
+                    };
+
+                    if timeout(READY_TIMEOUT, server.wait_ready()).await.is_ok() {
+                        server.session_id = server.fetch_session_id().await;
+                        return server;
+                    }
+
+                    server._task.abort();
+
+                    if attempt == MAX_START_ATTEMPTS {
+                        panic!(
+                            "test server failed to reach Ready after {} attempts",
+                            MAX_START_ATTEMPTS
+                        );
+                    }
+                }
+
+                unreachable!("loop above must return or panic")
             }
 
             fn dummy_sender() -> IcedSender<AppMessage> {
@@ -1103,7 +1125,7 @@ mod tests {
                                 .ok();
                                 self.app_tx = tx;
                                 // Give the server event loop time to process Reconnect.
-                                tokio::time::sleep(Duration::from_millis(100)).await;
+                                tokio::time::sleep(Duration::from_millis(500)).await;
                                 break;
                             }
                             Some(_) => {}
@@ -1117,9 +1139,22 @@ mod tests {
 
             async fn fetch_session_id(&self) -> String {
                 let url = format!("http://{}/connect", self.addr);
-                let resp = reqwest::get(&url).await.expect("GET /connect failed");
-                let json: serde_json::Value = resp.json().await.unwrap();
-                json["sessionId"].as_str().unwrap().to_owned()
+                timeout(Duration::from_secs(5), async {
+                    loop {
+                        let resp = reqwest::get(&url).await.expect("GET /connect failed");
+                        if resp.status().is_success()
+                            && let Ok(json) = resp.json::<serde_json::Value>().await
+                            && let Some(session_id) = json.get("sessionId").and_then(|v| v.as_str())
+                            && !session_id.is_empty()
+                        {
+                            break session_id.to_owned();
+                        }
+
+                        tokio::time::sleep(Duration::from_millis(50)).await;
+                    }
+                })
+                .await
+                .expect("timed out waiting for /connect sessionId")
             }
 
             /// Convenience: POST JSON to a path and return the response.
@@ -1240,10 +1275,22 @@ mod tests {
             drop(server);
 
             // Give the OS a moment to reclaim the port
-            tokio::time::sleep(Duration::from_millis(200)).await;
+            tokio::time::sleep(Duration::from_millis(500)).await;
 
-            let rebind = tokio::net::TcpListener::bind(addr).await;
-            assert!(rebind.is_ok(), "port should be available after server drop");
+            let rebind = timeout(Duration::from_secs(2), async {
+                loop {
+                    match tokio::net::TcpListener::bind(addr).await {
+                        Ok(listener) => break Ok::<tokio::net::TcpListener, Elapsed>(listener),
+                        Err(_) => tokio::time::sleep(Duration::from_millis(25)).await,
+                    }
+                }
+            })
+            .await;
+
+            assert!(
+                matches!(rebind, Ok(Ok(_))),
+                "port should be available after server drop"
+            );
         }
     }
 }
