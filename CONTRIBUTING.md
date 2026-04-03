@@ -21,7 +21,7 @@ to step 3
 
 1. [Fork the danceinterpreter-rs repository](https://github.com/klassenserver7b/danceinterpreter-rs/fork) on GitHub
 2. Clone the fork: `git clone git@github.com:your_github_username/danceinterpreter-rs.git && cd danceinterpreter-rs`
-3. Create a new branch for your code: `git checkout -b my-feature` Make sure to follow the branch [naming convention](#Branch-Naming) below.
+3. Create a new branch for your code: `git checkout -b my-feature` Make sure to follow the branch [naming convention](#branch-naming) below.
 
 ### `pre-commit`
 
@@ -31,7 +31,7 @@ to step 3
       prek install
       prek install -t pre-push
 
-  If you have a problems with a particular hook, you can use the `SKIP` environment variable to disable hooks:
+  If you have problems with particular hooks, you can use the `SKIP` environment variable to disable hooks:
 
       SKIP=end-of-file-fixer git commit
 

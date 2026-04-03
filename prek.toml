@@ -1,4 +1,4 @@
-files = { glob = ["src/**/*.rs", "traktor-api/**/*.m?[jt]s", "*.toml", "\\.yaml", "traktor-api/**/*.json", "dist/*.xml"] }
+files = { glob = ["src/**/*.rs", "traktor-api/**/*.m?[jt]s", "*.toml", "*.ya?ml", ".github/**/*.ya?ml", "traktor-api/**/*.json", "dist/*.xml"] }
 
 [[repos]]
 repo = "https://github.com/pre-commit/pre-commit-hooks"
