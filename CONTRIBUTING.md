@@ -25,7 +25,7 @@ to step 3
 
 ### `pre-commit`
 
-* Install [prek](https://prek.j178.dev/installation/) to automatically ensure that your commits comply with our code style for both Rust and Java/TypeScript. This saves time reviewing, so I don't have to point out nitpicky style issues. Once you have prek installed on your computer, set it up in your local Git repository:
+* Install [prek](https://prek.j178.dev/installation/) to automatically ensure that your commits comply with our code style for both Rust and JavaScript/TypeScript. This saves time reviewing, so I don't have to point out nitpicky style issues. Once you have prek installed on your computer, set it up in your local Git repository:
 
       cd /path/to/your/git/repo
       prek install
