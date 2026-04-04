@@ -7,7 +7,7 @@ on:
     ## - release
 
 permissions:
-    contents: write
+  contents: write
 
 
 env:
