@@ -9,8 +9,6 @@ on:
 
 permissions:
   contents: read
-  secrets: read
-  statuses: write
 
 jobs:
   publish-crate:

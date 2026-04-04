@@ -7,7 +7,6 @@ on:
 
 permissions:
   contents: read
-  statuses: write
 
 jobs:
   build_and_test:
