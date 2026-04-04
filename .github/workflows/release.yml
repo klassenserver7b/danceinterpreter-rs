@@ -6,7 +6,11 @@ on:
       - 'v[0-9]+.[0-9]+.[0-9]+'
     ## - release
 
-permissions: write-all
+permissions:
+    contents: write
+    statuses: write
+    secrets: read
+
 
 env:
   BIN_NAME: danceinterpreter-rs

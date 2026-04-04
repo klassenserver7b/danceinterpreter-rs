@@ -1,10 +1,13 @@
+name: CI
 on:
   push:
     branches: [ "dev", "iced-gui" ]
   pull_request:
     branches: [ "main", "dev", "iced-gui" ]
 
-name: CI
+permissions:
+  contents: read
+  statuses: write
 
 jobs:
   build_and_test:
