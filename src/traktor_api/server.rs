@@ -8,7 +8,6 @@ use iced::futures::channel::mpsc::{UnboundedReceiver, UnboundedSender};
 use iced::futures::channel::oneshot;
 use iced::futures::{SinkExt, Stream, StreamExt};
 use iced::futures::{TryFutureExt, stream};
-use libmdns::{Responder, Service};
 use serde::de::DeserializeOwned;
 use std::collections::HashMap;
 use std::convert::Infallible;
@@ -469,11 +468,14 @@ async fn server_main(
     let routes = TraktorServer::routes(state.clone());
 
     println!("starting traktor server on {}", addr);
+
+    #[cfg(feature = "mdns")]
     let service = advertise_server(addr);
 
     let Ok(listener) = tokio::net::TcpListener::bind(addr).await else {
         println!("could not start traktor server on {}", addr);
 
+        #[cfg(feature = "mdns")]
         drop(service);
         return;
     };
@@ -491,13 +493,15 @@ async fn server_main(
     }
 }
 
-fn advertise_server(addr: SocketAddr) -> Service {
+#[cfg(feature = "mdns")]
+fn advertise_server(addr: SocketAddr) -> libmdns::Service {
     let addr_vec = if !addr.ip().is_unspecified() {
         [addr.ip()].to_vec()
     } else {
         Vec::new()
     };
-    let responder = Responder::new_with_ip_list(addr_vec).expect("could not create responder");
+    let responder =
+        libmdns::Responder::new_with_ip_list(addr_vec).expect("could not create responder");
     let svc = responder.register(
         "_http._tcp",
         "traktor-di-webserver",
