@@ -50,8 +50,12 @@ impl State {
         match update {
             StateUpdate::Mixer(mixer) => self.mixer = mixer,
             StateUpdate::Channel(id, channel) => self.channels[id as usize] = channel,
-            StateUpdate::DeckContent(id, deck_content) => self.decks[id as usize].content = *deck_content,
-            StateUpdate::DeckPlayState(id, deck_play_state) => self.decks[id as usize].play_state = deck_play_state,
+            StateUpdate::DeckContent(id, deck_content) => {
+                self.decks[id as usize].content = *deck_content
+            }
+            StateUpdate::DeckPlayState(id, deck_play_state) => {
+                self.decks[id as usize].play_state = deck_play_state
+            }
         }
     }
 }

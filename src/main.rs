@@ -4,6 +4,7 @@ mod macros;
 mod traktor_api;
 mod ui;
 
+use crate::Message::SnapTo;
 use crate::async_utils::run_subscription_with;
 use crate::dataloading::dataprovider::song_data_provider::{
     SongChange, SongDataEdit, SongDataProvider, SongDataSource,
@@ -16,16 +17,13 @@ use crate::traktor_api::{
 };
 use crate::ui::config_window::{ConfigWindow, PLAYLIST_SCROLLABLE_ID};
 use crate::ui::song_window::SongWindow;
-use crate::Message::SnapTo;
 use iced::keyboard::key::Named;
 use iced::keyboard::{Key, Modifiers};
 use iced::widget::operation::{scroll_by, snap_to};
 use iced::widget::scrollable::{AbsoluteOffset, RelativeOffset};
 use iced::widget::space::horizontal;
 use iced::window::icon::from_file_data;
-use iced::{
-    exit, keyboard, system, theme, window, Element, Size, Subscription, Task, Theme,
-};
+use iced::{Element, Size, Subscription, Task, Theme, exit, keyboard, system, theme, window};
 use iced_aw::ICED_AW_FONT_BYTES;
 use rfd::FileDialog;
 use std::path::PathBuf;
@@ -36,11 +34,11 @@ fn main() -> iced::Result {
         DanceInterpreter::update,
         DanceInterpreter::view,
     )
-        .title(DanceInterpreter::title)
-        .theme(DanceInterpreter::theme)
-        .font(ICED_AW_FONT_BYTES)
-        .subscription(DanceInterpreter::subscription)
-        .run()
+    .title(DanceInterpreter::title)
+    .theme(DanceInterpreter::theme)
+    .font(ICED_AW_FONT_BYTES)
+    .subscription(DanceInterpreter::subscription)
+    .run()
 }
 
 pub trait Window {
@@ -109,7 +107,7 @@ impl DanceInterpreter {
             include_bytes!(res_file!("icon_light.png")),
             Some(image::ImageFormat::Png),
         )
-            .ok();
+        .ok();
 
         let (config_window, cw_opened) = Self::open_window(window::Settings {
             platform_specific: Self::get_platform_specific(),
@@ -220,7 +218,9 @@ impl DanceInterpreter {
 
                 let icon = from_file_data(
                     match mode {
-                        theme::Mode::Light | theme::Mode::None => include_bytes!(res_file!("icon_light.png")),
+                        theme::Mode::Light | theme::Mode::None => {
+                            include_bytes!(res_file!("icon_light.png"))
+                        }
                         theme::Mode::Dark => include_bytes!(res_file!("icon_dark.png")),
                     },
                     Some(image::ImageFormat::Png),

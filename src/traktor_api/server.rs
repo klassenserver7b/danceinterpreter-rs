@@ -2,12 +2,12 @@ use crate::async_utils::DroppingOnce;
 use crate::traktor_api::model::{
     AppMessage, ConnectionResponse, InitializeRequest, ServerMessage, UpdateRequest,
 };
-use crate::traktor_api::{StateUpdate, ID};
+use crate::traktor_api::{ID, StateUpdate};
 use bytes::Bytes;
 use iced::futures::channel::mpsc::{UnboundedReceiver, UnboundedSender};
 use iced::futures::channel::oneshot;
-use iced::futures::{stream, TryFutureExt};
 use iced::futures::{SinkExt, Stream, StreamExt};
+use iced::futures::{TryFutureExt, stream};
 use libmdns::{Responder, Service};
 use serde::de::DeserializeOwned;
 use std::collections::HashMap;
@@ -17,8 +17,8 @@ use std::sync::Arc;
 use std::time::{SystemTime, UNIX_EPOCH};
 use tokio::sync::Mutex;
 use uuid::Uuid;
-use warp::http::StatusCode;
 use warp::Filter;
+use warp::http::StatusCode;
 
 const MAX_QUEUE_LENGTH: usize = 20;
 
@@ -533,7 +533,7 @@ mod tests {
     use super::*;
     use iced::futures::channel::mpsc as iced_mpsc;
     use serde_json::json;
-    use tokio::time::{timeout, Duration};
+    use tokio::time::{Duration, timeout};
 
     // -- Shared test helpers --
 
@@ -1019,8 +1019,8 @@ mod tests {
 
     mod integration {
         use super::*;
-        use iced::futures::channel::mpsc::UnboundedSender as IcedSender;
         use iced::futures::StreamExt as IcedStreamExt;
+        use iced::futures::channel::mpsc::UnboundedSender as IcedSender;
         use tokio::sync::mpsc as tokio_mpsc;
         use tokio::time::error::Elapsed;
         // ── Test server harness ───────────────────────────────────────────────

@@ -1,8 +1,8 @@
-use iced::advanced::graphics::futures::{boxed_stream, BoxStream, MaybeSend};
-use iced::advanced::subscription::{from_recipe, EventStream, Hasher, Recipe};
-use iced::futures::stream::FusedStream;
-use iced::futures::{ready, Stream};
 use iced::Subscription;
+use iced::advanced::graphics::futures::{BoxStream, MaybeSend, boxed_stream};
+use iced::advanced::subscription::{EventStream, Hasher, Recipe, from_recipe};
+use iced::futures::stream::FusedStream;
+use iced::futures::{Stream, ready};
 use pin_project_lite::pin_project;
 use std::future::Future;
 use std::hash::Hash;
@@ -72,13 +72,13 @@ impl<Fut: Future, DropFn: FnOnce()> FusedStream for DroppingOnce<Fut, DropFn> {
 pub fn run_subscription_with<T, D, S>(data: D, builder: fn(&D) -> S) -> Subscription<T>
 where
     D: Hash + 'static,
-    S: Stream<Item=T> + MaybeSend + 'static,
+    S: Stream<Item = T> + MaybeSend + 'static,
     T: 'static,
 {
     struct Runner<I, F, S, T>
     where
         F: FnOnce(&I, EventStream) -> S,
-        S: Stream<Item=T>,
+        S: Stream<Item = T>,
     {
         data: I,
         spawn: F,
@@ -88,7 +88,7 @@ where
     where
         I: Hash + 'static,
         F: FnOnce(&I, EventStream) -> S,
-        S: Stream<Item=T> + MaybeSend + 'static,
+        S: Stream<Item = T> + MaybeSend + 'static,
     {
         type Output = T;
 

@@ -1,5 +1,5 @@
-use iced::widget::text::Shaping;
 use iced::widget::Text;
+use iced::widget::text::Shaping;
 use iced::{Font, Length, Renderer, Theme};
 
 pub mod config_window;

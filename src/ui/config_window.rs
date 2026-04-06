@@ -1,7 +1,7 @@
 use crate::dataloading::dataprovider::song_data_provider::{
     SongChange, SongDataEdit, SongDataSource,
 };
-use crate::traktor_api::{TraktorNextMode, TraktorSyncMode, TRAKTOR_SERVER_DEFAULT_ADDR};
+use crate::traktor_api::{TRAKTOR_SERVER_DEFAULT_ADDR, TraktorNextMode, TraktorSyncMode};
 use crate::ui::material_icon;
 use crate::ui::widget::dynamic_text_input::DynamicTextInput;
 use crate::{DanceInterpreter, Message, Window};
@@ -10,14 +10,14 @@ use iced::alignment::Vertical;
 use iced::border::Radius;
 use iced::widget::scrollable::{Direction, RelativeOffset, Scrollbar};
 use iced::widget::{
-    button, checkbox, column as col, radio, row, scrollable, text, Button, Column, Row,
-    Scrollable, Space,
+    Button, Column, Row, Scrollable, Space, button, checkbox, column as col, radio, row,
+    scrollable, text,
 };
-use iced::{font, window, Border, Color, Element, Font, Length, Renderer, Size, Theme};
+use iced::{Border, Color, Element, Font, Length, Renderer, Size, Theme, font, window};
 use iced_aw::menu::Item;
-use iced_aw::style::{menu_bar::primary, Status};
+use iced_aw::style::{Status, menu_bar::primary};
 use iced_aw::widget::InnerBounds;
-use iced_aw::{iced_aw_font, menu, menu_bar, menu_items, quad, Menu, MenuBar};
+use iced_aw::{Menu, MenuBar, iced_aw_font, menu, menu_bar, menu_items, quad};
 use network_interface::Addr::V4;
 use network_interface::{NetworkInterface, NetworkInterfaceConfig};
 use std::sync::LazyLock;
@@ -115,7 +115,7 @@ impl ConfigWindow {
                 .width(Length::Fixed(10.0))
                 .height(Length::Shrink),
         ]
-            .spacing(5);
+        .spacing(5);
 
         let mut playlist_column: Column<'_, _, _, _> = col!().spacing(5);
 
@@ -175,7 +175,7 @@ impl ConfigWindow {
                 .spacing(5)
                 .width(Length::Fill),
             ]
-                .spacing(5);
+            .spacing(5);
 
             if !playlist_column.children().is_empty() {
                 playlist_column = playlist_column.push(separator());
@@ -390,12 +390,12 @@ fn submenu_button(label: &'_ str) -> button::Button<'_, Message, iced::Theme, ic
                 .width(Length::Shrink)
                 .align_y(Vertical::Center),
         ]
-            .align_y(iced::Alignment::Center),
+        .align_y(iced::Alignment::Center),
     )
-        .padding([4, 8])
-        .style(button::text)
-        .on_press(Message::Noop)
-        .width(Length::Fill)
+    .padding([4, 8])
+    .style(button::text)
+    .on_press(Message::Noop)
+    .width(Length::Fill)
 }
 
 fn label_message_button_opt(

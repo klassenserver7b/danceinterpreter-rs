@@ -1,12 +1,12 @@
-use iced::advanced::graphics::core::{touch, Element};
+use iced::advanced::graphics::core::{Element, touch};
 use iced::advanced::text::Wrapping;
-use iced::advanced::widget::{tree, Operation, Tree};
-use iced::advanced::{layout, mouse, overlay, renderer, text, Clipboard, Layout, Shell, Widget};
-use iced::keyboard::key::Named;
+use iced::advanced::widget::{Operation, Tree, tree};
+use iced::advanced::{Clipboard, Layout, Shell, Widget, layout, mouse, overlay, renderer, text};
 use iced::keyboard::Key;
+use iced::keyboard::key::Named;
 use iced::widget::text::{LineHeight, Shaping};
-use iced::widget::{text_input, Text, TextInput};
-use iced::{alignment, keyboard, Color, Event, Length, Pixels, Rectangle, Size, Vector};
+use iced::widget::{Text, TextInput, text_input};
+use iced::{Color, Event, Length, Pixels, Rectangle, Size, Vector, alignment, keyboard};
 
 #[allow(missing_debug_implementations)]
 pub struct DynamicTextInput<'a, Message, Theme = iced::Theme, Renderer = iced::Renderer>
@@ -83,7 +83,7 @@ where
     pub fn new(placeholder: &str, value: &str) -> Self
     where
         <Theme as iced::widget::text::Catalog>::Class<'a>:
-        From<iced::widget::text::StyleFn<'a, Theme>>,
+            From<iced::widget::text::StyleFn<'a, Theme>>,
     {
         let input = TextInput::new(placeholder, value).padding(0);
 
@@ -162,7 +162,7 @@ where
 }
 
 impl<'a, Message, Theme, Renderer> Widget<Message, Theme, Renderer>
-for DynamicTextInput<'a, Message, Theme, Renderer>
+    for DynamicTextInput<'a, Message, Theme, Renderer>
 where
     Renderer: text::Renderer,
     Message: Clone,
@@ -354,7 +354,7 @@ where
 }
 
 impl<'a, Message, Theme, Renderer> From<DynamicTextInput<'a, Message, Theme, Renderer>>
-for Element<'a, Message, Theme, Renderer>
+    for Element<'a, Message, Theme, Renderer>
 where
     Message: 'a + Clone,
     Theme: 'a,
