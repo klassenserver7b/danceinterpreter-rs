@@ -214,9 +214,7 @@ impl TraktorServer {
     }
 
     async fn handle_log(&mut self, msg: String) -> impl warp::Reply + use<> {
-        if self.debug_logging {
-            self.send_message(ServerMessage::Log(msg)).await;
-        }
+        self.send_message(ServerMessage::Log(msg)).await;
         StatusCode::CREATED
     }
 }
@@ -527,9 +525,9 @@ pub fn run_server(addr: SocketAddr) -> impl Stream<Item = ServerMessage> {
     stream::select(output_receive, runner)
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Tests
-// ─────────────────────────────────────────────────────────────────────────────
+////////////
+// Tests  //
+////////////
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -537,7 +535,7 @@ mod tests {
     use serde_json::json;
     use tokio::time::{timeout, Duration};
 
-    // ── Shared test helpers ───────────────────────────────────────────────────
+    // -- Shared test helpers --
 
     /// Creates a fresh server state and returns the message receiver alongside it.
     fn new_state() -> (
@@ -624,11 +622,11 @@ mod tests {
         );
     }
 
-    // ─────────────────────────────────────────────────────────────────────────
+    // ==============================================================
     // Unit tests — exercised through warp::test (no real TCP socket)
-    // ─────────────────────────────────────────────────────────────────────────
+    // ==============================================================
 
-    // ── Session guard ─────────────────────────────────────────────────────────
+    // -- Session guard --
 
     /// Every route returns 404 while session_id is empty (server not yet
     /// started via reconnect).
@@ -694,7 +692,7 @@ mod tests {
         assert_ne!(body1["sessionId"], body2["sessionId"]);
     }
 
-    // ── /init endpoint ────────────────────────────────────────────────────────
+    // -- /init endpoint --
 
     /// A POST /init with the correct session ID emits ServerMessage::Connect
     /// and returns the session ID as the response body.
@@ -780,7 +778,7 @@ mod tests {
         assert!(matches!(upd2, ServerMessage::Update(_)));
     }
 
-    // ── /update/* endpoints ───────────────────────────────────────────────────
+    // -- /update/* endpoints --
 
     /// A POST /update/mixer with the correct session and after init emits
     /// ServerMessage::Update(Mixer(…)).
@@ -887,7 +885,7 @@ mod tests {
         );
     }
 
-    // ── /cover endpoint ───────────────────────────────────────────────────────
+    // -- /cover endpoint --
 
     /// A non-empty POST /cover for a required file path emits CoverImage and
     /// returns 202 Accepted.
@@ -994,12 +992,11 @@ mod tests {
         assert_eq!(res.status(), 400);
     }
 
-    // ── /log endpoint ─────────────────────────────────────────────────────────
+    // -- /log endpoint --
 
-    /// With debug_logging enabled, POST /log emits a Log message and
-    /// returns 201.
+    /// POST /log emits a Log message and returns 201.
     #[tokio::test]
-    async fn log_with_debug_logging_enabled_emits_log_message() {
+    async fn log_emits_log_message() {
         let (state, mut rx) = new_state();
         state.lock().await.reconnect(true); // debug_logging = true
         let filter = TraktorServer::routes(state);
@@ -1016,28 +1013,9 @@ mod tests {
         assert!(matches!(msg, ServerMessage::Log(s) if s == "deck A loaded"));
     }
 
-    /// With debug_logging disabled, POST /log still returns 201 but no
-    /// Log message is forwarded.
-    #[tokio::test]
-    async fn log_without_debug_logging_no_message_emitted() {
-        let (state, mut rx) = new_state();
-        state.lock().await.reconnect(false); // debug_logging = false
-        let filter = TraktorServer::routes(state);
-
-        let res = warp::test::request()
-            .method("POST")
-            .path("/log")
-            .body(b"some log")
-            .reply(&filter)
-            .await;
-
-        assert_eq!(res.status(), 201);
-        assert_no_msg(&mut rx).await;
-    }
-
-    // ─────────────────────────────────────────────────────────────────────────
+    // ===========================================================
     // Integration tests — real TCP server driven via run_server()
-    // ─────────────────────────────────────────────────────────────────────────
+    // ===========================================================
 
     mod integration {
         use super::*;
