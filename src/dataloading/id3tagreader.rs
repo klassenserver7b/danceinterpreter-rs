@@ -1,7 +1,7 @@
 use crate::dataloading::songinfo::SongInfo;
 use iced::widget::image::Handle;
-use id3::frame::PictureType;
 use id3::Result;
+use id3::frame::PictureType;
 use id3::{Tag, TagLike};
 use std::path::Path;
 

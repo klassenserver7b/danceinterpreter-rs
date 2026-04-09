@@ -1,12 +1,12 @@
 use crate::Window;
 use crate::{DanceInterpreter, Message};
+use iced::Size;
 use iced::advanced::text::Shaping;
 use iced::alignment::{Horizontal, Vertical};
 use iced::widget::space::horizontal;
 use iced::widget::text::LineHeight;
-use iced::widget::{column, image, row, stack, Text};
-use iced::Size;
-use iced::{window, Element, Length};
+use iced::widget::{Text, column, image, row, stack};
+use iced::{Element, Length, window};
 
 pub struct SongWindow {
     pub id: window::Id,
@@ -23,7 +23,7 @@ impl Window for SongWindow {
             id,
             closed: false,
             size: Size::default(),
-            
+
             enable_image: true,
             enable_next_dance: true,
         }
@@ -75,7 +75,7 @@ impl SongWindow {
                 .size(artist_size)
                 .shaping(Shaping::Advanced),
         ]
-            .spacing(song_spacing);
+        .spacing(song_spacing);
 
         let row_bottom = (if self.enable_image {
             if let Some(image_handle) = song_info.album_art.as_ref() {
@@ -89,9 +89,9 @@ impl SongWindow {
         } else {
             row![column_title_artist]
         })
-            .height(Length::Fill)
-            .align_y(Vertical::Top)
-            .spacing(song_spacing);
+        .height(Length::Fill)
+        .align_y(Vertical::Top)
+        .spacing(song_spacing);
 
         let column_center = column![text_dance, row_bottom]
             .width(Length::Fill)
@@ -128,8 +128,8 @@ impl SongWindow {
         } else {
             stack![column_center]
         })
-            .width(Length::Fill)
-            .height(Length::Fill)
-            .into()
+        .width(Length::Fill)
+        .height(Length::Fill)
+        .into()
     }
 }
