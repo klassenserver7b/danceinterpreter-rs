@@ -91,9 +91,9 @@ pub enum Message {
     EnableAutoscroll(bool),
 
     TraktorMessage(Box<ServerMessage>),
-    TraktorSetSyncMode(Option<TraktorSyncMode>),
-    TraktorSetNextMode(Option<TraktorNextMode>),
-    TraktorSetNextModeFallback(Option<TraktorNextMode>),
+    TraktorSetSyncMode(TraktorSyncMode),
+    TraktorSetNextMode(TraktorNextMode),
+    TraktorSetNextModeFallback(TraktorNextMode),
     TraktorEnableServer(bool),
     TraktorChangeAddress(String),
     TraktorSubmitAddress,
@@ -370,8 +370,8 @@ impl DanceInterpreter {
 
             Message::ToggleRightSidebar => {
                 self.config_window
-                    .sidebar_slidein
-                    .go_mut(!self.config_window.sidebar_slidein.value(), Instant::now());
+                    .sidebar_state
+                    .go_mut(!self.config_window.sidebar_state.value(), Instant::now());
                 ().into()
             }
 
@@ -542,7 +542,7 @@ impl DanceInterpreter {
             system::theme_changes().map(Message::ThemeChanged),
             if self
                 .config_window
-                .sidebar_slidein
+                .sidebar_state
                 .is_animating(Instant::now())
             {
                 window::frames().map(|_| Message::Animate)
