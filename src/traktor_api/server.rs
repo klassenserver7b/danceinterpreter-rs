@@ -476,7 +476,9 @@ async fn server_main(
         println!("could not start traktor server on {}", addr);
 
         #[cfg(feature = "mdns")]
-        drop(service);
+        {
+            drop(service);
+        }
         return;
     };
     let server = warp::serve(routes).incoming(listener).graceful(async {
@@ -494,14 +496,13 @@ async fn server_main(
 }
 
 #[cfg(feature = "mdns")]
-fn advertise_server(addr: SocketAddr) -> libmdns::Service {
+fn advertise_server(addr: SocketAddr) -> Result<libmdns::Service, std::io::Error> {
     let addr_vec = if !addr.ip().is_unspecified() {
         [addr.ip()].to_vec()
     } else {
         Vec::new()
     };
-    let responder =
-        libmdns::Responder::new_with_ip_list(addr_vec).expect("could not create responder");
+    let responder = libmdns::Responder::new_with_ip_list(addr_vec)?;
     let svc = responder.register(
         "_http._tcp",
         "traktor-di-webserver",
@@ -509,7 +510,7 @@ fn advertise_server(addr: SocketAddr) -> libmdns::Service {
         &["path=/"],
     );
     println!("advertising traktor server on {}", addr);
-    svc
+    Ok(svc)
 }
 
 pub fn run_server(addr: SocketAddr) -> impl Stream<Item = ServerMessage> {
@@ -616,7 +617,7 @@ mod tests {
             .expect("channel closed unexpectedly")
     }
 
-    /// Asserts that no message arrives within 50 ms.
+    /// Asserts that no message arrives within 500 ms.
     async fn assert_no_msg(rx: &mut iced_mpsc::UnboundedReceiver<ServerMessage>) {
         let result = timeout(Duration::from_millis(500), rx.next()).await;
         assert!(
