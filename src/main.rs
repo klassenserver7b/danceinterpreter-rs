@@ -27,6 +27,7 @@ use iced_aw::ICED_AW_FONT_BYTES;
 use rfd::FileDialog;
 use std::env::var;
 use std::path::PathBuf;
+use std::time::Instant;
 
 fn main() -> iced::Result {
     iced::daemon(
@@ -77,6 +78,8 @@ pub enum Message {
     ScrollBy(f32),
     SnapTo(RelativeOffset),
     AddBlankSong(RelativeOffset),
+    ToggleRightSidebar,
+    Animate,
 
     FileDropped(PathBuf),
     SongChanged(SongChange),
@@ -382,6 +385,15 @@ impl DanceInterpreter {
 
             Message::SnapTo(offset) => snap_to(PLAYLIST_SCROLLABLE_ID.clone(), offset),
 
+            Message::ToggleRightSidebar => {
+                self.config_window
+                    .sidebar_slidein
+                    .go_mut(!self.config_window.sidebar_slidein.value(), Instant::now());
+                ().into()
+            }
+
+            Message::Animate => Task::none(),
+
             Message::TraktorMessage(msg) => {
                 self.data_provider.process_traktor_message(*msg);
                 self.run_traktor_sync_action();
@@ -545,6 +557,15 @@ impl DanceInterpreter {
                 }
             }),
             system::theme_changes().map(Message::ThemeChanged),
+            if self
+                .config_window
+                .sidebar_slidein
+                .is_animating(Instant::now())
+            {
+                window::frames().map(|_| Message::Animate)
+            } else {
+                Subscription::none()
+            },
         ];
 
         if let Some(addr) = self.data_provider.traktor_provider.get_socket_addr() {

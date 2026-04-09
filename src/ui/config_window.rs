@@ -2,18 +2,22 @@ use crate::dataloading::dataprovider::song_data_provider::{
     SongChange, SongDataEdit, SongDataSource,
 };
 use crate::traktor_api::{TRAKTOR_SERVER_DEFAULT_ADDR, TraktorNextMode, TraktorSyncMode};
-use crate::ui::material_icon;
 use crate::ui::widget::dynamic_text_input::DynamicTextInput;
+use crate::ui::{material_icon, material_icon_sized};
 use crate::{DanceInterpreter, Message, Window};
 use iced::advanced::Widget;
 use iced::alignment::Vertical;
 use iced::border::Radius;
 use iced::widget::scrollable::{Direction, RelativeOffset, Scrollbar};
+use iced::widget::space::horizontal;
 use iced::widget::{
     Button, Column, Row, Scrollable, Space, button, checkbox, column as col, radio, row,
     scrollable, text,
 };
-use iced::{Border, Color, Element, Font, Length, Renderer, Size, Theme, font, window};
+use iced::{
+    Animation, Border, Color, Element, Font, Length, Pixels, Renderer, Size, Theme, animation,
+    font, window,
+};
 use iced_aw::menu::Item;
 use iced_aw::style::{Status, menu_bar::primary};
 use iced_aw::widget::InnerBounds;
@@ -21,13 +25,14 @@ use iced_aw::{Menu, MenuBar, iced_aw_font, menu, menu_bar, menu_items, quad};
 use network_interface::Addr::V4;
 use network_interface::{NetworkInterface, NetworkInterfaceConfig};
 use std::sync::LazyLock;
+use std::time::{Duration, Instant};
 
 pub struct ConfigWindow {
     pub id: window::Id,
     pub closed: bool,
     pub size: Size,
-
     pub enable_autoscroll: bool,
+    pub sidebar_slidein: Animation<bool>,
     pub theme: Theme,
 }
 
@@ -42,6 +47,9 @@ impl Window for ConfigWindow {
             size: Size::default(),
 
             enable_autoscroll: true,
+            sidebar_slidein: Animation::new(false)
+                .duration(Duration::from_secs(5))
+                .easing(animation::Easing::EaseInOut),
             theme: Theme::Dark,
         }
     }
@@ -61,11 +69,11 @@ impl Window for ConfigWindow {
 
 impl ConfigWindow {
     pub fn view<'a>(&'a self, dance_interpreter: &'a DanceInterpreter) -> Element<'a, Message> {
-        let menu_bar = self.build_menu_bar(dance_interpreter);
+        let top_bar = self.build_top_bar(dance_interpreter);
         let playlist_view = self.build_playlist_view(dance_interpreter);
         let statics_view = self.build_statics_view(dance_interpreter);
 
-        let content = col![menu_bar, playlist_view, statics_view];
+        let content = col![top_bar, playlist_view, statics_view];
         content.into()
     }
 
@@ -232,6 +240,19 @@ impl ConfigWindow {
             .direction(Direction::Horizontal(Scrollbar::new()))
             .spacing(5)
             .width(Length::Fill)
+    }
+
+    fn build_top_bar<'a>(&self, dance_interpreter: &'a DanceInterpreter) -> Row<'a, Message> {
+        row![
+            self.build_menu_bar(dance_interpreter),
+            horizontal(),
+            material_icon_sized_message_button(
+                "right_panel_open",
+                self.sidebar_slidein.interpolate(10.0, 40.0, Instant::now()),
+                Message::ToggleRightSidebar
+            )
+            .padding([0, 4])
+        ]
     }
 
     fn build_menu_bar<'a>(
@@ -420,7 +441,18 @@ fn label_message_button_fill_opt(
 
 fn material_icon_message_button(icon_id: &'_ str, message: Message) -> button::Button<'_, Message> {
     button(material_icon(icon_id))
-        .padding([4, 8])
+        //.padding([4, 8])
+        .style(button::secondary)
+        .on_press(message)
+        .width(Length::Shrink)
+}
+
+fn material_icon_sized_message_button(
+    icon_id: &'_ str,
+    size: impl Into<Pixels>,
+    message: Message,
+) -> button::Button<'_, Message> {
+    button(material_icon_sized(icon_id, size))
         .style(button::secondary)
         .on_press(message)
         .width(Length::Shrink)
