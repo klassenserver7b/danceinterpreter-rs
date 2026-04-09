@@ -469,23 +469,26 @@ async fn server_main(
 
     println!("starting traktor server on {}", addr);
 
-    #[cfg(feature = "mdns")]
-    let service = advertise_server(addr);
-
     let Ok(listener) = tokio::net::TcpListener::bind(addr).await else {
         println!("could not start traktor server on {}", addr);
-
-        #[cfg(feature = "mdns")]
-        {
-            drop(service);
-        }
         return;
     };
+
     let server = warp::serve(routes).incoming(listener).graceful(async {
         cancelled.await.ok();
     });
 
     tokio::task::spawn(server.run());
+
+    #[cfg(feature = "mdns")]
+    let service;
+    #[cfg(feature = "mdns")]
+    {
+        service = advertise_server(addr);
+        if service.is_err() {
+            drop(service)
+        }
+    }
 
     state.lock().await.send_ready(input_send).await;
     loop {
