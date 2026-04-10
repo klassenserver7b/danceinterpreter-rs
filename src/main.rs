@@ -4,7 +4,6 @@ mod macros;
 mod traktor_api;
 mod ui;
 
-use crate::Message::SnapTo;
 use crate::async_utils::run_subscription_with;
 use crate::dataloading::dataprovider::song_data_provider::{
     SongChange, SongDataEdit, SongDataProvider, SongDataSource,
@@ -15,7 +14,7 @@ use crate::dataloading::songinfo::SongInfo;
 use crate::traktor_api::{
     ServerMessage, StateUpdate, TraktorNextMode, TraktorSyncAction, TraktorSyncMode,
 };
-use crate::ui::config_window::{ConfigWindow, PLAYLIST_SCROLLABLE_ID};
+use crate::ui::config_window::{ConfigWindow, PLAYLIST_SCROLLABLE_ID, SidebarMessage};
 use crate::ui::song_window::SongWindow;
 use iced::keyboard::key::Named;
 use iced::keyboard::{Key, Modifiers};
@@ -78,7 +77,7 @@ pub enum Message {
     ScrollBy(f32),
     SnapTo(RelativeOffset),
     AddBlankSong(RelativeOffset),
-    ToggleRightSidebar,
+    Sidebar(SidebarMessage),
     Animate,
 
     FileDropped(PathBuf),
@@ -368,12 +367,19 @@ impl DanceInterpreter {
 
             Message::SnapTo(offset) => snap_to(PLAYLIST_SCROLLABLE_ID.clone(), offset),
 
-            Message::ToggleRightSidebar => {
-                self.config_window
-                    .sidebar_state
-                    .go_mut(!self.config_window.sidebar_state.value(), Instant::now());
-                ().into()
-            }
+            Message::Sidebar(msg) => match msg {
+                SidebarMessage::Toggle => {
+                    self.config_window
+                        .sidebar_state
+                        .go_mut(!self.config_window.sidebar_state.value(), Instant::now());
+                    ().into()
+                }
+                SidebarMessage::UpdateAddressPresets => {
+                    self.config_window
+                        .update_network_interface_selection(&self.data_provider);
+                    ().into()
+                }
+            },
 
             Message::Animate => Task::none(),
 
@@ -480,7 +486,7 @@ impl DanceInterpreter {
             let offset_y =
                 index as f32 / std::cmp::max(1, self.data_provider.playlist_songs.len() - 1) as f32;
 
-            Task::done(SnapTo(RelativeOffset {
+            Task::done(Message::SnapTo(RelativeOffset {
                 x: 0.0,
                 y: offset_y,
             }))
@@ -536,6 +542,9 @@ impl DanceInterpreter {
                         Some(Message::AddBlankSong(RelativeOffset::END))
                     }
                     (Key::Character("r"), Modifiers::CTRL) => Some(Message::ReloadStatics),
+                    (Key::Character("c"), Modifiers::ALT) => {
+                        Some(Message::Sidebar(SidebarMessage::Toggle))
+                    }
                     _ => None,
                 }
             }),

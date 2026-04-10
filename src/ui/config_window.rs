@@ -1,5 +1,5 @@
 use crate::dataloading::dataprovider::song_data_provider::{
-    SongChange, SongDataEdit, SongDataSource,
+    SongChange, SongDataEdit, SongDataProvider, SongDataSource,
 };
 use crate::traktor_api::{TRAKTOR_SERVER_DEFAULT_ADDR, TraktorNextMode, TraktorSyncMode};
 use crate::ui::widget::dynamic_text_input::DynamicTextInput;
@@ -11,8 +11,8 @@ use iced::border::Radius;
 use iced::widget::scrollable::{Direction, RelativeOffset, Scrollbar};
 use iced::widget::space::horizontal;
 use iced::widget::{
-    Button, Column, ComboBox, Row, Scrollable, Space, button, checkbox, column as col, combo_box,
-    pick_list, radio, row, scrollable, text,
+    Button, Column, ComboBox, Container, Row, Scrollable, Space, button, checkbox, column as col,
+    combo_box, container, pick_list, radio, row, scrollable, text,
 };
 use iced::{
     Alignment, Animation, Border, Color, Element, Font, Length, Pixels, Renderer, Size, Theme,
@@ -33,8 +33,9 @@ pub struct ConfigWindow {
     pub size: Size,
     pub enable_autoscroll: bool,
     pub sidebar_state: Animation<bool>,
-    pub server_address_state: combo_box::State<String>,
+    pub server_address_text: String,
     pub theme: Theme,
+    server_address_presets: combo_box::State<String>,
 }
 
 pub static PLAYLIST_SCROLLABLE_ID: LazyLock<iced::widget::Id> =
@@ -49,9 +50,10 @@ impl Window for ConfigWindow {
 
             enable_autoscroll: true,
             sidebar_state: Animation::new(false)
-                .duration(Duration::from_millis(500))
+                .duration(Duration::from_millis(100))
                 .easing(animation::Easing::EaseInOut),
-            server_address_state: combo_box::State::default(),
+            server_address_presets: combo_box::State::default(),
+            server_address_text: String::new(),
             theme: Theme::Dark,
         }
     }
@@ -75,15 +77,14 @@ impl ConfigWindow {
         let playlist_view = self.build_playlist_view(dance_interpreter);
         let statics_view = self.build_statics_view(dance_interpreter);
 
-        let main_content = col![top_bar, playlist_view, statics_view];
-
         if self.sidebar_state.value() || self.sidebar_state.is_animating(Instant::now()) {
             let side_bar = self
                 .build_server_sidebar(dance_interpreter)
                 .width(self.sidebar_state.interpolate(0.0, 400.0, Instant::now()));
-            row![main_content, side_bar].into()
+            let main_content = row![col![top_bar, playlist_view], side_bar];
+            col![main_content, statics_view].spacing(5).into()
         } else {
-            main_content.into()
+            col![top_bar, playlist_view, statics_view].into()
         }
     }
 
@@ -125,7 +126,7 @@ impl ConfigWindow {
     fn build_server_sidebar<'a>(
         &'a self,
         dance_interpreter: &'a DanceInterpreter,
-    ) -> Column<'a, Message> {
+    ) -> Container<'a, Message> {
         let sync_options = vec![
             TraktorSyncMode::None,
             TraktorSyncMode::Relative,
@@ -141,80 +142,75 @@ impl ConfigWindow {
             TraktorNextMode::PlaylistByName,
         ];
 
-        col![
-            text("Server Settings").size(24),
-            labeled_message_checkbox(
-                "Enable Server",
-                dance_interpreter.data_provider.traktor_provider.is_enabled,
-                Message::TraktorEnableServer,
-            ),
-            labeled_dynamic_text_input(
-                "Server Address",
-                TRAKTOR_SERVER_DEFAULT_ADDR,
-                dance_interpreter
-                    .data_provider
-                    .traktor_provider
-                    .address
-                    .as_str(),
-                Message::TraktorChangeAddress,
-                Some(Message::TraktorSubmitAddress),
-            ),
+        container(
             col![
-                text("Network Interface:"),
-                self.get_network_interface_combo_box(dance_interpreter)
-            ],
-            labeled_message_checkbox(
-                "Enable Debug Logging",
-                dance_interpreter
-                    .data_provider
-                    .traktor_provider
-                    .debug_logging,
-                Message::TraktorEnableDebugLogging,
-            ),
-            label_message_button_fill_opt(
-                "Reset Connection",
-                dance_interpreter
-                    .data_provider
-                    .traktor_provider
-                    .is_enabled
-                    .then_some(Message::TraktorReconnect)
-            ),
-            col![
-                text("Sync Mode"),
-                pick_list(
-                    sync_options.clone(),
-                    Some(dance_interpreter.data_provider.traktor_provider.sync_mode),
-                    Message::TraktorSetSyncMode
-                )
-            ]
-            .align_x(Alignment::Center),
-            col![
-                text("Next Song Mode"),
-                pick_list(
-                    next_options.clone(),
-                    Some(dance_interpreter.data_provider.traktor_provider.next_mode),
-                    Message::TraktorSetNextMode
-                )
-            ]
-            .align_x(Alignment::Center),
-            col![
-                text("Next Song Mode (Fallback)"),
-                pick_list(
-                    next_options.clone(),
-                    Some(
-                        dance_interpreter
-                            .data_provider
-                            .traktor_provider
-                            .next_mode_fallback
-                    ),
-                    Message::TraktorSetNextModeFallback
-                )
+                text("Server Settings").size(24),
+                labeled_message_checkbox(
+                    "Enable Server",
+                    dance_interpreter.data_provider.traktor_provider.is_enabled,
+                    Message::TraktorEnableServer,
+                ),
+                col![
+                    text("Server Address: "),
+                    self.build_network_interface_combo_box(dance_interpreter)
+                ],
+                labeled_message_checkbox(
+                    "Enable Debug Logging",
+                    dance_interpreter
+                        .data_provider
+                        .traktor_provider
+                        .debug_logging,
+                    Message::TraktorEnableDebugLogging,
+                ),
+                label_message_button_fill_opt(
+                    "Reset Connection",
+                    dance_interpreter
+                        .data_provider
+                        .traktor_provider
+                        .is_enabled
+                        .then_some(Message::TraktorReconnect)
+                ),
+                col![
+                    text("Sync Mode"),
+                    pick_list(
+                        sync_options.clone(),
+                        Some(dance_interpreter.data_provider.traktor_provider.sync_mode),
+                        Message::TraktorSetSyncMode
+                    )
+                ]
+                .align_x(Alignment::Center),
+                col![
+                    text("Next Song Mode"),
+                    pick_list(
+                        next_options.clone(),
+                        Some(dance_interpreter.data_provider.traktor_provider.next_mode),
+                        Message::TraktorSetNextMode
+                    )
+                ]
+                .align_x(Alignment::Center),
+                col![
+                    text("Next Song Mode (Fallback)"),
+                    pick_list(
+                        next_options.clone(),
+                        Some(
+                            dance_interpreter
+                                .data_provider
+                                .traktor_provider
+                                .next_mode_fallback
+                        ),
+                        Message::TraktorSetNextModeFallback
+                    )
+                ]
+                .align_x(Alignment::Center)
             ]
             .align_x(Alignment::Center)
-        ]
-        .align_x(Alignment::Center)
-        .spacing(10)
-        .padding(10)
+            .spacing(10)
+            .padding(10),
+        )
+        .height(Length::Fill)
+        .style(|t| {
+            container::Style::default().background(t.extended_palette().background.weakest.color)
+        })
     }
 
     fn build_playlist_view(&'_ self, dance_interpreter: &DanceInterpreter) -> Column<'_, Message> {
@@ -354,7 +350,7 @@ impl ConfigWindow {
             material_icon_sized_message_button(
                 "right_panel_open",
                 20.0,
-                Message::ToggleRightSidebar
+                Message::Sidebar(SidebarMessage::Toggle)
             )
             .padding([0, 4])
         ]
@@ -409,7 +405,7 @@ impl ConfigWindow {
                         (
                             labeled_dynamic_text_input("Server Address", TRAKTOR_SERVER_DEFAULT_ADDR, dance_interpreter.data_provider.traktor_provider.address.as_str(),
                                 Message::TraktorChangeAddress, Some(Message::TraktorSubmitAddress)),
-                            menu_tpl_2(get_network_interface_menu(dance_interpreter).into_iter().map(Item::new).collect())
+                            menu_tpl_2(get_network_interface_menu(&dance_interpreter.data_provider).into_iter().map(Item::new).collect())
                         ),
                         (separator()),
                         (labeled_message_checkbox_opt("Enable Debug Logging", dance_interpreter.data_provider.traktor_provider.debug_logging,
@@ -483,22 +479,49 @@ impl ConfigWindow {
         mb
     }
 
-    fn get_network_interface_combo_box(
+    fn build_network_interface_combo_box(
         &'_ self,
         dance_interpreter: &DanceInterpreter,
     ) -> ComboBox<'_, String, Message> {
         combo_box::<String, _, Theme, Renderer>(
-            &self.server_address_state,
-            "Enter bind address",
-            Some(
-                &dance_interpreter
-                    .data_provider
-                    .traktor_provider
-                    .submitted_address,
-            ),
+            &self.server_address_presets,
+            if !self.server_address_text.is_empty() {
+                self.server_address_text.as_ref()
+            } else {
+                TRAKTOR_SERVER_DEFAULT_ADDR
+            },
+            Some(&dance_interpreter.data_provider.traktor_provider.address),
             Message::TraktorChangeAndSubmitAddress,
         )
+        .on_open(Message::Sidebar(SidebarMessage::UpdateAddressPresets))
+        .on_option_hovered(Message::TraktorChangeAddress)
+        .on_input(Message::TraktorChangeAddress)
+        .on_close(Message::TraktorSubmitAddress)
     }
+
+    pub fn update_network_interface_selection(&mut self, song_data_provider: &SongDataProvider) {
+        let mut detected_interfaces: Vec<String> =
+            get_formatted_network_interfaces(song_data_provider)
+                .into_iter()
+                .map(|(_, _, formatted)| formatted)
+                .collect();
+        detected_interfaces.push(TRAKTOR_SERVER_DEFAULT_ADDR.to_owned());
+        detected_interfaces.push(
+            song_data_provider
+                .traktor_provider
+                .submitted_address
+                .clone(),
+        );
+        detected_interfaces.sort();
+
+        self.server_address_presets = combo_box::State::new(detected_interfaces);
+    }
+}
+
+#[derive(Debug, Clone)]
+pub enum SidebarMessage {
+    Toggle,
+    UpdateAddressPresets,
 }
 
 fn get_network_interfaces() -> Vec<(String, String)> {
@@ -519,19 +542,27 @@ fn get_network_interfaces() -> Vec<(String, String)> {
     interfaces
 }
 
-fn get_network_interface_menu(dance_interpreter: &'_ DanceInterpreter) -> Vec<Button<'_, Message>> {
+fn get_formatted_network_interfaces(
+    song_data_provider: &'_ SongDataProvider,
+) -> Vec<(String, String, String)> {
     let interfaces = get_network_interfaces();
 
-    let original_addr = dance_interpreter
-        .data_provider
+    let original_addr = song_data_provider
         .traktor_provider
         .get_socket_addr()
         .unwrap_or(TRAKTOR_SERVER_DEFAULT_ADDR.parse().unwrap());
     let original_port = original_addr.port();
 
-    let interfaces = interfaces
+    interfaces
         .into_iter()
-        .map(|(name, addr)| (name, addr.clone(), format!("{}:{}", addr, original_port)));
+        .map(|(name, addr)| (name, addr.clone(), format!("{}:{}", addr, original_port)))
+        .collect()
+}
+
+fn get_network_interface_menu(
+    song_data_provider: &'_ SongDataProvider,
+) -> Vec<Button<'_, Message>> {
+    let interfaces = get_formatted_network_interfaces(song_data_provider);
 
     interfaces
         .into_iter()
