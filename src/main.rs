@@ -14,7 +14,7 @@ use crate::dataloading::songinfo::SongInfo;
 use crate::traktor_api::{
     ServerMessage, StateUpdate, TraktorNextMode, TraktorSyncAction, TraktorSyncMode,
 };
-use crate::ui::config_window::{ConfigWindow, PLAYLIST_SCROLLABLE_ID};
+use crate::ui::config_window::{ConfigWindow, PLAYLIST_SCROLLABLE_ID, SidebarMessage};
 use crate::ui::song_window::SongWindow;
 use iced::keyboard::key::Named;
 use iced::keyboard::{Key, Modifiers};
@@ -78,7 +78,7 @@ pub enum Message {
     ScrollBy(f32),
     SnapTo(RelativeOffset),
     AddBlankSong(RelativeOffset),
-    ToggleRightSidebar,
+    Sidebar(SidebarMessage),
     Animate,
 
     FileDropped(PathBuf),
@@ -385,12 +385,19 @@ impl DanceInterpreter {
 
             Message::SnapTo(offset) => snap_to(PLAYLIST_SCROLLABLE_ID.clone(), offset),
 
-            Message::ToggleRightSidebar => {
-                self.config_window
-                    .sidebar_state
-                    .go_mut(!self.config_window.sidebar_state.value(), Instant::now());
-                ().into()
-            }
+            Message::Sidebar(msg) => match msg {
+                SidebarMessage::Toggle => {
+                    self.config_window
+                        .sidebar_state
+                        .go_mut(!self.config_window.sidebar_state.value(), Instant::now());
+                    ().into()
+                }
+                SidebarMessage::UpdateAddressPresets => {
+                    self.config_window
+                        .update_network_interface_selection(&self.data_provider);
+                    ().into()
+                }
+            },
 
             Message::Animate => Task::none(),
 
@@ -553,6 +560,9 @@ impl DanceInterpreter {
                         Some(Message::AddBlankSong(RelativeOffset::END))
                     }
                     (Key::Character("r"), Modifiers::CTRL) => Some(Message::ReloadStatics),
+                    (Key::Character("c"), Modifiers::ALT) => {
+                        Some(Message::Sidebar(SidebarMessage::Toggle))
+                    }
                     _ => None,
                 }
             }),

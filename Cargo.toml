@@ -10,7 +10,7 @@ authors = ["Klassenserver7b <klassenserver7bwin10@gmail.com>", "Konsl <82901383+
 id3 = "1.16"
 url = "2.5"
 percent-encoding = "2.3"
-iced = { version = "0.14.0", features = ["linux-theme-detection", "image", "debug", "wayland", "svg", "lazy", "canvas", "tokio", "advanced"] }
+iced = { version = "0.14.0", features = ["linux-theme-detection", "image", "wayland", "svg", "lazy", "canvas", "tokio", "advanced", "debug"] }
 iced_aw = { version = "0.13.1", features = ["default"] }
 #iced_anim = { version = "0.3.1", features = ["derive", "widgets"] }
 rfd = "0.17"
@@ -35,5 +35,5 @@ futures-util = "0.3"
 
 [features]
 default = ["mdns"]
-debug = ["iced/hot"]
+hot = ["iced/hot"]
 mdns = ["dep:libmdns"]
