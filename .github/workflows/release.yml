@@ -116,7 +116,7 @@ jobs:
             cp "target/${{ matrix.target }}/release/$BIN_NAME" "bins/"
           fi
 
-      - uses: actions/upload-artifact@v7.0.0
+      - uses: actions/upload-artifact@v7.0.1
         with:
           name: bins-rust-${{ matrix.build }}
           path: bins
@@ -144,7 +144,7 @@ jobs:
           bun build --compile --target=bun-linux-aarch64 ./index.ts --outfile target/cover-loader-linux-aarch64
           bun build --compile --target=bun-windows-x64-baseline ./index.ts --outfile target/cover-loader-windows-x64
 
-      - uses: actions/upload-artifact@v7.0.0
+      - uses: actions/upload-artifact@v7.0.1
         with:
           name: bins-js
           path: ./traktor-api/cover-loader/target
