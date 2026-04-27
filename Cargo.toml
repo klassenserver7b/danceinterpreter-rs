@@ -11,7 +11,7 @@ id3 = "1.16"
 url = "2.5"
 percent-encoding = "2.3"
 iced = { version = "0.14.0", features = ["linux-theme-detection", "image", "debug", "wayland", "svg", "lazy", "canvas", "tokio", "advanced"] }
-iced_aw = { version = "0.13.1", features = ["default"] }
+iced_aw = { version = "0.14.1", features = ["default"] }
 #iced_anim = { version = "0.3.1", features = ["derive", "widgets"] }
 rfd = "0.17"
 dirs = "6.0"
