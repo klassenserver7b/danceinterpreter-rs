@@ -14,9 +14,9 @@ use crate::dataloading::songinfo::SongInfo;
 use crate::traktor_api::{
     ServerMessage, StateUpdate, TraktorNextMode, TraktorSyncAction, TraktorSyncMode,
 };
-use crate::ui::config_window::{
-    BottomBarMessage, ConfigWindow, PLAYLIST_SCROLLABLE_ID, SidebarMessage,
-};
+use crate::ui::config_window::bottombar::BottomBarMessage;
+use crate::ui::config_window::sidebar::SidebarMessage;
+use crate::ui::config_window::{ConfigWindow, PLAYLIST_SCROLLABLE_ID};
 use crate::ui::song_window::SongWindow;
 use iced::keyboard::key::Named;
 use iced::keyboard::{Key, Modifiers};
@@ -391,12 +391,14 @@ impl DanceInterpreter {
             Message::Sidebar(msg) => match msg {
                 SidebarMessage::Toggle => {
                     self.config_window
-                        .sidebar_state
-                        .go_mut(!self.config_window.sidebar_state.value(), Instant::now());
+                        .sidebar
+                        .state
+                        .go_mut(!self.config_window.sidebar.state.value(), Instant::now());
                     ().into()
                 }
                 SidebarMessage::UpdateAddressPresets => {
                     self.config_window
+                        .sidebar
                         .update_network_interface_selection(&self.data_provider);
                     ().into()
                 }
@@ -405,8 +407,9 @@ impl DanceInterpreter {
             Message::Bottombar(msg) => match msg {
                 BottomBarMessage::Toggle => {
                     self.config_window
-                        .bottombar_state
-                        .go_mut(!self.config_window.bottombar_state.value(), Instant::now());
+                        .bottombar
+                        .state
+                        .go_mut(!self.config_window.bottombar.state.value(), Instant::now());
                     ().into()
                 }
             },
@@ -422,7 +425,7 @@ impl DanceInterpreter {
 
             Message::TraktorEnableServer(enabled) => {
                 self.data_provider.traktor_provider.is_enabled = enabled;
-                self.config_window.power_button_cache.clear();
+                self.config_window.sidebar.power_button_cache.clear();
                 ().into()
             }
 
@@ -582,11 +585,13 @@ impl DanceInterpreter {
             system::theme_changes().map(Message::ThemeChanged),
             if self
                 .config_window
-                .sidebar_state
+                .sidebar
+                .state
                 .is_animating(Instant::now())
                 || self
                     .config_window
-                    .bottombar_state
+                    .bottombar
+                    .state
                     .is_animating(Instant::now())
             {
                 window::frames().map(|_| Message::Animate)
