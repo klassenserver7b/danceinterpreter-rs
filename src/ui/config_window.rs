@@ -3,6 +3,8 @@ use crate::dataloading::dataprovider::song_data_provider::{
 };
 use crate::traktor_api::{TRAKTOR_SERVER_DEFAULT_ADDR, TraktorNextMode, TraktorSyncMode};
 use crate::ui::widget::dynamic_text_input::DynamicTextInput;
+use crate::ui::widget::suggestion_text_input;
+use crate::ui::widget::suggestion_text_input::SuggestionTextInput;
 use crate::ui::{material_icon, material_icon_sized};
 use crate::{DanceInterpreter, Message, Window};
 use iced::advanced::Widget;
@@ -11,14 +13,13 @@ use iced::border::Radius;
 use iced::widget::scrollable::{Direction, RelativeOffset, Scrollbar};
 use iced::widget::space::horizontal;
 use iced::widget::{
-    Button, Column, ComboBox, Container, Row, Scrollable, Space, button, checkbox, column as col,
-    combo_box, container, pick_list, radio, row, scrollable, text,
+    Button, Column, Container, Row, Scrollable, Space, button, checkbox, column as col, container,
+    pick_list, radio, row, scrollable, text,
 };
 use iced::{
     Alignment, Animation, Border, Color, Element, Font, Length, Pixels, Renderer, Size, Theme,
     animation, font, window,
 };
-use iced_aw::menu::Item;
 use iced_aw::style::{Status, menu_bar::primary};
 use iced_aw::widget::InnerBounds;
 use iced_aw::{Menu, MenuBar, iced_aw_font, menu, menu_bar, menu_items, quad};
@@ -35,7 +36,7 @@ pub struct ConfigWindow {
     pub sidebar_state: Animation<bool>,
     pub server_address_text: String,
     pub theme: Theme,
-    server_address_presets: combo_box::State<String>,
+    server_address_presets: suggestion_text_input::State<String>,
 }
 
 pub static PLAYLIST_SCROLLABLE_ID: LazyLock<iced::widget::Id> =
@@ -52,7 +53,7 @@ impl Window for ConfigWindow {
             sidebar_state: Animation::new(false)
                 .duration(Duration::from_millis(100))
                 .easing(animation::Easing::EaseInOut),
-            server_address_presets: combo_box::State::default(),
+            server_address_presets: suggestion_text_input::State::default(),
             server_address_text: String::new(),
             theme: Theme::Dark,
         }
@@ -361,7 +362,6 @@ impl ConfigWindow {
         dance_interpreter: &'a DanceInterpreter,
     ) -> MenuBar<'a, Message, Theme, Renderer> {
         let menu_tpl_1 = |items| Menu::new(items).max_width(150.0).offset(15.0).spacing(5.0);
-        let menu_tpl_2 = |items| Menu::new(items).max_width(150.0).offset(0.0).spacing(5.0);
 
         #[rustfmt::skip]
         let mb = menu_bar!
@@ -396,74 +396,6 @@ impl ConfigWindow {
                     )
                 )
                 .spacing(5.0)
-            ),
-            (
-                label_message_button_shrink("Traktor", Message::Noop),
-                menu_tpl_1(
-                    menu_items!(
-                        (labeled_message_checkbox("Enable Server", dance_interpreter.data_provider.traktor_provider.is_enabled, Message::TraktorEnableServer)),
-                        (
-                            labeled_dynamic_text_input("Server Address", TRAKTOR_SERVER_DEFAULT_ADDR, dance_interpreter.data_provider.traktor_provider.address.as_str(),
-                                Message::TraktorChangeAddress, Some(Message::TraktorSubmitAddress)),
-                            menu_tpl_2(get_network_interface_menu(&dance_interpreter.data_provider).into_iter().map(Item::new).collect())
-                        ),
-                        (separator()),
-                        (labeled_message_checkbox_opt("Enable Debug Logging", dance_interpreter.data_provider.traktor_provider.debug_logging,
-                            dance_interpreter.data_provider.traktor_provider.is_enabled.then_some(Message::TraktorEnableDebugLogging))),
-                        (label_message_button_fill_opt("Reset Connection", dance_interpreter.data_provider.traktor_provider.is_enabled.then_some(Message::TraktorReconnect))),
-                        (separator()),
-                        (
-                            submenu_button("Sync Mode"),
-                            menu_tpl_2(
-                                menu_items!(
-                                    (labeled_message_radio("None", TraktorSyncMode::None,
-                                        dance_interpreter.data_provider.traktor_provider.sync_mode, Message::TraktorSetSyncMode)),
-                                    (labeled_message_radio("X Fader", TraktorSyncMode::Relative,
-                                        dance_interpreter.data_provider.traktor_provider.sync_mode, Message::TraktorSetSyncMode)),
-                                    (labeled_message_radio("By Track Number", TraktorSyncMode::AbsoluteByNumber,
-                                        dance_interpreter.data_provider.traktor_provider.sync_mode, Message::TraktorSetSyncMode)),
-                                    (labeled_message_radio("By Title / Artist", TraktorSyncMode::AbsoluteByName,
-                                        dance_interpreter.data_provider.traktor_provider.sync_mode, Message::TraktorSetSyncMode)),
-                                )
-                            )
-                        ),
-                        (
-                            submenu_button("Next Song Mode"),
-                            menu_tpl_2(
-                                menu_items!(
-                                    (labeled_message_radio("None", TraktorNextMode::None,
-                                        dance_interpreter.data_provider.traktor_provider.next_mode, Message::TraktorSetNextMode)),
-                                    (labeled_message_radio("From other Deck (by Position)", TraktorNextMode::DeckByPosition,
-                                        dance_interpreter.data_provider.traktor_provider.next_mode, Message::TraktorSetNextMode)),
-                                    (labeled_message_radio("From other Deck (by Track Number)", TraktorNextMode::DeckByNumber,
-                                        dance_interpreter.data_provider.traktor_provider.next_mode, Message::TraktorSetNextMode)),
-                                    (labeled_message_radio("From Playlist (by Track Number)", TraktorNextMode::PlaylistByNumber,
-                                        dance_interpreter.data_provider.traktor_provider.next_mode, Message::TraktorSetNextMode)),
-                                    (labeled_message_radio("From Playlist (by Title / Artist)", TraktorNextMode::PlaylistByName,
-                                        dance_interpreter.data_provider.traktor_provider.next_mode, Message::TraktorSetNextMode)),
-                                )
-                            )
-                        ),
-                        (
-                            submenu_button("Next Song Mode (Fallback)"),
-                            menu_tpl_2(
-                                menu_items!(
-                                    (labeled_message_radio("None", TraktorNextMode::None,
-                                        dance_interpreter.data_provider.traktor_provider.next_mode_fallback, Message::TraktorSetNextModeFallback)),
-                                    (labeled_message_radio("From other Deck (by Position)", TraktorNextMode::DeckByPosition,
-                                        dance_interpreter.data_provider.traktor_provider.next_mode_fallback, Message::TraktorSetNextModeFallback)),
-                                    (labeled_message_radio("From other Deck (by Track Number)", TraktorNextMode::DeckByNumber,
-                                        dance_interpreter.data_provider.traktor_provider.next_mode_fallback, Message::TraktorSetNextModeFallback)),
-                                    (labeled_message_radio("From Playlist (by Track Number)", TraktorNextMode::PlaylistByNumber,
-                                        dance_interpreter.data_provider.traktor_provider.next_mode_fallback, Message::TraktorSetNextModeFallback)),
-                                    (labeled_message_radio("From Playlist (by Title / Artist)", TraktorNextMode::PlaylistByName,
-                                        dance_interpreter.data_provider.traktor_provider.next_mode_fallback, Message::TraktorSetNextModeFallback)),
-                                )
-                            )
-                        )
-                    )
-                )
-                .spacing(5.0)
             )
         )
         .spacing(5.0)
@@ -482,8 +414,8 @@ impl ConfigWindow {
     fn build_network_interface_combo_box(
         &'_ self,
         dance_interpreter: &DanceInterpreter,
-    ) -> ComboBox<'_, String, Message> {
-        combo_box::<String, _, Theme, Renderer>(
+    ) -> SuggestionTextInput<'_, String, Message> {
+        SuggestionTextInput::new(
             &self.server_address_presets,
             if !self.server_address_text.is_empty() {
                 self.server_address_text.as_ref()
@@ -506,15 +438,12 @@ impl ConfigWindow {
                 .map(|(_, _, formatted)| formatted)
                 .collect();
         detected_interfaces.push(TRAKTOR_SERVER_DEFAULT_ADDR.to_owned());
-        detected_interfaces.push(
-            song_data_provider
-                .traktor_provider
-                .submitted_address
-                .clone(),
-        );
         detected_interfaces.sort();
 
-        self.server_address_presets = combo_box::State::new(detected_interfaces);
+        self.server_address_presets = suggestion_text_input::State::with_selection(
+            detected_interfaces,
+            Some(&song_data_provider.traktor_provider.address.clone()),
+        );
     }
 }
 
