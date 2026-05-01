@@ -1,3 +1,60 @@
+//! Combo boxes display a dropdown list of searchable and selectable options.
+//!
+//! # Example
+//! ```no_run
+//! # mod iced { pub mod widget { pub use iced_widget::*; } pub use iced_widget::Renderer; pub use iced_widget::core::*; }
+//! # pub type Element<'a, Message> = iced_widget::core::Element<'a, Message, iced_widget::Theme, iced_widget::Renderer>;
+//! #
+//! use iced::widget::combo_box;
+//!
+//! struct State {
+//!    fruits: combo_box::State<Fruit>,
+//!    favorite: Option<Fruit>,
+//! }
+//!
+//! #[derive(Debug, Clone)]
+//! enum Fruit {
+//!     Apple,
+//!     Orange,
+//!     Strawberry,
+//!     Tomato,
+//! }
+//!
+//! #[derive(Debug, Clone)]
+//! enum Message {
+//!     FruitSelected(Fruit),
+//! }
+//!
+//! fn view(state: &State) -> Element<'_, Message> {
+//!     combo_box(
+//!         &state.fruits,
+//!         "Select your favorite fruit...",
+//!         state.favorite.as_ref(),
+//!         Message::FruitSelected
+//!     )
+//!     .into()
+//! }
+//!
+//! fn update(state: &mut State, message: Message) {
+//!     match message {
+//!         Message::FruitSelected(fruit) => {
+//!             state.favorite = Some(fruit);
+//!         }
+//!     }
+//! }
+//!
+//! impl std::fmt::Display for Fruit {
+//!     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+//!         f.write_str(match self {
+//!             Self::Apple => "Apple",
+//!             Self::Orange => "Orange",
+//!             Self::Strawberry => "Strawberry",
+//!             Self::Tomato => "Tomato",
+//!         })
+//!     }
+//! }
+//! ```
+use iced::advanced::{Clipboard, Layout, Shell, Widget, layout, renderer, text, widget};
 use iced::keyboard;
 use iced::keyboard::key;
 use iced::mouse;
@@ -5,13 +62,68 @@ use iced::overlay;
 use iced::overlay::menu;
 use iced::time::Instant;
 use iced::{Element, Event, Length, Padding, Pixels, Rectangle, Size, Theme, Vector};
-use std::cell::RefCell;
 
 use iced::advanced::text::LineHeight;
-use iced::advanced::{Clipboard, Layout, Shell, Widget, layout, renderer, text, widget};
 use iced::widget::{TextInput, text_input};
+use std::cell::RefCell;
 use std::fmt::Display;
 
+/// A widget for searching and selecting a single value from a list of options.
+///
+/// # Example
+/// ```no_run
+/// # mod iced { pub mod widget { pub use iced_widget::*; } pub use iced_widget::Renderer; pub use iced_widget::core::*; }
+/// # pub type Element<'a, Message> = iced_widget::core::Element<'a, Message, iced_widget::Theme, iced_widget::Renderer>;
+/// #
+/// use iced::widget::combo_box;
+///
+/// struct State {
+///    fruits: combo_box::State<Fruit>,
+///    favorite: Option<Fruit>,
+/// }
+///
+/// #[derive(Debug, Clone)]
+/// enum Fruit {
+///     Apple,
+///     Orange,
+///     Strawberry,
+///     Tomato,
+/// }
+///
+/// #[derive(Debug, Clone)]
+/// enum Message {
+///     FruitSelected(Fruit),
+/// }
+///
+/// fn view(state: &State) -> Element<'_, Message> {
+///     combo_box(
+///         &state.fruits,
+///         "Select your favorite fruit...",
+///         state.favorite.as_ref(),
+///         Message::FruitSelected
+///     )
+///     .into()
+/// }
+///
+/// fn update(state: &mut State, message: Message) {
+///     match message {
+///         Message::FruitSelected(fruit) => {
+///             state.favorite = Some(fruit);
+///         }
+///     }
+/// }
+///
+/// impl std::fmt::Display for Fruit {
+///     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+///         f.write_str(match self {
+///             Self::Apple => "Apple",
+///             Self::Orange => "Orange",
+///             Self::Strawberry => "Strawberry",
+///             Self::Tomato => "Tomato",
+///         })
+///     }
+/// }
+/// ```
 pub struct SuggestionTextInput<'a, T, Message, Theme = iced::Theme, Renderer = iced::Renderer>
 where
     Theme: Catalog,
@@ -20,9 +132,12 @@ where
     state: &'a State<T>,
     text_input: TextInput<'a, TextInputEvent, Theme, Renderer>,
     font: Option<Renderer::Font>,
+    selection: text_input::Value,
+    on_selected: Box<dyn Fn(T) -> Message>,
+    on_option_hovered: Option<Box<dyn Fn(T) -> Message>>,
     on_open: Option<Message>,
     on_close: Option<Message>,
-    on_input: Box<dyn Fn(String) -> Message>,
+    on_input: Option<Box<dyn Fn(String) -> Message>>,
     padding: Padding,
     size: Option<f32>,
     text_shaping: text::Shaping,
@@ -42,17 +157,23 @@ where
     pub fn new(
         state: &'a State<T>,
         placeholder: &str,
-        on_input: impl Fn(String) -> Message + 'static,
+        selection: Option<&T>,
+        on_selected: impl Fn(T) -> Message + 'static,
     ) -> Self {
         let text_input = TextInput::new(placeholder, &state.value())
             .on_input(TextInputEvent::TextChanged)
             .class(Theme::default_input());
 
+        let selection = selection.map(T::to_string).unwrap_or_default();
+
         Self {
             state,
             text_input,
             font: None,
-            on_input: Box::new(on_input),
+            selection: text_input::Value::new(&selection),
+            on_selected: Box::new(on_selected),
+            on_option_hovered: None,
+            on_input: None,
             on_open: None,
             on_close: None,
             padding: text_input::DEFAULT_PADDING,
@@ -61,6 +182,20 @@ where
             menu_class: <Theme as Catalog>::default_menu(),
             menu_height: Length::Shrink,
         }
+    }
+
+    /// Sets the message that should be produced when some text is typed into
+    /// the [`TextInput`] of the [`SuggestionTextInput`].
+    pub fn on_input(mut self, on_input: impl Fn(String) -> Message + 'static) -> Self {
+        self.on_input = Some(Box::new(on_input));
+        self
+    }
+
+    /// Sets the message that will be produced when an option of the
+    /// [`SuggestionTextInput`] is hovered using the arrow keys.
+    pub fn on_option_hovered(mut self, on_option_hovered: impl Fn(T) -> Message + 'static) -> Self {
+        self.on_option_hovered = Some(Box::new(on_option_hovered));
+        self
     }
 
     /// Sets the message that will be produced when the  [`SuggestionTextInput`] is
@@ -178,11 +313,11 @@ where
     }
 }
 
-/// The local state of a [`ComboBox`].
+/// The local state of a [`SuggestionTextInput`].
 #[derive(Debug, Clone)]
 pub struct State<T> {
     options: Vec<T>,
-    pub(super) inner: RefCell<Inner<T>>,
+    inner: RefCell<Inner<T>>,
 }
 
 #[derive(Debug, Clone)]
@@ -202,12 +337,12 @@ impl<T> State<T>
 where
     T: Display + Clone,
 {
-    /// Creates a new [`State`] for a [`ComboBox`] with the given list of options.
+    /// Creates a new [`State`] for a [`SuggestionTextInput`] with the given list of options.
     pub fn new(options: Vec<T>) -> Self {
         Self::with_selection(options, None)
     }
 
-    /// Creates a new [`State`] for a [`ComboBox`] with the given list of options
+    /// Creates a new [`State`] for a [`SuggestionTextInput`] with the given list of options
     /// and selected value.
     pub fn with_selection(options: Vec<T>, selection: Option<&T>) -> Self {
         let value = selection.map(T::to_string).unwrap_or_default();
@@ -364,7 +499,7 @@ where
             &mut tree.children[0],
             renderer,
             limits,
-            (!is_focused).then_some(&text_input::Value::new(&self.state.inner.borrow().value)),
+            (!is_focused).then_some(&self.selection),
         )
     }
 
@@ -386,10 +521,10 @@ where
             text_input_state.is_focused()
         };
 
-        let selection = if is_focused || self.state.value().is_empty() {
+        let selection = if is_focused || self.selection.is_empty() {
             None
         } else {
-            Some(&text_input::Value::new(&self.state.value()))
+            Some(&self.selection)
         };
 
         self.text_input.draw(
@@ -444,9 +579,6 @@ where
 
             text_input_state.is_focused()
         };
-        // This is intended to check whether the message buffer was empty,
-        // since `Shell` does not expose such functionality.
-        let mut published_message_to_shell = false;
 
         // Create a new list of local messages
         let mut local_messages = Vec::new();
@@ -475,9 +607,11 @@ where
         for message in local_messages {
             let TextInputEvent::TextChanged(new_value) = message;
 
-            shell.publish((self.on_input)(new_value.clone()));
+            if let Some(on_input) = &self.on_input {
+                shell.publish(on_input(new_value.clone()));
+            }
 
-            // Couple the filtered options with the `ComboBox`
+            // Couple the filtered options with the `SuggestionTextInput`
             // value and only recompute them when the value changes,
             // instead of doing it in every `view` call
             self.state.with_inner_mut(|state| {
@@ -504,6 +638,14 @@ where
 
         if is_focused {
             self.state.with_inner(|state| {
+                if !started_focused && let Some(on_option_hovered) = &mut self.on_option_hovered {
+                    let hovered_option = menu.hovered_option.unwrap_or(0);
+
+                    if let Some(option) = state.filtered_options.options.get(hovered_option) {
+                        shell.publish(on_option_hovered(option.clone()));
+                    }
+                }
+
                 if let Event::Keyboard(keyboard::Event::KeyPressed {
                     key: keyboard::Key::Named(named_key),
                     modifiers,
@@ -533,6 +675,15 @@ where
                                 menu.hovered_option = Some(0);
                             }
 
+                            if let Some(on_option_hovered) = &mut self.on_option_hovered
+                                && let Some(option) = menu
+                                    .hovered_option
+                                    .and_then(|index| state.filtered_options.options.get(index))
+                            {
+                                // Notify the selection
+                                shell.publish(on_option_hovered(option.clone()));
+                            }
+
                             shell.capture_event();
                             shell.request_redraw();
                         }
@@ -550,6 +701,15 @@ where
                                 }
                             } else {
                                 menu.hovered_option = Some(0);
+                            }
+
+                            if let Some(on_option_hovered) = &mut self.on_option_hovered
+                                && let Some(option) = menu
+                                    .hovered_option
+                                    .and_then(|index| state.filtered_options.options.get(index))
+                            {
+                                // Notify the selection
+                                shell.publish(on_option_hovered(option.clone()));
                             }
 
                             shell.capture_event();
@@ -570,8 +730,7 @@ where
                 menu.menu = menu::State::default();
 
                 // Notify the selection
-                shell.publish((self.on_input)(selection.to_string()));
-                published_message_to_shell = true;
+                shell.publish((self.on_selected)(selection));
 
                 // Unfocus the input
                 let mut local_messages = Vec::new();
@@ -602,14 +761,12 @@ where
             // Focus changed, invalidate widget tree to force a fresh `view`
             shell.invalidate_widgets();
 
-            if !published_message_to_shell {
-                if is_focused {
-                    if let Some(on_open) = self.on_open.take() {
-                        shell.publish(on_open);
-                    }
-                } else if let Some(on_close) = self.on_close.take() {
-                    shell.publish(on_close);
+            if is_focused {
+                if let Some(on_open) = self.on_open.take() {
+                    shell.publish(on_open);
                 }
+            } else if let Some(on_close) = self.on_close.take() {
+                shell.publish(on_close);
             }
         }
     }
@@ -672,9 +829,9 @@ where
                             .downcast_mut::<text_input::State<Renderer::Paragraph>>()
                             .unfocus();
 
-                        (self.on_input)(selection.to_string())
+                        (self.on_selected)(selection)
                     },
-                    None,
+                    self.on_option_hovered.as_deref(),
                     &self.menu_class,
                 )
                 .width(bounds.width)
@@ -710,8 +867,8 @@ where
     Theme: Catalog + 'a,
     Renderer: text::Renderer + 'a,
 {
-    fn from(combo_box: SuggestionTextInput<'a, T, Message, Theme, Renderer>) -> Self {
-        Self::new(combo_box)
+    fn from(suggestion_text_input: SuggestionTextInput<'a, T, Message, Theme, Renderer>) -> Self {
+        Self::new(suggestion_text_input)
     }
 }
 
