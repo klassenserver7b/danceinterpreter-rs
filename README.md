@@ -11,6 +11,10 @@ It currently contains three source modes
 2. A connection to a running Traktor Pro instance
 3. Manually added songs and static dance labels
 
+## Roadmap
+
+The [Roadmap](https://github.com/users/klassenserver7b/projects/1) can be found here
+
 # Installation
 
 The danceinterpreter is currently only availible for Linux(x64, aarch64) and Windows(x64).
