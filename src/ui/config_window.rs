@@ -3,6 +3,7 @@ use crate::dataloading::dataprovider::song_data_provider::{
 };
 use crate::traktor_api::{TRAKTOR_SERVER_DEFAULT_ADDR, TraktorNextMode, TraktorSyncMode};
 use crate::ui::widget::dynamic_text_input::DynamicTextInput;
+use crate::ui::widget::power_button::PowerButton;
 use crate::ui::widget::suggestion_text_input;
 use crate::ui::widget::suggestion_text_input::SuggestionTextInput;
 use crate::ui::{material_icon, material_icon_sized};
@@ -13,8 +14,8 @@ use iced::border::Radius;
 use iced::widget::scrollable::{Direction, RelativeOffset, Scrollbar};
 use iced::widget::space::horizontal;
 use iced::widget::{
-    Button, Column, Container, Row, Scrollable, Space, button, checkbox, column as col, container,
-    pick_list, radio, row, scrollable, text,
+    Button, Column, Container, Row, Scrollable, Space, button, canvas, checkbox, column as col,
+    container, pick_list, radio, row, scrollable, text,
 };
 use iced::{
     Alignment, Animation, Border, Color, Element, Font, Length, Pixels, Renderer, Size, Theme,
@@ -36,6 +37,7 @@ pub struct ConfigWindow {
     pub sidebar_state: Animation<bool>,
     pub server_address_text: String,
     pub theme: Theme,
+    pub power_button_cache: canvas::Cache,
     server_address_presets: suggestion_text_input::State<String>,
 }
 
@@ -56,6 +58,7 @@ impl Window for ConfigWindow {
             server_address_presets: suggestion_text_input::State::default(),
             server_address_text: String::new(),
             theme: Theme::Dark,
+            power_button_cache: canvas::Cache::default(),
         }
     }
 
@@ -79,9 +82,13 @@ impl ConfigWindow {
         let statics_view = self.build_statics_view(dance_interpreter);
 
         if self.sidebar_state.value() || self.sidebar_state.is_animating(Instant::now()) {
-            let side_bar = self
-                .build_server_sidebar(dance_interpreter)
-                .width(self.sidebar_state.interpolate(0.0, 400.0, Instant::now()));
+            let side_bar =
+                self.build_server_sidebar(dance_interpreter)
+                    .width(self.sidebar_state.interpolate(
+                        0.0,
+                        (self.size.width / 5.0).max(400.0),
+                        Instant::now(),
+                    ));
             let main_content = row![col![top_bar, playlist_view], side_bar];
             col![main_content, statics_view].spacing(5).into()
         } else {
@@ -146,11 +153,16 @@ impl ConfigWindow {
         container(
             col![
                 text("Server Settings").size(24),
-                labeled_message_checkbox(
-                    "Enable Server",
-                    dance_interpreter.data_provider.traktor_provider.is_enabled,
-                    Message::TraktorEnableServer,
-                ),
+                col![
+                    canvas(
+                        PowerButton::new(
+                            dance_interpreter.data_provider.traktor_provider.is_enabled,
+                            &self.power_button_cache
+                        )
+                        .on_toggle(Message::TraktorEnableServer)
+                    ),
+                    text("Enable Server")
+                ],
                 col![
                     text("Server Address: "),
                     self.build_network_interface_combo_box(dance_interpreter)
@@ -349,7 +361,11 @@ impl ConfigWindow {
             self.build_menu_bar(dance_interpreter),
             horizontal(),
             material_icon_sized_message_button(
-                "right_panel_open",
+                if self.sidebar_state.value() {
+                    "right_panel_close"
+                } else {
+                    "right_panel_open"
+                },
                 20.0,
                 Message::Sidebar(SidebarMessage::Toggle)
             )
@@ -488,22 +504,6 @@ fn get_formatted_network_interfaces(
         .collect()
 }
 
-fn get_network_interface_menu(
-    song_data_provider: &'_ SongDataProvider,
-) -> Vec<Button<'_, Message>> {
-    let interfaces = get_formatted_network_interfaces(song_data_provider);
-
-    interfaces
-        .into_iter()
-        .map(|(name, addr, addr_with_port)| {
-            label_message_button_fill(
-                format!("{}: {}", name, addr),
-                Message::TraktorChangeAndSubmitAddress(addr_with_port),
-            )
-        })
-        .collect()
-}
-
 fn label_message_button_fill<'a>(
     label: impl text::IntoFragment<'a>,
     message: Message,
@@ -528,6 +528,7 @@ fn label_message_button<'a>(
         .on_press(message)
 }
 
+#[allow(dead_code)]
 fn submenu_button(label: &'_ str) -> Button<'_, Message, Theme, Renderer> {
     button(
         row![
@@ -589,6 +590,7 @@ fn labeled_message_checkbox(
     //.style(checkbox::secondary)
 }
 
+#[allow(dead_code)]
 fn labeled_message_radio<T: Copy + Eq>(
     label: &'_ str,
     value: T,
@@ -599,6 +601,7 @@ fn labeled_message_radio<T: Copy + Eq>(
     //.style(checkbox::secondary)
 }
 
+#[allow(dead_code)]
 fn labeled_message_checkbox_opt(
     label: &'_ str,
     checked: bool,
@@ -612,6 +615,7 @@ fn labeled_message_checkbox_opt(
     }
 }
 
+#[allow(dead_code)]
 fn labeled_dynamic_text_input<'a>(
     label: &'a str,
     placeholder: &'a str,
