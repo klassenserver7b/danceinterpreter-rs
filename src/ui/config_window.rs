@@ -2,10 +2,10 @@ use crate::dataloading::dataprovider::song_data_provider::{
     SongChange, SongDataEdit, SongDataProvider, SongDataSource,
 };
 use crate::traktor_api::{TRAKTOR_SERVER_DEFAULT_ADDR, TraktorNextMode, TraktorSyncMode};
+use crate::ui::widget::canvas_toggle::CanvasToggle;
 use crate::ui::widget::dynamic_text_input::DynamicTextInput;
-use crate::ui::widget::power_button::PowerButton;
-use crate::ui::widget::suggestion_text_input;
 use crate::ui::widget::suggestion_text_input::SuggestionTextInput;
+use crate::ui::widget::{power_button, suggestion_text_input};
 use crate::ui::{material_icon, material_icon_sized};
 use crate::{DanceInterpreter, Message, Window};
 use iced::advanced::Widget;
@@ -35,10 +35,22 @@ pub struct ConfigWindow {
     pub size: Size,
     pub enable_autoscroll: bool,
     pub sidebar_state: Animation<bool>,
+    pub bottombar_state: Animation<bool>,
     pub server_address_text: String,
     pub theme: Theme,
     pub power_button_cache: canvas::Cache,
     server_address_presets: suggestion_text_input::State<String>,
+}
+
+#[derive(Debug, Clone)]
+pub enum SidebarMessage {
+    Toggle,
+    UpdateAddressPresets,
+}
+
+#[derive(Debug, Clone)]
+pub enum BottomBarMessage {
+    Toggle,
 }
 
 pub static PLAYLIST_SCROLLABLE_ID: LazyLock<iced::widget::Id> =
@@ -53,6 +65,9 @@ impl Window for ConfigWindow {
 
             enable_autoscroll: true,
             sidebar_state: Animation::new(false)
+                .duration(Duration::from_millis(100))
+                .easing(animation::Easing::EaseInOut),
+            bottombar_state: Animation::new(false)
                 .duration(Duration::from_millis(100))
                 .easing(animation::Easing::EaseInOut),
             server_address_presets: suggestion_text_input::State::default(),
@@ -79,21 +94,22 @@ impl ConfigWindow {
     pub fn view<'a>(&'a self, dance_interpreter: &'a DanceInterpreter) -> Element<'a, Message> {
         let top_bar = self.build_top_bar(dance_interpreter);
         let playlist_view = self.build_playlist_view(dance_interpreter);
-        let statics_view = self.build_statics_view(dance_interpreter);
 
-        if self.sidebar_state.value() || self.sidebar_state.is_animating(Instant::now()) {
-            let side_bar =
-                self.build_server_sidebar(dance_interpreter)
-                    .width(self.sidebar_state.interpolate(
-                        0.0,
-                        (self.size.width / 5.0).max(400.0),
-                        Instant::now(),
-                    ));
-            let main_content = row![col![top_bar, playlist_view], side_bar];
-            col![main_content, statics_view].spacing(5).into()
-        } else {
-            col![top_bar, playlist_view, statics_view].into()
-        }
+        let side_bar =
+            self.build_server_sidebar(dance_interpreter)
+                .width(self.sidebar_state.interpolate(
+                    0.0,
+                    (self.size.width / 5.0).min(400.0),
+                    Instant::now(),
+                ));
+        let bottom_bar = self.build_statics_bottombar(dance_interpreter).height(
+            self.bottombar_state
+                .interpolate(60.0, self.size.height / 3.0, Instant::now()),
+        );
+
+        col![row![col![top_bar, playlist_view], side_bar], bottom_bar]
+            .spacing(5)
+            .into()
     }
 
     fn get_play_state(
@@ -131,6 +147,18 @@ impl ConfigWindow {
         (is_current, is_next, is_traktor, is_played)
     }
 
+    fn build_statics_bottombar<'a>(
+        &'a self,
+        dance_interpreter: &'a DanceInterpreter,
+    ) -> Container<'a, Message> {
+        container(self.build_statics_view(dance_interpreter))
+            .width(Length::Fill)
+            .style(|t: &Theme| {
+                container::Style::default()
+                    .background(t.extended_palette().background.weakest.color)
+            })
+    }
+
     fn build_server_sidebar<'a>(
         &'a self,
         dance_interpreter: &'a DanceInterpreter,
@@ -154,13 +182,12 @@ impl ConfigWindow {
             col![
                 text("Server Settings").size(24),
                 col![
-                    canvas(
-                        PowerButton::new(
-                            dance_interpreter.data_provider.traktor_provider.is_enabled,
-                            &self.power_button_cache
-                        )
-                        .on_toggle(Message::TraktorEnableServer)
-                    ),
+                    CanvasToggle::new(
+                        dance_interpreter.data_provider.traktor_provider.is_enabled,
+                        &self.power_button_cache
+                    )
+                    .on_toggle(Message::TraktorEnableServer)
+                    .on_draw(power_button::draw_power_button),
                     text("Enable Server")
                 ],
                 col![
@@ -326,6 +353,15 @@ impl ConfigWindow {
             style: font::Style::Normal,
         };
 
+        let btn_bottombar_extend = material_icon_sized_message_button(
+            if self.sidebar_state.value() {
+                "bottom_panel_close"
+            } else {
+                "bottom_panel_open"
+            },
+            20.0,
+            Message::Bottombar(BottomBarMessage::Toggle),
+        );
         let btn_blank: Button<Message> =
             button(text("Blank").align_y(Vertical::Center).font(bold_font))
                 .style(button::secondary)
@@ -346,9 +382,9 @@ impl ConfigWindow {
                     .into()
             })
             .collect();
-
-        statics.insert(0, btn_blank.into());
-        statics.insert(1, btn_traktor.into());
+        statics.insert(0, btn_bottombar_extend.into());
+        statics.insert(1, btn_blank.into());
+        statics.insert(2, btn_traktor.into());
 
         scrollable(row(statics).spacing(5))
             .direction(Direction::Horizontal(Scrollbar::new()))
@@ -461,12 +497,6 @@ impl ConfigWindow {
             Some(&song_data_provider.traktor_provider.address.clone()),
         );
     }
-}
-
-#[derive(Debug, Clone)]
-pub enum SidebarMessage {
-    Toggle,
-    UpdateAddressPresets,
 }
 
 fn get_network_interfaces() -> Vec<(String, String)> {

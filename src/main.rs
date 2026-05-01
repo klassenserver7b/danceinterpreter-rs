@@ -14,7 +14,9 @@ use crate::dataloading::songinfo::SongInfo;
 use crate::traktor_api::{
     ServerMessage, StateUpdate, TraktorNextMode, TraktorSyncAction, TraktorSyncMode,
 };
-use crate::ui::config_window::{ConfigWindow, PLAYLIST_SCROLLABLE_ID, SidebarMessage};
+use crate::ui::config_window::{
+    BottomBarMessage, ConfigWindow, PLAYLIST_SCROLLABLE_ID, SidebarMessage,
+};
 use crate::ui::song_window::SongWindow;
 use iced::keyboard::key::Named;
 use iced::keyboard::{Key, Modifiers};
@@ -79,6 +81,7 @@ pub enum Message {
     SnapTo(RelativeOffset),
     AddBlankSong(RelativeOffset),
     Sidebar(SidebarMessage),
+    Bottombar(BottomBarMessage),
     Animate,
 
     FileDropped(PathBuf),
@@ -399,6 +402,15 @@ impl DanceInterpreter {
                 }
             },
 
+            Message::Bottombar(msg) => match msg {
+                BottomBarMessage::Toggle => {
+                    self.config_window
+                        .bottombar_state
+                        .go_mut(!self.config_window.bottombar_state.value(), Instant::now());
+                    ().into()
+                }
+            },
+
             Message::Animate => Task::none(),
 
             Message::TraktorMessage(msg) => {
@@ -572,6 +584,10 @@ impl DanceInterpreter {
                 .config_window
                 .sidebar_state
                 .is_animating(Instant::now())
+                || self
+                    .config_window
+                    .bottombar_state
+                    .is_animating(Instant::now())
             {
                 window::frames().map(|_| Message::Animate)
             } else {
