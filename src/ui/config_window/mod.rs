@@ -91,41 +91,6 @@ impl ConfigWindow {
             .into()
     }
 
-    fn get_play_state(
-        &self,
-        dance_interpreter: &DanceInterpreter,
-        playlist_index: usize,
-    ) -> (bool, bool, bool, bool) {
-        let mut is_current = false;
-        let mut is_next = false;
-        let mut is_traktor = false;
-        let is_played = dance_interpreter
-            .data_provider
-            .playlist_played
-            .get(playlist_index)
-            .copied()
-            .unwrap_or(false);
-
-        if let SongDataSource::Playlist(i) = dance_interpreter.data_provider.current {
-            is_current = playlist_index == i;
-            is_next = playlist_index == (i + 1);
-        }
-
-        if let Some(SongDataSource::Playlist(i)) = dance_interpreter.data_provider.next {
-            is_next = playlist_index == i;
-        }
-
-        if matches!(
-            dance_interpreter.data_provider.current,
-            SongDataSource::Traktor
-        ) && let Some(index) = dance_interpreter.data_provider.get_current_traktor_index()
-        {
-            is_traktor = playlist_index == index;
-        }
-
-        (is_current, is_next, is_traktor, is_played)
-    }
-
     fn build_playlist_view(&'_ self, dance_interpreter: &DanceInterpreter) -> Column<'_, Message> {
         let trow: Row<_> = row![
             text!("#").width(Length::Fixed(24.0)),
@@ -148,7 +113,7 @@ impl ConfigWindow {
             .enumerate()
         {
             let (is_current, is_next, is_traktor, is_played) =
-                self.get_play_state(dance_interpreter, i);
+                dance_interpreter.data_provider.get_play_state(i);
             let icon: Element<Message> = if is_traktor {
                 material_icon("agriculture")
                     .width(Length::Fixed(24.0))
