@@ -4,7 +4,6 @@ mod macros;
 mod traktor_api;
 mod ui;
 
-use crate::Message::SnapTo;
 use crate::async_utils::run_subscription_with;
 use crate::dataloading::dataprovider::song_data_provider::{
     SongChange, SongDataEdit, SongDataProvider, SongDataSource,
@@ -26,6 +25,7 @@ use iced::window::icon::from_file_data;
 use iced::{Element, Size, Subscription, Task, Theme, exit, keyboard, system, theme, window};
 use iced_aw::ICED_AW_FONT_BYTES;
 use rfd::FileDialog;
+use std::env::var;
 use std::path::PathBuf;
 
 fn main() -> iced::Result {
@@ -256,6 +256,23 @@ impl DanceInterpreter {
             }
 
             Message::OpenPlaylist => {
+                #[cfg(target_os = "linux")]
+                if var("container").is_ok() {
+                    // Request folder access first in flatpak environment
+                    let folder = FileDialog::new()
+                        .set_title(
+                            "Select folder containing m3u AND audio files (required in flatpak)",
+                        )
+                        .set_directory(
+                            dirs::audio_dir()
+                                .unwrap_or(dirs::home_dir().unwrap_or(PathBuf::from("."))),
+                        )
+                        .pick_folders();
+                    if folder.is_none() {
+                        return ().into();
+                    }
+                }
+
                 // Open playlist file
                 let file = FileDialog::new()
                     .add_filter("Playlist", &["m3u", "m3u8"])
@@ -468,7 +485,7 @@ impl DanceInterpreter {
             let offset_y =
                 index as f32 / std::cmp::max(1, self.data_provider.playlist_songs.len() - 1) as f32;
 
-            Task::done(SnapTo(RelativeOffset {
+            Task::done(Message::SnapTo(RelativeOffset {
                 x: 0.0,
                 y: offset_y,
             }))
