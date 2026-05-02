@@ -4,7 +4,7 @@ pub mod sidebar;
 use crate::dataloading::dataprovider::song_data_provider::{
     SongChange, SongDataEdit, SongDataSource,
 };
-use crate::ui::config_window::bottombar::BottomBar;
+use crate::ui::config_window::bottombar::Bottombar;
 use crate::ui::config_window::sidebar::Sidebar;
 use crate::ui::widget::dynamic_text_input::DynamicTextInput;
 use crate::ui::{material_icon, material_icon_sized};
@@ -30,7 +30,7 @@ pub struct ConfigWindow {
     pub size: Size,
     pub enable_autoscroll: bool,
     pub sidebar: Sidebar,
-    pub bottombar: BottomBar,
+    pub bottombar: Bottombar,
     pub theme: Theme,
 }
 
@@ -46,7 +46,7 @@ impl Window for ConfigWindow {
 
             enable_autoscroll: true,
             sidebar: Sidebar::new(),
-            bottombar: BottomBar::new(),
+            bottombar: Bottombar::new(),
             theme: Theme::Dark,
         }
     }

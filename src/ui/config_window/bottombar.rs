@@ -7,7 +7,7 @@ use iced::widget::{Button, Column, button, column as col, container, row, scroll
 use iced::{Animation, Element, Font, Length, Theme, animation, font};
 use std::time::Duration;
 
-pub struct BottomBar {
+pub struct Bottombar {
     pub state: Animation<bool>,
 }
 
@@ -16,7 +16,7 @@ pub enum BottomBarMessage {
     Toggle,
 }
 
-impl BottomBar {
+impl Bottombar {
     pub fn new() -> Self {
         Self {
             state: Animation::new(false)
@@ -41,21 +41,22 @@ impl BottomBar {
         )
         .padding([0, 4]);
 
-        let statics_scrollable = scrollable(row(statics_buttons).spacing(5))
-            .direction(Direction::Horizontal(Scrollbar::new()))
-            .spacing(5)
-            .width(Length::Fill);
-
-        let statics_bar = container(statics_scrollable)
-            .width(Length::Fill)
-            .style(|t: &Theme| {
-                container::Style::default()
-                    .background(t.extended_palette().background.weakest.color)
-            });
-
         if self.state.value() {
             col![btn_bottombar_extend]
         } else {
+            let statics_scrollable = scrollable(row(statics_buttons).spacing(5))
+                .direction(Direction::Horizontal(Scrollbar::new()))
+                .spacing(5)
+                .width(Length::Fill);
+
+            let statics_bar =
+                container(statics_scrollable)
+                    .width(Length::Fill)
+                    .style(|t: &Theme| {
+                        container::Style::default()
+                            .background(t.extended_palette().background.weakest.color)
+                    });
+
             col![btn_bottombar_extend, statics_bar]
                 .align_x(Horizontal::Left)
                 .spacing(5)

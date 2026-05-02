@@ -5,7 +5,7 @@ use crate::ui::config_window::{
 };
 use crate::ui::widget::canvas_toggle::CanvasToggle;
 use crate::ui::widget::suggestion_text_input::SuggestionTextInput;
-use crate::ui::widget::{power_button, suggestion_text_input};
+use crate::ui::widget::{power_button, restart_button, suggestion_text_input};
 use crate::{DanceInterpreter, Message};
 use iced::alignment::Vertical;
 use iced::widget::{Row, canvas, column as col, container, pick_list, row, text};
@@ -17,6 +17,7 @@ use std::time::Duration;
 pub struct Sidebar {
     pub state: Animation<bool>,
     pub power_button_cache: canvas::Cache,
+    pub restart_button_cache: canvas::Cache,
     server_address_presets: suggestion_text_input::State<String>,
     pub server_address_text: String,
 }
@@ -34,6 +35,7 @@ impl Sidebar {
                 .duration(Duration::from_millis(100))
                 .easing(animation::Easing::EaseInOut),
             power_button_cache: canvas::Cache::default(),
+            restart_button_cache: canvas::Cache::default(),
             server_address_presets: suggestion_text_input::State::default(),
             server_address_text: String::new(),
         }
@@ -69,15 +71,27 @@ impl Sidebar {
             container(
                 col![
                     text("Server Settings").size(24),
-                    col![
-                        CanvasToggle::new(
-                            dance_interpreter.data_provider.traktor_provider.is_enabled,
-                            &self.power_button_cache
-                        )
-                        .on_toggle(Message::TraktorEnableServer)
-                        .on_draw(power_button::draw_power_button),
-                        text("Enable Server")
-                    ],
+                    row![
+                        col![
+                            CanvasToggle::new(
+                                dance_interpreter.data_provider.traktor_provider.is_enabled,
+                                &self.power_button_cache
+                            )
+                            .on_toggle(Message::TraktorEnableServer)
+                            .on_draw(power_button::draw),
+                            text("Enable Server")
+                        ],
+                        col![
+                            CanvasToggle::new(
+                                dance_interpreter.data_provider.traktor_provider.is_enabled,
+                                &self.restart_button_cache
+                            )
+                            .on_toggle(|_| Message::TraktorReconnect)
+                            .on_draw(restart_button::draw),
+                            text("Restart Server")
+                        ]
+                    ]
+                    .spacing(10),
                     col![
                         text("Server Address: "),
                         self.build_network_interface_combo_box(dance_interpreter)
@@ -141,7 +155,6 @@ impl Sidebar {
                     .background(t.extended_palette().background.weakest.color)
             })
         ]
-        .spacing(5)
         .align_y(Vertical::Top)
     }
 

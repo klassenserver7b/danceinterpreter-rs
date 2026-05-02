@@ -426,6 +426,7 @@ impl DanceInterpreter {
             Message::TraktorEnableServer(enabled) => {
                 self.data_provider.traktor_provider.is_enabled = enabled;
                 self.config_window.sidebar.power_button_cache.clear();
+                self.config_window.sidebar.restart_button_cache.clear();
                 ().into()
             }
 

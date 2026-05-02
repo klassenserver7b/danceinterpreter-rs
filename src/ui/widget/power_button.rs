@@ -3,7 +3,7 @@ use iced::widget::canvas::{Frame, LineCap, Path, Stroke};
 use iced::{Point, Radians, Theme};
 use std::f32::consts::PI;
 
-pub fn draw_power_button(theme: &Theme, frame: &mut Frame, enabled: bool) {
+pub fn draw(theme: &Theme, frame: &mut Frame, enabled: bool) {
     let size = frame.size();
     let cx = size.width / 2.0;
     let cy = size.height / 2.0;
@@ -15,7 +15,7 @@ pub fn draw_power_button(theme: &Theme, frame: &mut Frame, enabled: bool) {
     let arc_r = dim * 0.30; // power arc radius
     let stroke_w = dim * 0.07;
 
-    // ── Colors ───────────────────────────────────────────────────────────────
+    // Colors
     let (icon_color, bg_color) = if enabled {
         (
             theme.extended_palette().primary.base.color,
@@ -37,7 +37,7 @@ pub fn draw_power_button(theme: &Theme, frame: &mut Frame, enabled: bool) {
         },
     );
 
-    // ── Power arc ────────────────────────────────────────────────────────────
+    // Power arc
     // Gap of 70° centered at the top (-π/2 in screen coords).
     // Arc drawn from right edge of gap → clockwise around → left edge of gap.
     let gap_half = 35.0_f32.to_radians(); // half the gap angle
@@ -59,10 +59,10 @@ pub fn draw_power_button(theme: &Theme, frame: &mut Frame, enabled: bool) {
         Stroke::default()
             .with_color(icon_color)
             .with_width(stroke_w)
-            .with_line_cap(LineCap::Round),
+            .with_line_cap(LineCap::Butt),
     );
 
-    // ── Power line (vertical, through the gap) ───────────────────────────────
+    // Power line (vertical, through the gap)
     // Runs from ~20% inside the radius up to the circumference.
     let line = Path::new(|b| {
         b.move_to(Point::new(cx, cy - arc_r * 0.18));
@@ -74,6 +74,6 @@ pub fn draw_power_button(theme: &Theme, frame: &mut Frame, enabled: bool) {
         Stroke::default()
             .with_color(icon_color)
             .with_width(stroke_w)
-            .with_line_cap(LineCap::Round),
+            .with_line_cap(LineCap::Butt),
     );
 }
