@@ -45,7 +45,7 @@ pub fn draw(theme: &Theme, frame: &mut Frame, enabled: bool) {
     let arc_start = top - gap / 2.0;
     let arc_cut_start = bot - gap / 4.0;
     let arc_cut_end = bot + gap / 4.0;
-    let arc_end = top - 1.5 * gap + 2.0 * PI; // 300°  (clockwise, long way round)
+    let arc_end = top - 1.25 * gap + 2.0 * PI; // 300°  (clockwise, long way round)
 
     let arc = Path::new(|b| {
         b.arc(canvas::path::Arc {
