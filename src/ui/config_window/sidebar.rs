@@ -80,7 +80,8 @@ impl Sidebar {
                             .on_toggle(Message::TraktorEnableServer)
                             .on_draw(power_button::draw),
                             text("Enable Server")
-                        ],
+                        ]
+                        .align_x(Alignment::Center),
                         col![
                             CanvasToggle::new(
                                 dance_interpreter.data_provider.traktor_provider.is_enabled,
@@ -90,6 +91,7 @@ impl Sidebar {
                             .on_draw(restart_button::draw),
                             text("Restart Server")
                         ]
+                        .align_x(Alignment::Center)
                     ]
                     .spacing(10),
                     col![

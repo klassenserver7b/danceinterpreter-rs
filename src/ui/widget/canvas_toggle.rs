@@ -1,25 +1,34 @@
 use crate::Message;
 use iced::advanced::graphics::core::event::Event;
-use iced::widget::canvas::{Frame, Geometry};
+use iced::widget::canvas::{Cache, Frame, Geometry};
 use iced::widget::{Action, Canvas, canvas};
-use iced::{Element, Rectangle, Renderer, Theme, mouse};
+use iced::{Element, Length, Rectangle, Renderer, Theme, mouse};
+use std::rc::Rc;
 
-type DrawFunction<'a> = Box<dyn Fn(&Theme, &mut Frame, bool) + 'a>;
+type DrawFunction<'a> = Rc<dyn Fn(&Theme, &mut Frame, bool) + 'a>;
+type ToggleFunction<'a> = Rc<dyn Fn(bool) -> Message + 'a>;
 
+#[derive(Clone)]
 pub struct CanvasToggle<'a> {
     is_checked: bool,
-    on_toggle: Option<Box<dyn Fn(bool) -> Message + 'a>>,
+    on_toggle: Option<ToggleFunction<'a>>,
     on_draw: Option<DrawFunction<'a>>,
-    cache: &'a canvas::Cache,
+    cache: &'a Cache,
+    width: Length,
+    height: Length,
 }
 
 impl<'a> CanvasToggle<'a> {
-    pub fn new(is_checked: bool, cache: &'a canvas::Cache) -> Self {
+    const DEFAULT_SIZE: f32 = 75.0;
+
+    pub fn new(is_checked: bool, cache: &'a Cache) -> Self {
         Self {
             is_checked,
             on_toggle: None,
             on_draw: None,
             cache,
+            width: Length::Fixed(Self::DEFAULT_SIZE),
+            height: Length::Fixed(Self::DEFAULT_SIZE),
         }
     }
 
@@ -27,7 +36,7 @@ impl<'a> CanvasToggle<'a> {
     where
         F: 'a + Fn(bool) -> Message,
     {
-        self.on_toggle = Some(Box::new(f));
+        self.on_toggle = Some(Rc::new(f));
         self
     }
 
@@ -35,20 +44,31 @@ impl<'a> CanvasToggle<'a> {
     where
         F: 'a + Fn(&Theme, &mut Frame, bool) + 'a,
     {
-        self.on_draw = Some(Box::new(f));
+        self.on_draw = Some(Rc::new(f));
+        self
+    }
+
+    pub fn width(mut self, width: f32) -> Self {
+        self.width = Length::Fixed(width);
+        self
+    }
+    pub fn height(mut self, height: f32) -> Self {
+        self.height = Length::Fixed(height);
         self
     }
 }
 
 impl<'a> From<CanvasToggle<'a>> for Canvas<CanvasToggle<'a>, Message, Theme, Renderer> {
     fn from(value: CanvasToggle<'a>) -> Self {
-        Canvas::new(value)
+        let w = value.width;
+        let h = value.height;
+        Canvas::new(value).width(w).height(h)
     }
 }
 
 impl<'a> From<CanvasToggle<'a>> for Element<'a, Message, Theme, Renderer> {
     fn from(value: CanvasToggle<'a>) -> Self {
-        Canvas::new(value).into()
+        <CanvasToggle<'a> as Into<Canvas<CanvasToggle, Message>>>::into(value).into()
     }
 }
 
