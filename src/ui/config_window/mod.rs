@@ -276,6 +276,7 @@ fn submenu_button(label: &'_ str) -> Button<'_, Message, Theme, Renderer> {
     .width(Length::Fill)
 }
 
+#[allow(dead_code)]
 fn label_message_button_opt(label: &'_ str, message: Option<Message>) -> Button<'_, Message> {
     if let Some(message) = message {
         label_message_button(label, message)
@@ -284,10 +285,6 @@ fn label_message_button_opt(label: &'_ str, message: Option<Message>) -> Button<
             .padding([4, 8])
             .style(button::secondary)
     }
-}
-
-fn label_message_button_fill_opt(label: &'_ str, message: Option<Message>) -> Button<'_, Message> {
-    label_message_button_opt(label, message).width(Length::Fill)
 }
 
 fn material_icon_message_button(icon_id: &'_ str, message: Message) -> Button<'_, Message> {
