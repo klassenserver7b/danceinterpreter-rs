@@ -10,13 +10,13 @@ authors = ["Klassenserver7b <klassenserver7bwin10@gmail.com>", "Konsl <82901383+
 id3 = "1.16"
 url = "2.5"
 percent-encoding = "2.3"
-iced = { version = "0.14.0", features = ["linux-theme-detection", "image", "wayland", "svg", "lazy", "canvas", "tokio", "advanced", "debug"] }
-iced_aw = { version = "0.13.1", features = ["default"] }
+iced = { version = "0.14.0", features = ["linux-theme-detection", "image", "wayland", "svg", "lazy", "canvas", "tokio", "advanced"] }
+iced_aw = { version = "0.14.1", features = ["default"] }
 #iced_anim = { version = "0.3.1", features = ["derive", "widgets"] }
 rfd = "0.17"
 dirs = "6.0"
 warp = { version = "0.4", features = ["websocket", "server"] }
-tokio = "1.51"
+tokio = { version = "1.51" }
 pin-project-lite = "0.2"
 serde = { version = "1.0", features = ["derive"] }
 uuid = { version = "1.22", features = ["v4"] }
@@ -27,6 +27,7 @@ image = "0.25"
 
 [dev-dependencies]
 warp = { version = "0.4", features = ["websocket", "server", "test"] }
+tokio = { version = "1.51", features = ["macros"] }
 tokio-tungstenite = "0.29"
 serde_json = "1.0.149"
 reqwest = { version = "0.13", features = ["json"] }
@@ -35,5 +36,6 @@ futures-util = "0.3"
 
 [features]
 default = ["mdns"]
+debug = ["iced/debug"]
 hot = ["iced/hot"]
 mdns = ["dep:libmdns"]
