@@ -456,6 +456,7 @@ impl DanceInterpreter {
 
             Message::TraktorReconnect => {
                 self.data_provider.traktor_provider.reconnect();
+                self.config_window.sidebar.restart_button_cache.clear();
                 ().into()
             }
 

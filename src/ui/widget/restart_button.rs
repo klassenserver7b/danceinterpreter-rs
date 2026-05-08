@@ -1,9 +1,10 @@
+use iced::mouse::Cursor;
 use iced::widget::canvas;
 use iced::widget::canvas::{Frame, LineCap, Path, Stroke};
-use iced::{Point, Radians, Theme};
+use iced::{Point, Radians, Rectangle, Theme};
 use std::f32::consts::PI;
 
-pub fn draw(theme: &Theme, frame: &mut Frame, enabled: bool) {
+pub fn draw(theme: &Theme, frame: &mut Frame, _bounds: Rectangle, _cursor: Cursor, enabled: bool) {
     let size = frame.size();
     let cx = size.width / 2.0;
     let cy = size.height / 2.0;
