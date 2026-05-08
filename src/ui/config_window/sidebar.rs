@@ -1,8 +1,6 @@
 use crate::dataloading::dataprovider::song_data_provider::SongDataProvider;
 use crate::traktor_api::{TRAKTOR_SERVER_DEFAULT_ADDR, TraktorNextMode, TraktorSyncMode};
-use crate::ui::config_window::{
-    label_message_button_fill_opt, labeled_message_checkbox, material_icon_sized_message_button,
-};
+use crate::ui::config_window::{labeled_message_checkbox, material_icon_sized_message_button};
 use crate::ui::widget::canvas_toggle::CanvasToggle;
 use crate::ui::widget::suggestion_text_input::SuggestionTextInput;
 use crate::ui::widget::{power_button, restart_button, suggestion_text_input};
@@ -106,14 +104,6 @@ impl Sidebar {
                             .debug_logging,
                         Message::TraktorEnableDebugLogging,
                     ),
-                    label_message_button_fill_opt(
-                        "Reset Connection",
-                        dance_interpreter
-                            .data_provider
-                            .traktor_provider
-                            .is_enabled
-                            .then_some(Message::TraktorReconnect)
-                    ),
                     col![
                         text("Sync Mode"),
                         pick_list(
@@ -121,6 +111,7 @@ impl Sidebar {
                             Some(dance_interpreter.data_provider.traktor_provider.sync_mode),
                             Message::TraktorSetSyncMode
                         )
+                        .width(Length::Fill)
                     ]
                     .align_x(Alignment::Center),
                     col![
@@ -130,6 +121,7 @@ impl Sidebar {
                             Some(dance_interpreter.data_provider.traktor_provider.next_mode),
                             Message::TraktorSetNextMode
                         )
+                        .width(Length::Fill)
                     ]
                     .align_x(Alignment::Center),
                     col![
@@ -144,6 +136,7 @@ impl Sidebar {
                             ),
                             Message::TraktorSetNextModeFallback
                         )
+                        .width(Length::Fill)
                     ]
                     .align_x(Alignment::Center)
                 ]

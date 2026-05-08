@@ -51,7 +51,7 @@ impl Bottombar {
 
             let statics_bar =
                 container(statics_scrollable)
-                    .width(Length::Fill)
+                    .width(Length::Shrink)
                     .style(|t: &Theme| {
                         container::Style::default()
                             .background(t.extended_palette().background.weakest.color)
