@@ -581,6 +581,9 @@ impl DanceInterpreter {
                     (Key::Character("c"), Modifiers::ALT) => {
                         Some(Message::Sidebar(SidebarMessage::Toggle))
                     }
+                    (Key::Character("b"), Modifiers::ALT) => {
+                        Some(Message::Bottombar(BottomBarMessage::Toggle))
+                    }
                     _ => None,
                 }
             }),

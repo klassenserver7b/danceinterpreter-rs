@@ -77,14 +77,10 @@ impl ConfigWindow {
                 (self.size.width / 5.0).min(400.0),
                 Instant::now(),
             ));
-        let bottom_bar =
-            self.bottombar
-                .build(dance_interpreter)
-                .height(self.bottombar.state.interpolate(
-                    80.0,
-                    self.size.height / 3.0,
-                    Instant::now(),
-                ));
+        let bottom_bar = self
+            .bottombar
+            .build(dance_interpreter)
+            .height(Length::Shrink);
 
         col![row![col![top_bar, playlist_view], side_bar], bottom_bar]
             .spacing(5)
