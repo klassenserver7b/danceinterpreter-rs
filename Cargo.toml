@@ -36,6 +36,5 @@ futures-util = "0.3"
 
 [features]
 default = ["mdns"]
-debug = ["iced/debug"]
-hot = ["iced/hot"]
+debug = ["iced/debug", "iced/hot"]
 mdns = ["dep:libmdns"]
