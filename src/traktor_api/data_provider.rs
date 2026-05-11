@@ -6,6 +6,7 @@ use crate::traktor_api::{
 use iced::futures::channel::mpsc::UnboundedSender;
 use iced::widget::image;
 use std::collections::HashMap;
+use std::fmt::Display;
 use std::mem;
 use std::net::SocketAddr;
 
@@ -13,6 +14,7 @@ pub const TRAKTOR_SERVER_DEFAULT_ADDR: &str = "127.0.0.1:8080";
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub enum TraktorNextMode {
+    None,
     DeckByPosition,
     DeckByNumber,
     PlaylistByNumber,
@@ -21,6 +23,7 @@ pub enum TraktorNextMode {
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub enum TraktorSyncMode {
+    None,
     Relative,
     AbsoluteByNumber,
     AbsoluteByName,
@@ -32,14 +35,32 @@ pub enum TraktorSyncAction {
     PlaylistAbsolute(usize),
 }
 
+impl Display for TraktorNextMode {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:?}", self)
+    }
+}
+
+impl Display for TraktorSyncMode {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:?}", self)
+    }
+}
+
+impl Display for TraktorSyncAction {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:?}", self)
+    }
+}
+
 pub struct TraktorDataProvider {
     pub is_enabled: bool,
     pub address: String,
     pub submitted_address: String,
 
-    pub next_mode: Option<TraktorNextMode>,
-    pub next_mode_fallback: Option<TraktorNextMode>,
-    pub sync_mode: Option<TraktorSyncMode>,
+    pub next_mode: TraktorNextMode,
+    pub next_mode_fallback: TraktorNextMode,
+    pub sync_mode: TraktorSyncMode,
 
     channel: Option<UnboundedSender<AppMessage>>,
 
@@ -66,9 +87,9 @@ impl Default for TraktorDataProvider {
             submitted_address: String::new(),
             channel: None,
 
-            next_mode: Some(TraktorNextMode::DeckByNumber),
-            next_mode_fallback: None,
-            sync_mode: None,
+            next_mode: TraktorNextMode::DeckByNumber,
+            next_mode_fallback: TraktorNextMode::None,
+            sync_mode: TraktorSyncMode::None,
 
             time_offset_ms: 0,
             state: None,
@@ -195,11 +216,11 @@ impl TraktorDataProvider {
         }
 
         self.cached_next_song_info = self
-            .try_get_next_with_mode(self.next_mode, channel, playlist)
-            .or_else(|| self.try_get_next_with_mode(self.next_mode_fallback, channel, playlist));
+            .try_get_next_with_mode(false, channel, playlist)
+            .or_else(|| self.try_get_next_with_mode(true, channel, playlist));
 
         match self.sync_mode {
-            Some(TraktorSyncMode::AbsoluteByNumber) => {
+            TraktorSyncMode::AbsoluteByNumber => {
                 let current_index = playlist
                     .iter()
                     .position(|s| content.number == s.track_number);
@@ -209,7 +230,7 @@ impl TraktorDataProvider {
                     Some(ci) => TraktorSyncAction::PlaylistAbsolute(ci),
                 };
             }
-            Some(TraktorSyncMode::AbsoluteByName) => {
+            TraktorSyncMode::AbsoluteByName => {
                 let current_index = playlist
                     .iter()
                     .position(|s| Self::songs_name_match(&current_song_info, s));
@@ -225,11 +246,15 @@ impl TraktorDataProvider {
 
     fn try_get_next_with_mode(
         &self,
-        mode: Option<TraktorNextMode>,
+        fallback: bool,
         current_channel: &ChannelState,
         playlist: &[SongInfo],
     ) -> Option<SongInfo> {
-        let mode = mode?;
+        let mode = if !fallback {
+            self.next_mode
+        } else {
+            self.next_mode_fallback
+        };
 
         if !self.is_ready() {
             return None;
@@ -283,6 +308,7 @@ impl TraktorDataProvider {
 
                 current_index.and_then(|ci| playlist.get(ci + 1).cloned())
             }
+            TraktorNextMode::None => None,
         }
     }
 
@@ -354,7 +380,7 @@ impl TraktorDataProvider {
             }
             ServerMessage::Update(update) => {
                 if let Some(state) = self.state.as_mut() {
-                    if matches!(self.sync_mode, Some(TraktorSyncMode::Relative))
+                    if matches!(self.sync_mode, TraktorSyncMode::Relative)
                         && let StateUpdate::Mixer(new_mixer_state) = &update
                     {
                         let x_fader_old = state.mixer.x_fader;

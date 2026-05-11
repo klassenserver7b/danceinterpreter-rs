@@ -14,6 +14,8 @@ use crate::dataloading::songinfo::SongInfo;
 use crate::traktor_api::{
     ServerMessage, StateUpdate, TraktorNextMode, TraktorSyncAction, TraktorSyncMode,
 };
+use crate::ui::config_window::bottombar::BottomBarMessage;
+use crate::ui::config_window::sidebar::SidebarMessage;
 use crate::ui::config_window::{ConfigWindow, PLAYLIST_SCROLLABLE_ID};
 use crate::ui::song_window::SongWindow;
 use iced::keyboard::key::Named;
@@ -27,6 +29,7 @@ use iced_aw::ICED_AW_FONT_BYTES;
 use rfd::FileDialog;
 use std::env::var;
 use std::path::PathBuf;
+use std::time::Instant;
 
 fn main() -> iced::Result {
     iced::daemon(
@@ -77,6 +80,9 @@ pub enum Message {
     ScrollBy(f32),
     SnapTo(RelativeOffset),
     AddBlankSong(RelativeOffset),
+    Sidebar(SidebarMessage),
+    Bottombar(BottomBarMessage),
+    Animate,
 
     FileDropped(PathBuf),
     SongChanged(SongChange),
@@ -88,9 +94,9 @@ pub enum Message {
     EnableAutoscroll(bool),
 
     TraktorMessage(Box<ServerMessage>),
-    TraktorSetSyncMode(Option<TraktorSyncMode>),
-    TraktorSetNextMode(Option<TraktorNextMode>),
-    TraktorSetNextModeFallback(Option<TraktorNextMode>),
+    TraktorSetSyncMode(TraktorSyncMode),
+    TraktorSetNextMode(TraktorNextMode),
+    TraktorSetNextModeFallback(TraktorNextMode),
     TraktorEnableServer(bool),
     TraktorChangeAddress(String),
     TraktorSubmitAddress,
@@ -382,6 +388,34 @@ impl DanceInterpreter {
 
             Message::SnapTo(offset) => snap_to(PLAYLIST_SCROLLABLE_ID.clone(), offset),
 
+            Message::Sidebar(msg) => match msg {
+                SidebarMessage::Toggle => {
+                    self.config_window
+                        .sidebar
+                        .state
+                        .go_mut(!self.config_window.sidebar.state.value(), Instant::now());
+                    ().into()
+                }
+                SidebarMessage::UpdateAddressPresets => {
+                    self.config_window
+                        .sidebar
+                        .update_network_interface_selection(&self.data_provider);
+                    ().into()
+                }
+            },
+
+            Message::Bottombar(msg) => match msg {
+                BottomBarMessage::Toggle => {
+                    self.config_window
+                        .bottombar
+                        .state
+                        .go_mut(!self.config_window.bottombar.state.value(), Instant::now());
+                    ().into()
+                }
+            },
+
+            Message::Animate => Task::none(),
+
             Message::TraktorMessage(msg) => {
                 self.data_provider.process_traktor_message(*msg);
                 self.run_traktor_sync_action();
@@ -391,6 +425,8 @@ impl DanceInterpreter {
 
             Message::TraktorEnableServer(enabled) => {
                 self.data_provider.traktor_provider.is_enabled = enabled;
+                self.config_window.sidebar.power_button_cache.clear();
+                self.config_window.sidebar.restart_button_cache.clear();
                 ().into()
             }
 
@@ -420,6 +456,7 @@ impl DanceInterpreter {
 
             Message::TraktorReconnect => {
                 self.data_provider.traktor_provider.reconnect();
+                self.config_window.sidebar.restart_button_cache.clear();
                 ().into()
             }
 
@@ -541,10 +578,31 @@ impl DanceInterpreter {
                         Some(Message::AddBlankSong(RelativeOffset::END))
                     }
                     (Key::Character("r"), Modifiers::CTRL) => Some(Message::ReloadStatics),
+                    (Key::Character("c"), Modifiers::ALT) => {
+                        Some(Message::Sidebar(SidebarMessage::Toggle))
+                    }
+                    (Key::Character("b"), Modifiers::ALT) => {
+                        Some(Message::Bottombar(BottomBarMessage::Toggle))
+                    }
                     _ => None,
                 }
             }),
             system::theme_changes().map(Message::ThemeChanged),
+            if self
+                .config_window
+                .sidebar
+                .state
+                .is_animating(Instant::now())
+                || self
+                    .config_window
+                    .bottombar
+                    .state
+                    .is_animating(Instant::now())
+            {
+                window::frames().map(|_| Message::Animate)
+            } else {
+                Subscription::none()
+            },
         ];
 
         if let Some(addr) = self.data_provider.traktor_provider.get_socket_addr() {

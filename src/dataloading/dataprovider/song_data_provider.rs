@@ -246,4 +246,32 @@ impl SongDataProvider {
             _ => None,
         }
     }
+
+    pub fn get_play_state(&self, playlist_index: usize) -> (bool, bool, bool, bool) {
+        let mut is_current = false;
+        let mut is_next = false;
+        let mut is_traktor = false;
+        let is_played = self
+            .playlist_played
+            .get(playlist_index)
+            .copied()
+            .unwrap_or(false);
+
+        if let SongDataSource::Playlist(i) = self.current {
+            is_current = playlist_index == i;
+            is_next = playlist_index == (i + 1);
+        }
+
+        if let Some(SongDataSource::Playlist(i)) = self.next {
+            is_next = playlist_index == i;
+        }
+
+        if matches!(self.current, SongDataSource::Traktor)
+            && let Some(index) = self.get_current_traktor_index()
+        {
+            is_traktor = playlist_index == index;
+        }
+
+        (is_current, is_next, is_traktor, is_played)
+    }
 }

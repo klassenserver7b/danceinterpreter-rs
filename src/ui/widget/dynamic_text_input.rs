@@ -392,30 +392,27 @@ fn handle_enter_event<Message: Clone, Renderer: text::Renderer>(
             }
         }
         Event::Mouse(mouse::Event::ButtonReleased(mouse::Button::Left))
-        | Event::Touch(touch::Event::FingerLifted { .. }) => {
-            if state.is_pressed {
-                state.is_pressed = false;
+        | Event::Touch(touch::Event::FingerLifted { .. })
+            if state.is_pressed =>
+        {
+            state.is_pressed = false;
 
-                let bounds = layout.bounds();
+            let bounds = layout.bounds();
 
-                if cursor.is_over(bounds)
-                    && let Some(cursor_position) = cursor.position()
-                {
-                    let new_click = mouse::Click::new(
-                        cursor_position,
-                        mouse::Button::Left,
-                        state.previous_click,
-                    );
+            if cursor.is_over(bounds)
+                && let Some(cursor_position) = cursor.position()
+            {
+                let new_click =
+                    mouse::Click::new(cursor_position, mouse::Button::Left, state.previous_click);
 
-                    state.previous_click = Some(new_click);
+                state.previous_click = Some(new_click);
 
-                    if matches!(new_click.kind(), mouse::click::Kind::Double) {
-                        enter_edit_mode::<Message, Renderer>(tree, shell, on_enter);
-                    }
+                if matches!(new_click.kind(), mouse::click::Kind::Double) {
+                    enter_edit_mode::<Message, Renderer>(tree, shell, on_enter);
                 }
-
-                shell.capture_event();
             }
+
+            shell.capture_event();
         }
         Event::Touch(touch::Event::FingerLost { .. }) => {
             state.is_pressed = false;
