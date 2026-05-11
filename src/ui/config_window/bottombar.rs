@@ -1,8 +1,9 @@
 use crate::dataloading::dataprovider::song_data_provider::SongChange;
+use crate::ui::config_window::material_icon_sized_message_button;
 use crate::{DanceInterpreter, Message};
 use iced::alignment::{Horizontal, Vertical};
 use iced::widget::scrollable::{Direction, Scrollbar};
-use iced::widget::{Button, Container, button, container, row, scrollable, text};
+use iced::widget::{Button, Column, button, column as col, container, row, scrollable, text};
 use iced::{Animation, Element, Font, Length, Theme, animation, font};
 use std::time::Duration;
 
@@ -27,21 +28,39 @@ impl Bottombar {
     pub(crate) fn build<'a>(
         &'a self,
         dance_interpreter: &'a DanceInterpreter,
-    ) -> Container<'a, Message> {
+    ) -> Column<'a, Message> {
         let statics_buttons = self.get_statics_buttons(dance_interpreter);
-        let statics_scrollable = scrollable(row(statics_buttons).spacing(5))
-            .direction(Direction::Horizontal(Scrollbar::new()))
-            .spacing(5)
-            .width(Length::Fill);
+        let btn_bottombar_extend = material_icon_sized_message_button(
+            if self.state.value() {
+                "bottom_panel_close"
+            } else {
+                "bottom_panel_open"
+            },
+            20.0,
+            Message::Bottombar(BottomBarMessage::Toggle),
+        )
+        .padding([0, 4]);
 
-        let statics_bar = container(statics_scrollable)
-            .width(Length::Shrink)
-            .style(|t: &Theme| {
-                container::Style::default()
-                    .background(t.extended_palette().background.weakest.color)
-            });
+        if self.state.value() {
+            col![btn_bottombar_extend]
+        } else {
+            let statics_scrollable = scrollable(row(statics_buttons).spacing(5))
+                .direction(Direction::Horizontal(Scrollbar::new()))
+                .spacing(5)
+                .width(Length::Fill);
 
-        statics_bar.align_x(Horizontal::Left)
+            let statics_bar =
+                container(statics_scrollable)
+                    .width(Length::Shrink)
+                    .style(|t: &Theme| {
+                        container::Style::default()
+                            .background(t.extended_palette().background.weakest.color)
+                    });
+
+            col![btn_bottombar_extend, statics_bar]
+                .align_x(Horizontal::Left)
+                .spacing(5)
+        }
     }
 
     pub(crate) fn get_statics_buttons<'a>(

@@ -73,10 +73,10 @@ pub fn draw(theme: &Theme, frame: &mut Frame, _bounds: Rectangle, _cursor: Curso
     let end_x = cx - gap * 16.0;
     let end_y = cy - arc_r;
 
-    // Two wings ±45° from the back direction
+    // Two wings ±35° from the back direction
     let (s, c) = 45.0_f32.to_radians().sin_cos();
-    let w1 = (-c, -s); // rotate +45°
-    let w2 = (-c, s); // rotate -45°
+    let w1 = (-c, -s); // rotate +35°
+    let w2 = (-c, s); // rotate -35°
 
     let tip = Point::new(end_x, end_y);
     let p1 = Point::new(end_x - w1.0 * arrow_size, end_y + w1.1 * arrow_size);
