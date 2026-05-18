@@ -1,10 +1,10 @@
 pub mod bottombar;
 pub mod sidebar;
+pub mod top_bar;
 
 use crate::dataloading::dataprovider::song_data_provider::{
     SongChange, SongDataEdit, SongDataSource,
 };
-use crate::ui::config_window::bottombar::Bottombar;
 use crate::ui::config_window::sidebar::Sidebar;
 use crate::ui::widget::dynamic_text_input::DynamicTextInput;
 use crate::ui::{material_icon, material_icon_sized};
@@ -12,15 +12,13 @@ use crate::{DanceInterpreter, Message, Window};
 use iced::advanced::Widget;
 use iced::alignment::Vertical;
 use iced::border::Radius;
-use iced::widget::scrollable::RelativeOffset;
 use iced::widget::{
     Button, Column, Row, Scrollable, Space, button, checkbox, column as col, radio, row,
     scrollable, text,
 };
 use iced::{Alignment, Border, Color, Element, Length, Pixels, Renderer, Size, Theme, window};
-use iced_aw::style::{Status, menu_bar::primary};
 use iced_aw::widget::InnerBounds;
-use iced_aw::{Menu, MenuBar, iced_aw_font, menu, menu_bar, menu_items, quad};
+use iced_aw::{iced_aw_font, quad};
 use std::sync::LazyLock;
 use std::time::Instant;
 
@@ -30,7 +28,7 @@ pub struct ConfigWindow {
     pub size: Size,
     pub enable_autoscroll: bool,
     pub sidebar: Sidebar,
-    pub bottombar: Bottombar,
+    pub is_statics_view: bool,
     pub theme: Theme,
 }
 
@@ -46,7 +44,7 @@ impl Window for ConfigWindow {
 
             enable_autoscroll: true,
             sidebar: Sidebar::new(),
-            bottombar: Bottombar::new(),
+            is_statics_view: false,
             theme: Theme::Dark,
         }
     }
@@ -66,27 +64,25 @@ impl Window for ConfigWindow {
 
 impl ConfigWindow {
     pub fn view<'a>(&'a self, dance_interpreter: &'a DanceInterpreter) -> Element<'a, Message> {
-        let top_bar = self.build_menu_bar(dance_interpreter);
-        let playlist_view = self.build_playlist_view(dance_interpreter);
+        let top_bar = top_bar::build(self, dance_interpreter);
+
+        let content_view = if self.is_statics_view {
+            self.build_statics_view(dance_interpreter)
+        } else {
+            self.build_playlist_view(dance_interpreter)
+        };
 
         let side_bar = self
             .sidebar
             .build(dance_interpreter)
             .width(self.sidebar.state.interpolate(
-                30.0,
+                0.0,
                 (self.size.width / 5.0).min(400.0),
                 Instant::now(),
             ));
-        let bottom_bar =
-            self.bottombar
-                .build(dance_interpreter)
-                .height(self.bottombar.state.interpolate(
-                    80.0,
-                    self.size.height / 3.0,
-                    Instant::now(),
-                ));
+        let bottom_bar = bottombar::build(dance_interpreter);
 
-        col![row![col![top_bar, playlist_view], side_bar], bottom_bar]
+        col![row![col![top_bar, content_view], side_bar], bottom_bar]
             .spacing(5)
             .into()
     }
@@ -180,58 +176,8 @@ impl ConfigWindow {
         col!(trow, playlist_scrollable).spacing(5)
     }
 
-    fn build_menu_bar<'a>(
-        &self,
-        dance_interpreter: &'a DanceInterpreter,
-    ) -> MenuBar<'a, Message, Theme, Renderer> {
-        let menu_tpl_1 = |items| Menu::new(items).max_width(150.0).offset(15.0).spacing(5.0);
-
-        #[rustfmt::skip]
-        let mb = menu_bar!
-        (
-            (
-                label_message_button_shrink("File", Message::Noop),
-                menu_tpl_1(
-                    menu_items!(
-                        (label_message_button_fill("Open Playlist File", Message::OpenPlaylist)),
-                        (label_message_button_fill("Exit", Message::WindowClosed(self.id))),
-                    )
-                )
-                .spacing(5.0)
-            ),
-            (
-                label_message_button_shrink("Edit", Message::Noop),
-                menu_tpl_1(
-                    menu_items!(
-                        (labeled_message_checkbox("Autoscroll", self.enable_autoscroll, Message::EnableAutoscroll)),
-                        (label_message_button_fill("Reload Statics", Message::ReloadStatics)),
-                        (label_message_button_fill("Add blank song", Message::AddBlankSong(RelativeOffset::END))),
-                    )
-                )
-                .spacing(5.0)
-            ),
-            (
-                label_message_button_shrink("SongWindow", Message::Noop),
-                menu_tpl_1(
-                    menu_items!(
-                        (labeled_message_checkbox("Show Thumbnails", dance_interpreter.song_window.enable_image, Message::EnableImage)),
-                        (labeled_message_checkbox("Show Next Dance", dance_interpreter.song_window.enable_next_dance, Message::EnableNextDance)),
-                    )
-                )
-                .spacing(5.0)
-            )
-        )
-        .spacing(5.0)
-        .draw_path(menu::DrawPath::Backdrop)
-            .style(|theme:&Theme, status: Status | menu::Style{
-                path_border: Border{
-                    radius: Radius::new(6.0),
-                    ..Default::default()
-                },
-                ..primary(theme, status)
-            });
-
-        mb
+    fn build_statics_view(&'_ self, dance_interpreter: &DanceInterpreter) -> Column<'_, Message> {
+        col![].width(Length::Fill).height(Length::Fill)
     }
 }
 
@@ -276,15 +222,18 @@ fn submenu_button(label: &'_ str) -> Button<'_, Message, Theme, Renderer> {
     .width(Length::Fill)
 }
 
-#[allow(dead_code)]
 fn label_message_button_opt(label: &'_ str, message: Option<Message>) -> Button<'_, Message> {
     if let Some(message) = message {
         label_message_button(label, message)
     } else {
         button(text(label).align_y(Vertical::Center))
             .padding([4, 8])
-            .style(button::secondary)
+            .style(button::primary)
     }
+}
+
+fn label_message_button_fill_opt(label: &'_ str, message: Option<Message>) -> Button<'_, Message> {
+    label_message_button_opt(label, message).width(Length::Fill)
 }
 
 fn material_icon_message_button(icon_id: &'_ str, message: Message) -> Button<'_, Message> {

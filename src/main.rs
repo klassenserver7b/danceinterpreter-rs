@@ -14,7 +14,6 @@ use crate::dataloading::songinfo::SongInfo;
 use crate::traktor_api::{
     ServerMessage, StateUpdate, TraktorNextMode, TraktorSyncAction, TraktorSyncMode,
 };
-use crate::ui::config_window::bottombar::BottomBarMessage;
 use crate::ui::config_window::sidebar::SidebarMessage;
 use crate::ui::config_window::{ConfigWindow, PLAYLIST_SCROLLABLE_ID};
 use crate::ui::song_window::SongWindow;
@@ -79,9 +78,9 @@ pub enum Message {
     DeleteSong(SongDataSource),
     ScrollBy(f32),
     SnapTo(RelativeOffset),
+    ToggleStaticsView,
     AddBlankSong(RelativeOffset),
     Sidebar(SidebarMessage),
-    Bottombar(BottomBarMessage),
     Animate,
 
     FileDropped(PathBuf),
@@ -388,6 +387,11 @@ impl DanceInterpreter {
 
             Message::SnapTo(offset) => snap_to(PLAYLIST_SCROLLABLE_ID.clone(), offset),
 
+            Message::ToggleStaticsView => {
+                self.config_window.is_statics_view = !self.config_window.is_statics_view;
+                ().into()
+            }
+
             Message::Sidebar(msg) => match msg {
                 SidebarMessage::Toggle => {
                     self.config_window
@@ -400,16 +404,6 @@ impl DanceInterpreter {
                     self.config_window
                         .sidebar
                         .update_network_interface_selection(&self.data_provider);
-                    ().into()
-                }
-            },
-
-            Message::Bottombar(msg) => match msg {
-                BottomBarMessage::Toggle => {
-                    self.config_window
-                        .bottombar
-                        .state
-                        .go_mut(!self.config_window.bottombar.state.value(), Instant::now());
                     ().into()
                 }
             },
@@ -474,7 +468,6 @@ impl DanceInterpreter {
                 self.data_provider.traktor_provider.next_mode_fallback = mode;
                 self.traktor_provider_force_update()
             }
-
             _ => ().into(),
         }
     }
@@ -581,9 +574,6 @@ impl DanceInterpreter {
                     (Key::Character("c"), Modifiers::ALT) => {
                         Some(Message::Sidebar(SidebarMessage::Toggle))
                     }
-                    (Key::Character("b"), Modifiers::ALT) => {
-                        Some(Message::Bottombar(BottomBarMessage::Toggle))
-                    }
                     _ => None,
                 }
             }),
@@ -593,11 +583,6 @@ impl DanceInterpreter {
                 .sidebar
                 .state
                 .is_animating(Instant::now())
-                || self
-                    .config_window
-                    .bottombar
-                    .state
-                    .is_animating(Instant::now())
             {
                 window::frames().map(|_| Message::Animate)
             } else {
