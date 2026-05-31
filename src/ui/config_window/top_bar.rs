@@ -9,8 +9,8 @@ use iced::widget::scrollable::RelativeOffset;
 use iced::widget::space::horizontal;
 use iced::widget::{Space, Stack, row, stack};
 use iced::{Border, Length, Renderer, Theme};
-use iced_aw::badge::Status;
-use iced_aw::menu::primary;
+use iced_aw::style::Status;
+use iced_aw::style::menu_bar::primary;
 use iced_aw::{Menu, menu, menu_bar, menu_items};
 
 pub(crate) fn build<'a>(
