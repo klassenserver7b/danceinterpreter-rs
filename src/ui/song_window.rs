@@ -56,6 +56,7 @@ impl SongWindow {
 
         let dance_spacing = self.size.height / 35.0;
         let song_spacing = self.size.height / 150.0;
+        let cover_spacing = self.size.height / 30.0;
 
         let cover_height = LineHeight::default().to_absolute(title_size.into())
             + song_spacing
@@ -91,7 +92,7 @@ impl SongWindow {
         })
         .height(Length::Fill)
         .align_y(Vertical::Top)
-        .spacing(song_spacing);
+        .spacing(cover_spacing);
 
         let column_center = column![text_dance, row_bottom]
             .width(Length::Fill)
