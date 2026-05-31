@@ -8,7 +8,7 @@ hooks = [{ id = "trailing-whitespace" }, { id = "check-case-conflict" }, { id = 
 [[repos]]
 repo = "https://github.com/doublify/pre-commit-rust"
 rev = "v1.0"
-hooks = [{ id = "fmt" }, { id = "cargo-check" }]
+hooks = [{ id = "fmt" }, { id = "cargo-check" }, { id = "clippy" }]
 
 [[repos]]
 repo = "https://github.com/pre-commit/mirrors-eslint"
