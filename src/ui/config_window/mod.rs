@@ -14,7 +14,7 @@ use iced::alignment::Vertical;
 use iced::border::Radius;
 use iced::widget::{
     Button, Column, Row, Scrollable, Space, button, checkbox, column as col, radio, row,
-    scrollable, text,
+    scrollable, text, toggler,
 };
 use iced::{Alignment, Border, Color, Element, Length, Pixels, Renderer, Size, Theme, window};
 use iced_aw::widget::InnerBounds;
@@ -176,7 +176,7 @@ impl ConfigWindow {
         col!(trow, playlist_scrollable).spacing(5)
     }
 
-    fn build_statics_view(&'_ self, dance_interpreter: &DanceInterpreter) -> Column<'_, Message> {
+    fn build_statics_view(&'_ self, _dance_interpreter: &DanceInterpreter) -> Column<'_, Message> {
         col![].width(Length::Fill).height(Length::Fill)
     }
 }
@@ -265,6 +265,17 @@ fn labeled_message_checkbox(
         .on_toggle(message)
         .width(Length::Fill)
     //.style(checkbox::secondary)
+}
+
+fn labeled_message_toggler(
+    label: &'_ str,
+    checked: bool,
+    message: fn(bool) -> Message,
+) -> toggler::Toggler<'_, Message> {
+    toggler(checked)
+        .label(label)
+        .on_toggle(message)
+        .width(Length::Fill)
 }
 
 #[allow(dead_code)]

@@ -14,7 +14,6 @@ pub const TRAKTOR_SERVER_DEFAULT_ADDR: &str = "127.0.0.1:8080";
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub enum TraktorNextMode {
-    None,
     DeckByPosition,
     DeckByNumber,
     PlaylistByNumber,
@@ -23,7 +22,6 @@ pub enum TraktorNextMode {
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub enum TraktorSyncMode {
-    None,
     Relative,
     AbsoluteByNumber,
     AbsoluteByName,
@@ -53,6 +51,21 @@ impl Display for TraktorSyncAction {
     }
 }
 
+#[derive(Debug, Clone)]
+pub enum TraktorMessage {
+    ServerMessage(Box<ServerMessage>),
+    EnableSync(bool),
+    SetSyncMode(TraktorSyncMode),
+    SetNextMode(TraktorNextMode),
+    SetNextModeFallback(TraktorNextMode),
+    EnableServer(bool),
+    ChangeAddress(String),
+    SubmitAddress,
+    ChangeAndSubmitAddress(String),
+    EnableDebugLogging(bool),
+    Reconnect,
+}
+
 pub struct TraktorDataProvider {
     pub is_enabled: bool,
     pub address: String,
@@ -60,6 +73,7 @@ pub struct TraktorDataProvider {
 
     pub next_mode: TraktorNextMode,
     pub next_mode_fallback: TraktorNextMode,
+    pub sync: bool,
     pub sync_mode: TraktorSyncMode,
 
     channel: Option<UnboundedSender<AppMessage>>,
@@ -88,8 +102,9 @@ impl Default for TraktorDataProvider {
             channel: None,
 
             next_mode: TraktorNextMode::DeckByNumber,
-            next_mode_fallback: TraktorNextMode::None,
-            sync_mode: TraktorSyncMode::None,
+            next_mode_fallback: TraktorNextMode::DeckByPosition,
+            sync: false,
+            sync_mode: TraktorSyncMode::Relative,
 
             time_offset_ms: 0,
             state: None,
@@ -308,7 +323,6 @@ impl TraktorDataProvider {
 
                 current_index.and_then(|ci| playlist.get(ci + 1).cloned())
             }
-            TraktorNextMode::None => None,
         }
     }
 
@@ -419,7 +433,6 @@ impl TraktorDataProvider {
 
                     state.apply_update(update);
                 }
-
                 self.update_song_info(playlist);
             }
             ServerMessage::CoverImage { path, data } => {

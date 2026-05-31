@@ -189,6 +189,7 @@ impl SongDataProvider {
                 self.current = SongDataSource::Traktor;
             }
             SongChange::StaticAbsolute(index) => {
+                self.traktor_provider.sync = false;
                 self.set_current_as_played();
                 self.current = SongDataSource::Static(index);
             }
