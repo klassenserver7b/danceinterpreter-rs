@@ -73,7 +73,7 @@ pub fn draw(theme: &Theme, frame: &mut Frame, _bounds: Rectangle, _cursor: Curso
     let end_x = cx - gap * 16.0;
     let end_y = cy - arc_r;
 
-    // Two wings ±35° from the back direction
+    // Two wings ±45° from the back direction
     let (s, c) = 45.0_f32.to_radians().sin_cos();
     let w1 = (-c, -s); // rotate +45°
     let w2 = (-c, s); // rotate -45°
