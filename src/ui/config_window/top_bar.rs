@@ -49,7 +49,7 @@ pub(crate) fn build<'a>(
                 menu_tpl_1(
                     menu_items!(
                         (row![
-                            text("Font size").width(Length::Fill),
+                            text("Scale").width(Length::Fill),
                             number_input(&dance_interpreter.song_window.scale, 0.5..=3.0 , Message::ChangeSongWindowScale)
                                 .on_submit(Message::SubmitSongWindowScale)
                                 .step(0.1)
