@@ -4,10 +4,11 @@ use crate::ui::config_window::{
     label_message_button_shrink, labeled_message_checkbox, material_icon_sized_message_button,
 };
 use crate::{DanceInterpreter, Message};
+use iced::alignment::Vertical;
 use iced::border::Radius;
 use iced::widget::scrollable::RelativeOffset;
 use iced::widget::space::horizontal;
-use iced::widget::{Space, Stack, row, stack};
+use iced::widget::{Space, Stack, row, stack, text, text_input};
 use iced::{Border, Length, Renderer, Theme};
 use iced_aw::style::Status;
 use iced_aw::style::menu_bar::primary;
@@ -47,6 +48,14 @@ pub(crate) fn build<'a>(
                 label_message_button_shrink("SongWindow", Message::Noop),
                 menu_tpl_1(
                     menu_items!(
+                        (row![
+                            text("Font size").width(Length::Fill),
+                            text_input("1.0", &dance_interpreter.config_window.sw_font_scale.to_string())
+                                .on_input(Message::SetFontScale)
+                                .width(Length::Fill)
+                        ].align_y(Vertical::Center)
+                        .spacing(5.0)
+                        .width(Length::Fill)),
                         (labeled_message_checkbox("Show Thumbnails", dance_interpreter.song_window.enable_image, Message::EnableImage)),
                         (labeled_message_checkbox("Show Next Dance", dance_interpreter.song_window.enable_next_dance, Message::EnableNextDance)),
                     )

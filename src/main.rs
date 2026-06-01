@@ -88,6 +88,7 @@ pub enum Message {
 
     EnableImage(bool),
     EnableNextDance(bool),
+    SetFontScale(String),
     EnableAutoscroll(bool),
 
     Traktor(TraktorMessage),
@@ -358,6 +359,16 @@ impl DanceInterpreter {
 
             Message::EnableNextDance(state) => {
                 self.song_window.enable_next_dance = state;
+                ().into()
+            }
+
+            Message::SetFontScale(value) => {
+                self.config_window.sw_font_scale = value.clone();
+
+                if let Ok(font_scale) = value.parse::<f32>() {
+                    self.song_window.font_scale = font_scale.clamp(0.5, 3.0);
+                }
+
                 ().into()
             }
 

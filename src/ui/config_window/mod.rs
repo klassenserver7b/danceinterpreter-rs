@@ -27,6 +27,7 @@ pub struct ConfigWindow {
     pub closed: bool,
     pub size: Size,
     pub enable_autoscroll: bool,
+    pub sw_font_scale: String,
     pub sidebar: Sidebar,
     pub is_statics_view: bool,
     pub theme: Theme,
@@ -43,6 +44,7 @@ impl Window for ConfigWindow {
             size: Size::default(),
 
             enable_autoscroll: true,
+            sw_font_scale: String::from("1.0"),
             sidebar: Sidebar::new(),
             is_statics_view: false,
             theme: Theme::Dark,
