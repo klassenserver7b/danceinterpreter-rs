@@ -8,11 +8,11 @@ use iced::alignment::Vertical;
 use iced::border::Radius;
 use iced::widget::scrollable::RelativeOffset;
 use iced::widget::space::horizontal;
-use iced::widget::{Space, Stack, row, stack, text, text_input};
+use iced::widget::{Space, Stack, row, stack, text};
 use iced::{Border, Length, Renderer, Theme};
 use iced_aw::style::Status;
 use iced_aw::style::menu_bar::primary;
-use iced_aw::{Menu, menu, menu_bar, menu_items};
+use iced_aw::{Menu, menu, menu_bar, menu_items, number_input};
 
 pub(crate) fn build<'a>(
     config_window: &'a ConfigWindow,
@@ -50,8 +50,9 @@ pub(crate) fn build<'a>(
                     menu_items!(
                         (row![
                             text("Font size").width(Length::Fill),
-                            text_input("1.0", &dance_interpreter.config_window.sw_font_scale.to_string())
-                                .on_input(Message::SetFontScale)
+                            number_input(&dance_interpreter.song_window.scale, 0.5..=3.0 , Message::ChangeSongWindowScale)
+                                .on_submit(Message::SubmitSongWindowScale)
+                                .step(0.1)
                                 .width(Length::Fill)
                         ].align_y(Vertical::Center)
                         .spacing(5.0)
