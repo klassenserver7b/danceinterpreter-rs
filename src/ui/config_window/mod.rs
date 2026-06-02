@@ -29,6 +29,7 @@ pub struct ConfigWindow {
     pub sidebar: Sidebar,
     pub is_statics_view: bool,
     pub theme: Theme,
+    pub follow_system_theme: bool,
 }
 
 pub static PLAYLIST_SCROLLABLE_ID: LazyLock<iced::widget::Id> =
@@ -45,6 +46,7 @@ impl Window for ConfigWindow {
             sidebar: Sidebar::new(),
             is_statics_view: false,
             theme: Theme::Dark,
+            follow_system_theme: true,
         }
     }
 

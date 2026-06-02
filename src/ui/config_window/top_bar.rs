@@ -8,7 +8,7 @@ use iced::alignment::Vertical;
 use iced::border::Radius;
 use iced::widget::scrollable::RelativeOffset;
 use iced::widget::space::horizontal;
-use iced::widget::{Space, Stack, row, stack, text};
+use iced::widget::{Space, Stack, pick_list, row, stack, text};
 use iced::{Border, Length, Renderer, Theme};
 use iced_aw::style::Status;
 use iced_aw::style::menu_bar::primary;
@@ -18,14 +18,15 @@ pub(crate) fn build<'a>(
     config_window: &'a ConfigWindow,
     dance_interpreter: &'a DanceInterpreter,
 ) -> Stack<'a, Message, Theme, Renderer> {
-    let menu_tpl_1 = |items| Menu::new(items).max_width(150.0).offset(15.0).spacing(5.0);
+    let menu_tpl = |items| Menu::new(items).max_width(160.0).offset(15.0).spacing(5.0);
+    let menu_tpl_wide = |items| Menu::new(items).max_width(256.0).offset(15.0).spacing(5.0);
 
     #[rustfmt::skip]
         let mb = menu_bar!
         (
             (
                 label_message_button_shrink("File", Message::Noop),
-                menu_tpl_1(
+                menu_tpl(
                     menu_items!(
                         (label_message_button_fill("Open Playlist File", Message::OpenPlaylist)),
                         (label_message_button_fill("Exit", Message::WindowClosed(config_window.id))),
@@ -35,9 +36,26 @@ pub(crate) fn build<'a>(
             ),
             (
                 label_message_button_shrink("Edit", Message::Noop),
-                menu_tpl_1(
+                menu_tpl_wide(
                     menu_items!(
                         (labeled_message_checkbox("Autoscroll", config_window.enable_autoscroll, Message::EnableAutoscroll)),
+                        (labeled_message_checkbox(
+                            "Follow system theme",
+                            config_window.follow_system_theme,
+                            Message::EnableFollowSystemTheme
+                        )),
+                        (row![
+                            text("Theme").width(Length::Shrink),
+                            Space::new().width(Length::Fill),
+                            pick_list(
+                                Theme::ALL,
+                                Some(config_window.theme.clone()),
+                                Message::SetConfigTheme
+                            )
+                        ]
+                        .align_y(Vertical::Center)
+                        .spacing(5.0)
+                        .width(Length::Fill)),
                         (label_message_button_fill("Reload Statics", Message::ReloadStatics)),
                         (label_message_button_fill("Add blank song", Message::AddBlankSong(RelativeOffset::END))),
                     )
@@ -46,7 +64,7 @@ pub(crate) fn build<'a>(
             ),
             (
                 label_message_button_shrink("SongWindow", Message::Noop),
-                menu_tpl_1(
+                menu_tpl(
                     menu_items!(
                         (row![
                             text("Scale").width(Length::Fill),

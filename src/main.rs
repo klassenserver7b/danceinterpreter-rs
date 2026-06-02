@@ -66,6 +66,7 @@ pub enum Message {
     WindowClosed(window::Id),
 
     ThemeChanged(theme::Mode),
+    SetConfigTheme(Theme),
 
     ToggleFullscreen,
     SetFullscreen(bool),
@@ -90,6 +91,7 @@ pub enum Message {
     EnableNextDance(bool),
     ChangeSongWindowScale(f32),
     EnableAutoscroll(bool),
+    EnableFollowSystemTheme(bool),
 
     Traktor(TraktorMessage),
 }
@@ -206,10 +208,12 @@ impl DanceInterpreter {
             }
 
             Message::ThemeChanged(mode) => {
-                self.config_window.theme = match mode {
-                    theme::Mode::Light => Theme::Light,
-                    theme::Mode::Dark | theme::Mode::None => Theme::Dark,
-                };
+                if self.config_window.follow_system_theme {
+                    self.config_window.theme = match mode {
+                        theme::Mode::Light => Theme::Light,
+                        theme::Mode::Dark | theme::Mode::None => Theme::Dark,
+                    };
+                }
 
                 let icon = from_file_data(
                     match mode {
@@ -229,6 +233,12 @@ impl DanceInterpreter {
                 } else {
                     ().into()
                 }
+            }
+
+            Message::SetConfigTheme(theme) => {
+                self.config_window.theme = theme;
+                self.config_window.follow_system_theme = false;
+                ().into()
             }
 
             Message::ToggleFullscreen => {
@@ -370,6 +380,16 @@ impl DanceInterpreter {
             Message::EnableAutoscroll(state) => {
                 self.config_window.enable_autoscroll = state;
                 ().into()
+            }
+
+            Message::EnableFollowSystemTheme(state) => {
+                self.config_window.follow_system_theme = state;
+
+                if state {
+                    system::theme().map(Message::ThemeChanged)
+                } else {
+                    ().into()
+                }
             }
 
             Message::ScrollBy(frac) => scroll_by(
