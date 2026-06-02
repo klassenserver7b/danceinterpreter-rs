@@ -9,14 +9,13 @@ use crate::ui::config_window::sidebar::Sidebar;
 use crate::ui::widget::dynamic_text_input::DynamicTextInput;
 use crate::ui::{material_icon, material_icon_sized};
 use crate::{DanceInterpreter, Message, Window};
-use iced::advanced::Widget;
 use iced::alignment::Vertical;
 use iced::border::Radius;
 use iced::widget::{
-    Button, Column, Row, Scrollable, Space, button, checkbox, column as col, radio, row,
+    Button, Column, Row, Scrollable, Space, button, checkbox, column as col, container, radio, row,
     scrollable, text, toggler,
 };
-use iced::{Alignment, Border, Color, Element, Length, Pixels, Renderer, Size, Theme, window};
+use iced::{Alignment, Border, Element, Length, Pixels, Renderer, Size, Theme, window};
 use iced_aw::widget::InnerBounds;
 use iced_aw::{iced_aw_font, quad};
 use std::sync::LazyLock;
@@ -100,7 +99,7 @@ impl ConfigWindow {
         ]
         .spacing(5);
 
-        let mut playlist_column: Column<'_, _, _, _> = col!().spacing(5);
+        let mut playlist_column: Column<'_, _, _, _> = col!();
 
         for (i, song) in dance_interpreter
             .data_provider
@@ -156,14 +155,27 @@ impl ConfigWindow {
                     ),
                 ]
                 .spacing(5)
+                .align_y(Alignment::Center)
                 .width(Length::Fill),
             ]
-            .spacing(5);
+            .align_y(Alignment::Center);
 
-            if !playlist_column.children().is_empty() {
-                playlist_column = playlist_column.push(separator());
-            }
+            let song_row = container(song_row)
+                .style(move |t| {
+                    let color = if i % 2 == 0 {
+                        t.extended_palette().background.weakest.color
+                    } else {
+                        t.extended_palette().background.weaker.color
+                    };
 
+                    container::Style::default().background(color)
+                })
+                .padding([4, 6])
+                .width(Length::Fill);
+
+            playlist_column = playlist_column.push(separator(
+                self.theme.extended_palette().secondary.base.color,
+            ));
             playlist_column = playlist_column.push(song_row);
         }
 
@@ -322,15 +334,15 @@ fn labeled_dynamic_text_input<'a>(
     col!(text(label).width(Length::Fill), input,).width(Length::Fill)
 }
 
-fn separator() -> quad::Quad {
+fn separator<T: Into<iced::Background>>(color: T) -> quad::Quad {
     quad::Quad {
-        quad_color: Color::from([0.5; 3]).into(),
+        quad_color: color.into(),
         quad_border: Border {
             radius: Radius::new(2.0),
             ..Default::default()
         },
-        inner_bounds: InnerBounds::Ratio(1.0, 0.2),
-        height: Length::Fixed(5.0),
+        inner_bounds: InnerBounds::Ratio(1.0, 1.0),
+        height: Length::Fixed(2.0),
         width: Length::Fill,
         ..Default::default()
     }
