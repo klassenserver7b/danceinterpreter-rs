@@ -11,10 +11,7 @@ use crate::dataloading::dataprovider::song_data_provider::{
 use crate::dataloading::id3tagreader::read_song_info_from_filepath;
 use crate::dataloading::m3uloader::load_tag_data_from_m3u;
 use crate::dataloading::songinfo::SongInfo;
-use crate::traktor_api::{
-    ServerMessage, StateUpdate, TraktorNextMode, TraktorSyncAction, TraktorSyncMode,
-};
-use crate::ui::config_window::bottombar::BottomBarMessage;
+use crate::traktor_api::{ServerMessage, StateUpdate, TraktorMessage, TraktorSyncAction};
 use crate::ui::config_window::sidebar::SidebarMessage;
 use crate::ui::config_window::{ConfigWindow, PLAYLIST_SCROLLABLE_ID};
 use crate::ui::song_window::SongWindow;
@@ -79,9 +76,9 @@ pub enum Message {
     DeleteSong(SongDataSource),
     ScrollBy(f32),
     SnapTo(RelativeOffset),
+    ToggleStaticsView,
     AddBlankSong(RelativeOffset),
     Sidebar(SidebarMessage),
-    Bottombar(BottomBarMessage),
     Animate,
 
     FileDropped(PathBuf),
@@ -93,16 +90,7 @@ pub enum Message {
     EnableNextDance(bool),
     EnableAutoscroll(bool),
 
-    TraktorMessage(Box<ServerMessage>),
-    TraktorSetSyncMode(TraktorSyncMode),
-    TraktorSetNextMode(TraktorNextMode),
-    TraktorSetNextModeFallback(TraktorNextMode),
-    TraktorEnableServer(bool),
-    TraktorChangeAddress(String),
-    TraktorSubmitAddress,
-    TraktorChangeAndSubmitAddress(String),
-    TraktorEnableDebugLogging(bool),
-    TraktorReconnect,
+    Traktor(TraktorMessage),
 }
 
 impl DanceInterpreter {
@@ -388,6 +376,11 @@ impl DanceInterpreter {
 
             Message::SnapTo(offset) => snap_to(PLAYLIST_SCROLLABLE_ID.clone(), offset),
 
+            Message::ToggleStaticsView => {
+                self.config_window.is_statics_view = !self.config_window.is_statics_view;
+                ().into()
+            }
+
             Message::Sidebar(msg) => match msg {
                 SidebarMessage::Toggle => {
                     self.config_window
@@ -404,76 +397,75 @@ impl DanceInterpreter {
                 }
             },
 
-            Message::Bottombar(msg) => match msg {
-                BottomBarMessage::Toggle => {
-                    self.config_window
-                        .bottombar
-                        .state
-                        .go_mut(!self.config_window.bottombar.state.value(), Instant::now());
+            Message::Traktor(msg) => match msg {
+                TraktorMessage::ServerMessage(msg) => {
+                    self.data_provider.process_traktor_message(*msg);
+                    if self.data_provider.traktor_provider.sync {
+                        self.run_traktor_sync_action();
+                    }
+
+                    self.try_scroll_to_song()
+                }
+
+                TraktorMessage::EnableServer(enabled) => {
+                    self.data_provider.traktor_provider.is_enabled = enabled;
+                    self.config_window.sidebar.power_button_cache.clear();
+                    self.config_window.sidebar.restart_button_cache.clear();
                     ().into()
+                }
+
+                TraktorMessage::ChangeAddress(addr) => {
+                    self.data_provider.traktor_provider.address = addr;
+                    ().into()
+                }
+
+                TraktorMessage::SubmitAddress => {
+                    self.data_provider.traktor_provider.submitted_address =
+                        self.data_provider.traktor_provider.address.clone();
+                    ().into()
+                }
+
+                TraktorMessage::ChangeAndSubmitAddress(addr) => {
+                    self.data_provider.traktor_provider.address = addr;
+                    self.data_provider.traktor_provider.submitted_address =
+                        self.data_provider.traktor_provider.address.clone();
+                    ().into()
+                }
+
+                TraktorMessage::EnableDebugLogging(enabled) => {
+                    self.data_provider.traktor_provider.debug_logging = enabled;
+                    self.data_provider.traktor_provider.reconnect();
+                    ().into()
+                }
+
+                TraktorMessage::Reconnect => {
+                    self.data_provider.traktor_provider.reconnect();
+                    self.config_window.sidebar.restart_button_cache.clear();
+                    ().into()
+                }
+
+                TraktorMessage::EnableSync(enabled) => {
+                    self.data_provider.traktor_provider.sync = enabled;
+                    self.traktor_provider_force_update()
+                }
+
+                TraktorMessage::SetSyncMode(mode) => {
+                    self.data_provider.traktor_provider.sync_mode = mode;
+                    self.traktor_provider_force_update()
+                }
+
+                TraktorMessage::SetNextMode(mode) => {
+                    self.data_provider.traktor_provider.next_mode = mode;
+                    self.traktor_provider_force_update()
+                }
+
+                TraktorMessage::SetNextModeFallback(mode) => {
+                    self.data_provider.traktor_provider.next_mode_fallback = mode;
+                    self.traktor_provider_force_update()
                 }
             },
 
             Message::Animate => Task::none(),
-
-            Message::TraktorMessage(msg) => {
-                self.data_provider.process_traktor_message(*msg);
-                self.run_traktor_sync_action();
-
-                self.try_scroll_to_song()
-            }
-
-            Message::TraktorEnableServer(enabled) => {
-                self.data_provider.traktor_provider.is_enabled = enabled;
-                self.config_window.sidebar.power_button_cache.clear();
-                self.config_window.sidebar.restart_button_cache.clear();
-                ().into()
-            }
-
-            Message::TraktorChangeAddress(addr) => {
-                self.data_provider.traktor_provider.address = addr;
-                ().into()
-            }
-
-            Message::TraktorSubmitAddress => {
-                self.data_provider.traktor_provider.submitted_address =
-                    self.data_provider.traktor_provider.address.clone();
-                ().into()
-            }
-
-            Message::TraktorChangeAndSubmitAddress(addr) => {
-                self.data_provider.traktor_provider.address = addr;
-                self.data_provider.traktor_provider.submitted_address =
-                    self.data_provider.traktor_provider.address.clone();
-                ().into()
-            }
-
-            Message::TraktorEnableDebugLogging(enabled) => {
-                self.data_provider.traktor_provider.debug_logging = enabled;
-                self.data_provider.traktor_provider.reconnect();
-                ().into()
-            }
-
-            Message::TraktorReconnect => {
-                self.data_provider.traktor_provider.reconnect();
-                self.config_window.sidebar.restart_button_cache.clear();
-                ().into()
-            }
-
-            Message::TraktorSetSyncMode(mode) => {
-                self.data_provider.traktor_provider.sync_mode = mode;
-                self.traktor_provider_force_update()
-            }
-
-            Message::TraktorSetNextMode(mode) => {
-                self.data_provider.traktor_provider.next_mode = mode;
-                self.traktor_provider_force_update()
-            }
-
-            Message::TraktorSetNextModeFallback(mode) => {
-                self.data_provider.traktor_provider.next_mode_fallback = mode;
-                self.traktor_provider_force_update()
-            }
 
             _ => ().into(),
         }
@@ -490,7 +482,9 @@ impl DanceInterpreter {
         {
             self.data_provider
                 .process_traktor_message(ServerMessage::Update(StateUpdate::Mixer(mixer_state)));
-            self.run_traktor_sync_action();
+            if self.data_provider.traktor_provider.sync {
+                self.run_traktor_sync_action();
+            }
             self.try_scroll_to_song()
         } else {
             ().into()
@@ -581,9 +575,6 @@ impl DanceInterpreter {
                     (Key::Character("c"), Modifiers::ALT) => {
                         Some(Message::Sidebar(SidebarMessage::Toggle))
                     }
-                    (Key::Character("b"), Modifiers::ALT) => {
-                        Some(Message::Bottombar(BottomBarMessage::Toggle))
-                    }
                     _ => None,
                 }
             }),
@@ -593,11 +584,6 @@ impl DanceInterpreter {
                 .sidebar
                 .state
                 .is_animating(Instant::now())
-                || self
-                    .config_window
-                    .bottombar
-                    .state
-                    .is_animating(Instant::now())
             {
                 window::frames().map(|_| Message::Animate)
             } else {
@@ -608,7 +594,7 @@ impl DanceInterpreter {
         if let Some(addr) = self.data_provider.traktor_provider.get_socket_addr() {
             subscriptions.push(
                 run_subscription_with(addr, |addr| traktor_api::run_server(*addr))
-                    .map(|m| Message::TraktorMessage(Box::new(m))),
+                    .map(|m| Message::Traktor(TraktorMessage::ServerMessage(Box::new(m)))),
             );
         }
 
