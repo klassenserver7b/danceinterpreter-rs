@@ -400,9 +400,7 @@ impl DanceInterpreter {
             Message::Traktor(msg) => match msg {
                 TraktorMessage::ServerMessage(msg) => {
                     self.data_provider.process_traktor_message(*msg);
-                    if self.data_provider.traktor_provider.sync {
-                        self.run_traktor_sync_action();
-                    }
+                    self.run_traktor_sync_action();
 
                     self.try_scroll_to_song()
                 }
@@ -482,9 +480,7 @@ impl DanceInterpreter {
         {
             self.data_provider
                 .process_traktor_message(ServerMessage::Update(StateUpdate::Mixer(mixer_state)));
-            if self.data_provider.traktor_provider.sync {
-                self.run_traktor_sync_action();
-            }
+            self.run_traktor_sync_action();
             self.try_scroll_to_song()
         } else {
             ().into()
@@ -492,7 +488,12 @@ impl DanceInterpreter {
     }
 
     fn run_traktor_sync_action(&mut self) {
-        match self.data_provider.traktor_provider.take_sync_action() {
+        let action = self.data_provider.traktor_provider.take_sync_action();
+        if !self.data_provider.traktor_provider.sync {
+            return;
+        }
+
+        match action {
             TraktorSyncAction::Relative(offset) => {
                 if offset >= 0 {
                     for _ in 0..offset {
