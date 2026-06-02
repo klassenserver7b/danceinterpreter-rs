@@ -10,14 +10,12 @@ use crate::ui::widget::dynamic_text_input::DynamicTextInput;
 use crate::ui::{material_icon, material_icon_sized};
 use crate::{DanceInterpreter, Message, Window};
 use iced::alignment::Vertical;
-use iced::border::Radius;
 use iced::widget::{
     Button, Column, Row, Scrollable, Space, button, checkbox, column as col, container, radio, row,
     scrollable, text, toggler,
 };
-use iced::{Alignment, Border, Element, Length, Pixels, Renderer, Size, Theme, window};
-use iced_aw::widget::InnerBounds;
-use iced_aw::{iced_aw_font, quad};
+use iced::{Alignment, Element, Length, Pixels, Renderer, Size, Theme, window};
+use iced_aw::iced_aw_font;
 use std::sync::LazyLock;
 use std::time::Instant;
 
@@ -175,9 +173,6 @@ impl ConfigWindow {
                 .padding([4, 6])
                 .width(Length::Fill);
 
-            playlist_column = playlist_column.push(separator(
-                self.theme.extended_palette().secondary.base.color,
-            ));
             playlist_column = playlist_column.push(song_row);
         }
 
@@ -334,18 +329,4 @@ fn labeled_dynamic_text_input<'a>(
     }
 
     col!(text(label).width(Length::Fill), input,).width(Length::Fill)
-}
-
-fn separator<T: Into<iced::Background>>(color: T) -> quad::Quad {
-    quad::Quad {
-        quad_color: color.into(),
-        quad_border: Border {
-            radius: Radius::new(2.0),
-            ..Default::default()
-        },
-        inner_bounds: InnerBounds::Ratio(1.0, 1.0),
-        height: Length::Fixed(2.0),
-        width: Length::Fill,
-        ..Default::default()
-    }
 }
