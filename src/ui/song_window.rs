@@ -16,7 +16,6 @@ pub struct SongWindow {
     pub enable_image: bool,
     pub enable_next_dance: bool,
     pub scale: f32,
-    pub submitted_scale: f32,
 }
 
 impl Window for SongWindow {
@@ -29,7 +28,6 @@ impl Window for SongWindow {
             enable_image: true,
             enable_next_dance: true,
             scale: 1.0,
-            submitted_scale: 1.0,
         }
     }
 
@@ -52,15 +50,15 @@ impl SongWindow {
             return horizontal().into();
         };
 
-        let dance_size = self.size.height / 8.0 * self.submitted_scale;
-        let title_size = self.size.height / 20.0 * self.submitted_scale;
-        let artist_size = self.size.height / 25.0 * self.submitted_scale;
-        let next_dance_size = self.size.height / 25.0 * self.submitted_scale;
-        let next_dance_label_size = self.size.height / 30.0 * self.submitted_scale;
+        let dance_size = self.size.height / 8.0 * self.scale;
+        let title_size = self.size.height / 20.0 * self.scale;
+        let artist_size = self.size.height / 25.0 * self.scale;
+        let next_dance_size = self.size.height / 25.0 * self.scale;
+        let next_dance_label_size = self.size.height / 30.0 * self.scale;
 
-        let dance_spacing = self.size.height / 35.0 * self.submitted_scale;
-        let song_spacing = self.size.height / 150.0 * self.submitted_scale;
-        let cover_spacing = self.size.height / 30.0 * self.submitted_scale;
+        let dance_spacing = self.size.height / 35.0 * self.scale;
+        let song_spacing = self.size.height / 150.0 * self.scale;
+        let cover_spacing = self.size.height / 30.0 * self.scale;
 
         let cover_height = LineHeight::default().to_absolute(title_size.into())
             + song_spacing

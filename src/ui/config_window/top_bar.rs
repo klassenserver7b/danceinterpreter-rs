@@ -51,7 +51,6 @@ pub(crate) fn build<'a>(
                         (row![
                             text("Scale").width(Length::Fill),
                             number_input(&dance_interpreter.song_window.scale, 0.5..=3.0 , Message::ChangeSongWindowScale)
-                                .on_submit(Message::SubmitSongWindowScale)
                                 .step(0.1)
                                 .width(Length::Fill)
                         ].align_y(Vertical::Center)
