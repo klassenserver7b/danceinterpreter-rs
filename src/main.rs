@@ -88,6 +88,7 @@ pub enum Message {
 
     EnableImage(bool),
     EnableNextDance(bool),
+    ChangeSongWindowScale(f32),
     EnableAutoscroll(bool),
 
     Traktor(TraktorMessage),
@@ -358,6 +359,11 @@ impl DanceInterpreter {
 
             Message::EnableNextDance(state) => {
                 self.song_window.enable_next_dance = state;
+                ().into()
+            }
+
+            Message::ChangeSongWindowScale(value) => {
+                self.song_window.scale = (value * 100.0).round() / 100.0;
                 ().into()
             }
 
