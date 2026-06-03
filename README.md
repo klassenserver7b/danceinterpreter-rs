@@ -72,6 +72,9 @@ Run `cargo uninstall danceinterpreter-rs`
 
 Always feel free to open an issue according to the issue templates at this github page.
 
+# Contributing
+- see [CONTRIBUTING.md](CONTRIBUTING.md)
+
 ## Screenshots
 
 ![MainWindow](https://github.com/user-attachments/assets/896e5cf3-832b-4579-aba5-398d5075aeee)
