@@ -1,6 +1,6 @@
 use crate::async_utils::DroppingOnce;
 use crate::traktor_api::model::{
-    AppMessage, ConnectionResponse, InitializeRequest, ServerMessage, UpdateRequest,
+    AppMessage, ClientInfo, ConnectionResponse, InitializeRequest, ServerMessage, UpdateRequest,
 };
 use crate::traktor_api::{ID, StateUpdate};
 use bytes::Bytes;
@@ -36,6 +36,7 @@ struct TraktorServer {
 
     cover_socket_id: usize,
     cover_sockets: HashMap<usize, UnboundedSender<warp::ws::Message>>,
+    client_addrs: HashMap<usize, Option<SocketAddr>>,
 }
 
 impl TraktorServer {
@@ -55,7 +56,22 @@ impl TraktorServer {
 
             cover_socket_id: 0,
             cover_sockets: HashMap::new(),
+            client_addrs: HashMap::new(),
         }
+    }
+
+    /// Builds the current client list and notifies the app of the change.
+    async fn notify_clients_changed(&mut self) {
+        let clients = self
+            .client_addrs
+            .values()
+            .map(|addr| ClientInfo {
+                addr: *addr,
+                name: None,
+            })
+            .collect();
+        self.send_message(ServerMessage::ClientsChanged(clients))
+            .await;
     }
 
     async fn send_message(&mut self, message: ServerMessage) {
@@ -195,7 +211,11 @@ impl TraktorServer {
         StatusCode::ACCEPTED
     }
 
-    async fn handle_socket_connect(&mut self, mut tx: UnboundedSender<warp::ws::Message>) -> usize {
+    async fn handle_socket_connect(
+        &mut self,
+        mut tx: UnboundedSender<warp::ws::Message>,
+        addr: Option<SocketAddr>,
+    ) -> usize {
         while self.cover_sockets.contains_key(&self.cover_socket_id) {
             self.cover_socket_id += 1;
         }
@@ -205,11 +225,15 @@ impl TraktorServer {
         }
 
         self.cover_sockets.insert(self.cover_socket_id, tx);
+        self.client_addrs.insert(self.cover_socket_id, addr);
+        self.notify_clients_changed().await;
         self.cover_socket_id
     }
 
-    fn handle_socket_disconnect(&mut self, id: usize) {
+    async fn handle_socket_disconnect(&mut self, id: usize) {
         self.cover_sockets.remove(&id);
+        self.client_addrs.remove(&id);
+        self.notify_clients_changed().await;
     }
 
     async fn handle_log(&mut self, msg: String) -> impl warp::Reply + use<> {
@@ -405,39 +429,42 @@ impl TraktorServer {
     ) -> impl Filter<Extract = (impl warp::Reply,), Error = warp::Rejection> + Clone {
         warp::ws()
             .and(Self::with_state(state))
-            .map(|ws: warp::ws::Ws, state: Arc<Mutex<Self>>| {
-                ws.on_upgrade(move |socket| async move {
-                    let (mut ws_tx, mut ws_rx) = socket.split();
-                    let (tx, mut rx) = iced::futures::channel::mpsc::unbounded();
+            .and(warp::addr::remote())
+            .map(
+                |ws: warp::ws::Ws, state: Arc<Mutex<Self>>, addr: Option<SocketAddr>| {
+                    ws.on_upgrade(move |socket| async move {
+                        let (mut ws_tx, mut ws_rx) = socket.split();
+                        let (tx, mut rx) = iced::futures::channel::mpsc::unbounded();
 
-                    tokio::task::spawn(async move {
-                        while let Some(message) = rx.next().await {
-                            ws_tx
-                                .send(message)
-                                .unwrap_or_else(|e| {
-                                    println!("websocket send error: {}", e);
-                                })
-                                .await;
-                        }
-                    });
-
-                    let socket_id = state.lock().await.handle_socket_connect(tx).await;
-                    println!("websocket connected");
-
-                    while let Some(result) = ws_rx.next().await {
-                        match result {
-                            Ok(_) => {}
-                            Err(e) => {
-                                println!("websocket error: {}", e);
-                                break;
+                        tokio::task::spawn(async move {
+                            while let Some(message) = rx.next().await {
+                                ws_tx
+                                    .send(message)
+                                    .unwrap_or_else(|e| {
+                                        println!("websocket send error: {}", e);
+                                    })
+                                    .await;
                             }
-                        };
-                    }
+                        });
 
-                    state.lock().await.handle_socket_disconnect(socket_id);
-                    println!("websocket disconnected");
-                })
-            })
+                        let socket_id = state.lock().await.handle_socket_connect(tx, addr).await;
+                        println!("websocket connected");
+
+                        while let Some(result) = ws_rx.next().await {
+                            match result {
+                                Ok(_) => {}
+                                Err(e) => {
+                                    println!("websocket error: {}", e);
+                                    break;
+                                }
+                            };
+                        }
+
+                        state.lock().await.handle_socket_disconnect(socket_id).await;
+                        println!("websocket disconnected");
+                    })
+                },
+            )
     }
 
     fn route_log(
@@ -1000,6 +1027,38 @@ mod tests {
         assert_eq!(res.status(), 400);
     }
 
+    // -- client tracking (cover WebSocket connections) --
+
+    /// Connecting a cover socket emits ClientsChanged carrying the remote
+    /// address; disconnecting emits ClientsChanged with the client removed.
+    #[tokio::test]
+    async fn socket_connect_and_disconnect_emit_client_list() {
+        let (state, mut rx) = new_state();
+        let addr: SocketAddr = "1.2.3.4:5678".parse().unwrap();
+
+        let (tx, _ws_rx) = iced_mpsc::unbounded();
+        let id = state
+            .lock()
+            .await
+            .handle_socket_connect(tx, Some(addr))
+            .await;
+
+        let msg = recv_msg(&mut rx).await;
+        assert!(matches!(
+            &msg,
+            ServerMessage::ClientsChanged(clients)
+                if clients.len() == 1 && clients[0].addr == Some(addr)
+        ));
+
+        state.lock().await.handle_socket_disconnect(id).await;
+
+        let msg = recv_msg(&mut rx).await;
+        assert!(matches!(
+            &msg,
+            ServerMessage::ClientsChanged(clients) if clients.is_empty()
+        ));
+    }
+
     // -- /log endpoint --
 
     /// POST /log emits a Log message and returns 201.
@@ -1249,6 +1308,40 @@ mod tests {
                 .expect("WS error");
 
             assert_eq!(ws_msg.into_text().unwrap(), "/music/new_track.mp3");
+        }
+
+        /// Connecting a real cover WebSocket emits ClientsChanged with the
+        /// client's resolved remote address; dropping it emits an empty list.
+        #[tokio::test]
+        async fn cover_websocket_connect_disconnect_tracks_clients() {
+            let mut server = TestServer::start().await;
+
+            let ws_url = format!("ws://{}/cover", server.addr);
+            let (ws_stream, _) = tokio_tungstenite::connect_async(&ws_url)
+                .await
+                .expect("WebSocket connection failed");
+
+            // Connecting reports exactly one client with a known address.
+            match server.recv().await {
+                ServerMessage::ClientsChanged(clients) => {
+                    assert_eq!(clients.len(), 1);
+                    assert!(
+                        clients[0].addr.is_some(),
+                        "remote address should be resolved over TCP"
+                    );
+                }
+                other => panic!("expected ClientsChanged, got {:?}", other),
+            }
+
+            // Dropping the socket eventually reports no clients.
+            drop(ws_stream);
+            loop {
+                match server.recv().await {
+                    ServerMessage::ClientsChanged(clients) if clients.is_empty() => break,
+                    ServerMessage::ClientsChanged(_) => continue,
+                    other => panic!("expected ClientsChanged, got {:?}", other),
+                }
+            }
         }
 
         /// Dropping TestServer aborts the task; a subsequent bind to the same

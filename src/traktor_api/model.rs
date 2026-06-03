@@ -1,6 +1,7 @@
 use bytes::Bytes;
 use iced::futures::channel::mpsc;
 use serde::{Deserialize, Deserializer, Serialize};
+use std::net::SocketAddr;
 
 #[derive(Debug, Clone)]
 pub enum AppMessage {
@@ -20,6 +21,22 @@ pub enum ServerMessage {
         data: Bytes,
     },
     Log(String),
+    ClientsChanged(Vec<ClientInfo>),
+}
+
+/// Information about a client currently connected to the Traktor server.
+///
+/// A "client" is a live connection on the `/cover` WebSocket — i.e. the
+/// cover-loader that proxies a Traktor instance. It is the only persistent
+/// connection in the API, so it is what we can reliably observe without
+/// changing the client-side protocol.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ClientInfo {
+    /// Remote socket address, if the transport exposed one.
+    pub addr: Option<SocketAddr>,
+    /// Human-readable name, if the client ever reports one. Currently always
+    /// `None` (the protocol carries no name), kept for forward compatibility.
+    pub name: Option<String>,
 }
 
 #[derive(Debug, Copy, Clone)]

@@ -1,7 +1,7 @@
 use crate::dataloading::songinfo::SongInfo;
 use crate::traktor_api::{
-    AppMessage, ChannelState, DeckContentState, DeckState, MixerState, ServerMessage, State,
-    StateUpdate,
+    AppMessage, ChannelState, ClientInfo, DeckContentState, DeckState, MixerState, ServerMessage,
+    State, StateUpdate,
 };
 use iced::futures::channel::mpsc::UnboundedSender;
 use iced::widget::image;
@@ -80,6 +80,7 @@ pub struct TraktorDataProvider {
 
     time_offset_ms: i64,
     pub state: Option<State>,
+    clients: Vec<ClientInfo>,
     covers: HashMap<String, image::Handle>,
 
     sync_x_fader_is_left: bool,
@@ -108,6 +109,7 @@ impl Default for TraktorDataProvider {
 
             time_offset_ms: 0,
             state: None,
+            clients: Vec::new(),
             covers: HashMap::new(),
 
             sync_x_fader_is_left: true,
@@ -126,6 +128,16 @@ impl Default for TraktorDataProvider {
 impl TraktorDataProvider {
     pub fn is_ready(&self) -> bool {
         self.is_enabled && self.channel.as_ref().is_some_and(|c| !c.is_closed())
+    }
+
+    /// Clients currently connected to the running server. Empty when the
+    /// server is not ready (disabled or not yet started).
+    pub fn connected_clients(&self) -> &[ClientInfo] {
+        if !self.is_ready() {
+            return &[];
+        }
+
+        &self.clients
     }
 
     #[allow(dead_code)]
@@ -378,10 +390,14 @@ impl TraktorDataProvider {
 
                 self.time_offset_ms = 0;
                 self.state = None;
+                self.clients.clear();
                 self.sync_x_fader_is_left = true;
                 self.update_song_info(playlist);
 
                 self.reconnect();
+            }
+            ServerMessage::ClientsChanged(clients) => {
+                self.clients = clients;
             }
             ServerMessage::Connect {
                 time_offset_ms,
@@ -475,5 +491,47 @@ impl TraktorDataProvider {
         {
             self.channel = None;
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use iced::futures::channel::mpsc;
+
+    fn client(ip: &str) -> ClientInfo {
+        ClientInfo {
+            addr: Some(format!("{ip}:8080").parse().unwrap()),
+            name: None,
+        }
+    }
+
+    /// `connected_clients()` reflects the latest `ClientsChanged` only while the
+    /// server is ready, and `Ready` clears the list (server restarted).
+    #[test]
+    fn connected_clients_gating_and_reset() {
+        // Keep the receivers alive so the channel counts as "open" (ready).
+        let (tx, _rx) = mpsc::unbounded();
+        let mut provider = TraktorDataProvider {
+            is_enabled: true,
+            channel: Some(tx),
+            ..Default::default()
+        };
+
+        assert!(provider.connected_clients().is_empty());
+
+        provider.process_message(ServerMessage::ClientsChanged(vec![client("1.2.3.4")]), &[]);
+        assert_eq!(provider.connected_clients().len(), 1);
+
+        // Disabling the server hides the list even though it is populated.
+        provider.is_enabled = false;
+        assert!(provider.connected_clients().is_empty());
+        provider.is_enabled = true;
+        assert_eq!(provider.connected_clients().len(), 1);
+
+        // A fresh server start (Ready) resets the tracked clients.
+        let (tx, _rx2) = mpsc::unbounded();
+        provider.process_message(ServerMessage::Ready(tx), &[]);
+        assert!(provider.connected_clients().is_empty());
     }
 }

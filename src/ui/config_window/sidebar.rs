@@ -8,8 +8,8 @@ use crate::ui::widget::suggestion_text_input::SuggestionTextInput;
 use crate::ui::widget::{power_button, restart_button, suggestion_text_input};
 use crate::{DanceInterpreter, Message};
 use iced::alignment::Vertical;
-use iced::widget::{Container, canvas, column as col, container, pick_list, row, text};
-use iced::{Alignment, Animation, Length, animation};
+use iced::widget::{Column, Container, canvas, column as col, container, pick_list, row, text};
+use iced::{Alignment, Animation, Length, animation, border};
 use network_interface::Addr::V4;
 use network_interface::{NetworkInterface, NetworkInterfaceConfig};
 use std::time::Duration;
@@ -84,6 +84,7 @@ impl Sidebar {
                     .align_x(Alignment::Center)
                 ]
                 .spacing(10),
+                Self::build_client_status(dance_interpreter),
                 col![
                     text("Server Address: "),
                     self.build_network_interface_combo_box(dance_interpreter)
@@ -146,6 +147,66 @@ impl Sidebar {
             container::Style::default().background(t.extended_palette().background.weakest.color)
         })
         .align_y(Vertical::Top)
+    }
+
+    /// A small LED + label showing whether (and how many) Traktor clients are
+    /// connected, listing each client's name or IP when available.
+    fn build_client_status<'a>(dance_interpreter: &DanceInterpreter) -> Column<'a, Message> {
+        let clients = dance_interpreter
+            .data_provider
+            .traktor_provider
+            .connected_clients();
+        let count = clients.len();
+        let connected = count > 0;
+
+        let led = container(text(""))
+            .width(Length::Fixed(12.0))
+            .height(Length::Fixed(12.0))
+            .style(move |t: &iced::Theme| {
+                let palette = t.extended_palette();
+                let color = if connected {
+                    palette.success.base.color
+                } else {
+                    palette.background.strong.color
+                };
+                container::Style {
+                    background: Some(color.into()),
+                    border: border::rounded(6.0),
+                    ..container::Style::default()
+                }
+            });
+
+        let summary = if connected {
+            format!(
+                "{} Traktor client{} connected",
+                count,
+                if count == 1 { "" } else { "s" }
+            )
+        } else {
+            "No Traktor client connected".to_owned()
+        };
+
+        let mut column = col![
+            row![led, text(summary)]
+                .spacing(8)
+                .align_y(Alignment::Center)
+        ]
+        .spacing(4)
+        .width(Length::Fill)
+        .align_x(Alignment::Center);
+
+        for client in clients {
+            let label = client
+                .name
+                .clone()
+                .or_else(|| client.addr.map(|addr| addr.ip().to_string()));
+
+            if let Some(label) = label {
+                column = column.push(text(label).size(12));
+            }
+        }
+
+        column
     }
 
     fn build_network_interface_combo_box(
