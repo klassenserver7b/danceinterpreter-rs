@@ -6,6 +6,7 @@ use crate::ui::config_window::labeled_message_toggler;
 use crate::ui::widget::canvas_toggle::CanvasToggle;
 use crate::ui::widget::suggestion_text_input::SuggestionTextInput;
 use crate::ui::widget::{power_button, restart_button, suggestion_text_input};
+use crate::ui::with_tooltip;
 use crate::{DanceInterpreter, Message};
 use iced::alignment::Vertical;
 use iced::widget::{Container, canvas, column as col, container, pick_list, row, text};
@@ -63,22 +64,28 @@ impl Sidebar {
                 text("Server Settings").size(24),
                 row![
                     col![
-                        CanvasToggle::new(
-                            dance_interpreter.data_provider.traktor_provider.is_enabled,
-                            &self.power_button_cache
-                        )
-                        .on_toggle(|b| Message::Traktor(TraktorMessage::EnableServer(b)))
-                        .on_draw(power_button::draw),
+                        with_tooltip(
+                            CanvasToggle::new(
+                                dance_interpreter.data_provider.traktor_provider.is_enabled,
+                                &self.power_button_cache
+                            )
+                            .on_toggle(|b| Message::Traktor(TraktorMessage::EnableServer(b)))
+                            .on_draw(power_button::draw),
+                            "Enable / disable Traktor server"
+                        ),
                         text("Enable Server")
                     ]
                     .align_x(Alignment::Center),
                     col![
-                        CanvasToggle::new(
-                            dance_interpreter.data_provider.traktor_provider.is_enabled,
-                            &self.restart_button_cache
-                        )
-                        .on_toggle(|_| Message::Traktor(TraktorMessage::Reconnect))
-                        .on_draw(restart_button::draw),
+                        with_tooltip(
+                            CanvasToggle::new(
+                                dance_interpreter.data_provider.traktor_provider.is_enabled,
+                                &self.restart_button_cache
+                            )
+                            .on_toggle(|_| Message::Traktor(TraktorMessage::Reconnect))
+                            .on_draw(restart_button::draw),
+                            "Restart Traktor server"
+                        ),
                         text("Restart Server")
                     ]
                     .align_x(Alignment::Center)

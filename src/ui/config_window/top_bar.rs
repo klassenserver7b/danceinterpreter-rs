@@ -3,6 +3,7 @@ use crate::ui::config_window::{
     ConfigWindow, label_message_button_fill, label_message_button_fill_opt,
     label_message_button_shrink, labeled_message_checkbox, material_icon_sized_message_button,
 };
+use crate::ui::with_tooltip;
 use crate::{DanceInterpreter, Message};
 use iced::alignment::Vertical;
 use iced::border::Radius;
@@ -113,23 +114,26 @@ pub(crate) fn build<'a>(
 
     let view_buttons = row![
         Space::new().width(Length::Fill),
-        playlist_button,
-        statics_button,
+        with_tooltip(playlist_button, "Show playlist view"),
+        with_tooltip(statics_button, "Show statics view"),
         Space::new().width(Length::Fill)
     ]
     .width(Length::Fill)
     .spacing(5);
 
-    let sidebar_button = material_icon_sized_message_button(
-        if config_window.sidebar.state.value() {
-            "right_panel_close"
-        } else {
-            "right_panel_open"
-        },
-        20.0,
-        Message::Sidebar(SidebarMessage::Toggle),
-    )
-    .padding([0, 4]);
+    let sidebar_button = with_tooltip(
+        material_icon_sized_message_button(
+            if config_window.sidebar.state.value() {
+                "right_panel_close"
+            } else {
+                "right_panel_open"
+            },
+            20.0,
+            Message::Sidebar(SidebarMessage::Toggle),
+        )
+        .padding([0, 4]),
+        "Toggle settings panel",
+    );
 
     stack![
         row![mb, horizontal()].width(Length::Fill),
