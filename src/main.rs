@@ -6,7 +6,7 @@ mod ui;
 
 use crate::async_utils::run_subscription_with;
 use crate::dataloading::dataprovider::song_data_provider::{
-    SongChange, SongDataEdit, SongDataProvider, SongDataSource,
+    RemovedSong, SongChange, SongDataEdit, SongDataProvider, SongDataSource,
 };
 use crate::dataloading::id3tagreader::read_song_info_from_filepath;
 use crate::dataloading::m3uloader::load_tag_data_from_m3u;
@@ -75,6 +75,10 @@ pub enum Message {
     ReloadStatics,
     AddSong(SongInfo),
     DeleteSong(SongDataSource),
+    RequestDeleteSong(SongDataSource),
+    ConfirmDelete,
+    CancelDelete,
+    UndoDelete,
     ScrollBy(f32),
     SnapTo(RelativeOffset),
     ToggleStaticsView,
@@ -357,6 +361,43 @@ impl DanceInterpreter {
                 ().into()
             }
 
+            Message::RequestDeleteSong(song) => {
+                self.config_window.pending_delete = Some(song);
+                ().into()
+            }
+
+            Message::ConfirmDelete => {
+                if let Some(song) = self.config_window.pending_delete.take()
+                    && let Some(removed) = self.data_provider.delete_song_returning(song)
+                {
+                    self.config_window.last_deleted = Some(removed);
+                }
+                ().into()
+            }
+
+            Message::CancelDelete => {
+                self.config_window.pending_delete = None;
+                ().into()
+            }
+
+            Message::UndoDelete => {
+                if let Some(removed) = self.config_window.last_deleted.take() {
+                    match removed {
+                        RemovedSong::Playlist {
+                            index,
+                            song,
+                            played,
+                        } => {
+                            self.data_provider.insert_song_at(index, song, played);
+                        }
+                        RemovedSong::Static { index, song } => {
+                            self.data_provider.insert_static_at(index, song);
+                        }
+                    }
+                }
+                ().into()
+            }
+
             Message::SetNextSong(i) => {
                 self.data_provider.set_next(i);
                 ().into()
@@ -599,6 +640,7 @@ impl DanceInterpreter {
                         Some(Message::AddBlankSong(RelativeOffset::END))
                     }
                     (Key::Character("r"), Modifiers::CTRL) => Some(Message::ReloadStatics),
+                    (Key::Character("z"), Modifiers::CTRL) => Some(Message::UndoDelete),
                     (Key::Character("c"), Modifiers::ALT) => {
                         Some(Message::Sidebar(SidebarMessage::Toggle))
                     }

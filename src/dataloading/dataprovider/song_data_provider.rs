@@ -29,6 +29,21 @@ pub enum SongDataEdit {
     Dance(String),
 }
 
+/// Data captured when a song is deleted, enough to restore it at its
+/// original position for undo.
+#[derive(Debug, Clone)]
+pub enum RemovedSong {
+    Playlist {
+        index: usize,
+        song: SongInfo,
+        played: bool,
+    },
+    Static {
+        index: usize,
+        song: SongInfo,
+    },
+}
+
 #[derive(Default)]
 pub struct SongDataProvider {
     pub playlist_songs: Vec<SongInfo>,
@@ -170,12 +185,55 @@ impl SongDataProvider {
     }
 
     pub fn delete_song(&mut self, song: SongDataSource) {
-        if let SongDataSource::Playlist(i) = song {
-            self.playlist_songs.remove(i);
-            self.playlist_played.remove(i);
-        } else if let SongDataSource::Static(i) = song {
-            self.statics.remove(i);
+        self.delete_song_returning(song);
+    }
+
+    /// Deletes the referenced song and returns the removed data so the
+    /// caller can offer an undo. Returns `None` if the index is out of range.
+    pub fn delete_song_returning(&mut self, song: SongDataSource) -> Option<RemovedSong> {
+        match song {
+            SongDataSource::Playlist(i) => {
+                if i >= self.playlist_songs.len() {
+                    return None;
+                }
+                let song = self.playlist_songs.remove(i);
+                let played = if i < self.playlist_played.len() {
+                    self.playlist_played.remove(i)
+                } else {
+                    false
+                };
+                Some(RemovedSong::Playlist {
+                    index: i,
+                    song,
+                    played,
+                })
+            }
+            SongDataSource::Static(i) => {
+                if i >= self.statics.len() {
+                    return None;
+                }
+                let song = self.statics.remove(i);
+                Some(RemovedSong::Static { index: i, song })
+            }
+            _ => None,
         }
+    }
+
+    /// Re-inserts a previously removed playlist song at the given index,
+    /// clamping to the end if the index is out of range.
+    pub fn insert_song_at(&mut self, index: usize, song: SongInfo, played: bool) {
+        let index = index.min(self.playlist_songs.len());
+        self.playlist_songs.insert(index, song);
+
+        let played_index = index.min(self.playlist_played.len());
+        self.playlist_played.insert(played_index, played);
+    }
+
+    /// Re-inserts a previously removed static song at the given index,
+    /// clamping to the end if the index is out of range.
+    pub fn insert_static_at(&mut self, index: usize, song: SongInfo) {
+        let index = index.min(self.statics.len());
+        self.statics.insert(index, song);
     }
 
     pub fn handle_song_change(&mut self, change: SongChange) {

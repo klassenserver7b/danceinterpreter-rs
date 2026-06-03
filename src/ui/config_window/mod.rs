@@ -3,18 +3,19 @@ pub mod sidebar;
 pub mod top_bar;
 
 use crate::dataloading::dataprovider::song_data_provider::{
-    SongChange, SongDataEdit, SongDataSource,
+    RemovedSong, SongChange, SongDataEdit, SongDataSource,
 };
+use crate::dataloading::songinfo::SongInfo;
 use crate::ui::config_window::sidebar::Sidebar;
 use crate::ui::widget::dynamic_text_input::DynamicTextInput;
 use crate::ui::{material_icon, material_icon_sized};
 use crate::{DanceInterpreter, Message, Window};
 use iced::alignment::Vertical;
 use iced::widget::{
-    Button, Column, Row, Scrollable, Space, button, checkbox, column as col, container, radio, row,
-    scrollable, text, toggler,
+    Button, Column, Row, Scrollable, Space, button, checkbox, column as col, container, mouse_area,
+    opaque, radio, row, scrollable, stack, text, toggler,
 };
-use iced::{Alignment, Element, Length, Pixels, Renderer, Size, Theme, window};
+use iced::{Alignment, Color, Element, Length, Pixels, Renderer, Size, Theme, window};
 use iced_aw::iced_aw_font;
 use std::sync::LazyLock;
 use std::time::Instant;
@@ -28,6 +29,10 @@ pub struct ConfigWindow {
     pub is_statics_view: bool,
     pub theme: Theme,
     pub follow_system_theme: bool,
+    /// Set while a delete confirmation dialog is open.
+    pub pending_delete: Option<SongDataSource>,
+    /// Most recently deleted song, available for undo.
+    pub last_deleted: Option<RemovedSong>,
 }
 
 pub static PLAYLIST_SCROLLABLE_ID: LazyLock<iced::widget::Id> =
@@ -45,6 +50,8 @@ impl Window for ConfigWindow {
             is_statics_view: false,
             theme: Theme::Dark,
             follow_system_theme: true,
+            pending_delete: None,
+            last_deleted: None,
         }
     }
 
@@ -81,9 +88,68 @@ impl ConfigWindow {
             ));
         let bottom_bar = bottombar::build(dance_interpreter);
 
-        col![row![col![top_bar, content_view], side_bar], bottom_bar]
-            .spacing(5)
-            .into()
+        let base: Element<'a, Message> =
+            col![row![col![top_bar, content_view], side_bar], bottom_bar]
+                .spacing(5)
+                .into();
+
+        if let Some(source) = self.pending_delete.as_ref() {
+            let title = delete_target_label(source, dance_interpreter);
+            stack![base, self.build_delete_dialog(title)].into()
+        } else {
+            base
+        }
+    }
+
+    fn build_delete_dialog<'a>(&'a self, target: String) -> Element<'a, Message> {
+        let card = container(
+            col![
+                text("Delete song?").size(20),
+                text(target),
+                row![
+                    label_message_button("Cancel", Message::CancelDelete).width(Length::Fill),
+                    button(text("Delete").align_x(Alignment::Center))
+                        .padding([4, 8])
+                        .style(button::danger)
+                        .on_press(Message::ConfirmDelete)
+                        .width(Length::Fill),
+                ]
+                .spacing(10),
+            ]
+            .spacing(15)
+            .width(Length::Fixed(360.0)),
+        )
+        .padding(20)
+        .style(|t: &Theme| {
+            let palette = t.extended_palette();
+            container::Style::default()
+                .background(palette.background.base.color)
+                .border(iced::Border {
+                    color: palette.background.strong.color,
+                    width: 1.0,
+                    radius: 8.0.into(),
+                })
+        });
+
+        let backdrop = mouse_area(
+            container(Space::new().width(Length::Fill).height(Length::Fill))
+                .width(Length::Fill)
+                .height(Length::Fill)
+                .style(|_t: &Theme| {
+                    container::Style::default().background(Color::from_rgba(0.0, 0.0, 0.0, 0.5))
+                }),
+        )
+        .on_press(Message::CancelDelete);
+
+        let centered_card = container(card)
+            .width(Length::Fill)
+            .height(Length::Fill)
+            .align_x(Alignment::Center)
+            .align_y(Alignment::Center);
+
+        // The backdrop captures clicks for dismissal; the card sits on top and
+        // intercepts its own clicks so they don't fall through to the backdrop.
+        opaque(stack![backdrop, opaque(centered_card)])
     }
 
     fn build_playlist_view(&'_ self, dance_interpreter: &DanceInterpreter) -> Column<'_, Message> {
@@ -151,7 +217,7 @@ impl ConfigWindow {
                     ),
                     material_icon_message_button(
                         "delete",
-                        Message::DeleteSong(SongDataSource::Playlist(i))
+                        Message::RequestDeleteSong(SongDataSource::Playlist(i))
                     ),
                 ]
                 .spacing(5)
@@ -182,11 +248,74 @@ impl ConfigWindow {
             .spacing(5)
             .id(PLAYLIST_SCROLLABLE_ID.clone());
 
-        col!(trow, playlist_scrollable).spacing(5)
+        let mut view: Column<'_, Message> = col!().spacing(5);
+
+        if let Some(removed) = self.last_deleted.as_ref() {
+            view = view.push(self.build_undo_bar(removed));
+        }
+
+        view.push(trow).push(playlist_scrollable)
+    }
+
+    fn build_undo_bar<'a>(&'a self, removed: &'a RemovedSong) -> Element<'a, Message> {
+        let song = match removed {
+            RemovedSong::Playlist { song, .. } => song,
+            RemovedSong::Static { song, .. } => song,
+        };
+
+        let label = format!("Deleted '{}'", removed_song_label(song));
+
+        container(
+            row![
+                text(label).width(Length::Fill).align_y(Vertical::Center),
+                label_message_button_shrink("Undo", Message::UndoDelete),
+            ]
+            .spacing(10)
+            .align_y(Alignment::Center),
+        )
+        .padding([6, 10])
+        .width(Length::Fill)
+        .style(|t: &Theme| {
+            container::Style::default().background(t.extended_palette().background.weak.color)
+        })
+        .into()
     }
 
     fn build_statics_view(&'_ self, _dance_interpreter: &DanceInterpreter) -> Column<'_, Message> {
         col![].width(Length::Fill).height(Length::Fill)
+    }
+}
+
+/// Builds a human-readable label for the song targeted by a delete request,
+/// used in the confirmation dialog.
+fn delete_target_label(source: &SongDataSource, dance_interpreter: &DanceInterpreter) -> String {
+    let song = match source {
+        SongDataSource::Playlist(i) => dance_interpreter.data_provider.playlist_songs.get(*i),
+        SongDataSource::Static(i) => dance_interpreter.data_provider.statics.get(*i),
+        _ => None,
+    };
+
+    match song {
+        Some(song) => removed_song_label(song),
+        None => "this item".to_string(),
+    }
+}
+
+/// Produces a short description of a song for dialog/undo text, preferring
+/// title + artist, then dance, then a generic fallback.
+fn removed_song_label(song: &SongInfo) -> String {
+    let title = song.title.trim();
+    let artist = song.artist.trim();
+    let dance = song.dance.trim();
+
+    if !title.is_empty() && !artist.is_empty() {
+        format!("{} - {}", title, artist)
+    } else if !title.is_empty() {
+        title.to_string()
+    } else if !dance.is_empty() {
+        dance.to_string()
+    } else {
+        "Untitled song".to_string()
     }
 }
 
