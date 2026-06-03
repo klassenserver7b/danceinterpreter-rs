@@ -94,6 +94,10 @@ pub enum Message {
     EnableFollowSystemTheme(bool),
 
     Traktor(TraktorMessage),
+
+    PlaylistSearchChanged(String),
+    PlaylistSearchClear,
+    PlaylistSearchNext,
 }
 
 impl DanceInterpreter {
@@ -489,6 +493,28 @@ impl DanceInterpreter {
                 }
             },
 
+            Message::PlaylistSearchChanged(query) => {
+                self.config_window.search_query = query;
+                self.config_window.search_match_idx = 0;
+                self.scroll_to_search_match()
+            }
+
+            Message::PlaylistSearchClear => {
+                self.config_window.search_query.clear();
+                self.config_window.search_match_idx = 0;
+                ().into()
+            }
+
+            Message::PlaylistSearchNext => {
+                let matches = self.search_match_indices();
+                if matches.is_empty() {
+                    return ().into();
+                }
+                self.config_window.search_match_idx =
+                    (self.config_window.search_match_idx + 1) % matches.len();
+                self.scroll_to_search_match()
+            }
+
             Message::Animate => Task::none(),
 
             _ => ().into(),
@@ -536,6 +562,44 @@ impl DanceInterpreter {
                     .set_current(SongDataSource::Playlist(pos));
             }
         }
+    }
+
+    fn search_match_indices(&self) -> Vec<usize> {
+        let query = self.config_window.search_query.to_lowercase();
+        if query.is_empty() {
+            return Vec::new();
+        }
+
+        self.data_provider
+            .playlist_songs
+            .iter()
+            .enumerate()
+            .filter(|(_, song)| {
+                song.title.to_lowercase().contains(&query)
+                    || song.artist.to_lowercase().contains(&query)
+                    || song.dance.to_lowercase().contains(&query)
+            })
+            .map(|(i, _)| i)
+            .collect()
+    }
+
+    fn scroll_to_search_match(&mut self) -> Task<Message> {
+        let matches = self.search_match_indices();
+        if matches.is_empty() {
+            return ().into();
+        }
+
+        let cursor = self.config_window.search_match_idx.min(matches.len() - 1);
+        self.config_window.search_match_idx = cursor;
+        let index = matches[cursor];
+
+        let offset_y =
+            index as f32 / std::cmp::max(1, self.data_provider.playlist_songs.len() - 1) as f32;
+
+        Task::done(Message::SnapTo(RelativeOffset {
+            x: 0.0,
+            y: offset_y,
+        }))
     }
 
     fn try_scroll_to_song(&mut self) -> Task<Message> {

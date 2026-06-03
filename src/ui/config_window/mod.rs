@@ -5,6 +5,7 @@ pub mod top_bar;
 use crate::dataloading::dataprovider::song_data_provider::{
     SongChange, SongDataEdit, SongDataSource,
 };
+use crate::dataloading::songinfo::SongInfo;
 use crate::ui::config_window::sidebar::Sidebar;
 use crate::ui::widget::dynamic_text_input::DynamicTextInput;
 use crate::ui::{material_icon, material_icon_sized};
@@ -12,7 +13,7 @@ use crate::{DanceInterpreter, Message, Window};
 use iced::alignment::Vertical;
 use iced::widget::{
     Button, Column, Row, Scrollable, Space, button, checkbox, column as col, container, radio, row,
-    scrollable, text, toggler,
+    scrollable, text, text_input, toggler,
 };
 use iced::{Alignment, Element, Length, Pixels, Renderer, Size, Theme, window};
 use iced_aw::iced_aw_font;
@@ -28,6 +29,8 @@ pub struct ConfigWindow {
     pub is_statics_view: bool,
     pub theme: Theme,
     pub follow_system_theme: bool,
+    pub search_query: String,
+    pub search_match_idx: usize,
 }
 
 pub static PLAYLIST_SCROLLABLE_ID: LazyLock<iced::widget::Id> =
@@ -45,6 +48,8 @@ impl Window for ConfigWindow {
             is_statics_view: false,
             theme: Theme::Dark,
             follow_system_theme: true,
+            search_query: String::new(),
+            search_match_idx: 0,
         }
     }
 
@@ -87,6 +92,43 @@ impl ConfigWindow {
     }
 
     fn build_playlist_view(&'_ self, dance_interpreter: &DanceInterpreter) -> Column<'_, Message> {
+        let query = self.search_query.to_lowercase();
+        let has_query = !query.is_empty();
+
+        let song_matches = |song: &SongInfo| {
+            has_query
+                && (song.title.to_lowercase().contains(&query)
+                    || song.artist.to_lowercase().contains(&query)
+                    || song.dance.to_lowercase().contains(&query))
+        };
+
+        let match_count = if has_query {
+            dance_interpreter
+                .data_provider
+                .playlist_songs
+                .iter()
+                .filter(|s| song_matches(s))
+                .count()
+        } else {
+            0
+        };
+
+        let mut search_box = text_input("Search title, artist or dance...", &self.search_query)
+            .on_input(Message::PlaylistSearchChanged)
+            .width(Length::Fill);
+        if has_query {
+            search_box = search_box.on_submit(Message::PlaylistSearchNext);
+        }
+
+        let search_row = row![
+            search_box,
+            text(format!("{} matches", match_count)).width(Length::Shrink),
+            material_icon_message_button("close", Message::PlaylistSearchClear),
+        ]
+        .spacing(5)
+        .align_y(Alignment::Center)
+        .width(Length::Fill);
+
         let trow: Row<_> = row![
             text!("#").width(Length::Fixed(24.0)),
             text!("Title").width(Length::Fill),
@@ -107,6 +149,7 @@ impl ConfigWindow {
             .iter()
             .enumerate()
         {
+            let is_match = song_matches(song);
             let (is_current, is_next, is_traktor, is_played) =
                 dance_interpreter.data_provider.get_play_state(i);
             let icon: Element<Message> = if is_traktor {
@@ -162,13 +205,27 @@ impl ConfigWindow {
 
             let song_row = container(song_row)
                 .style(move |t| {
+                    let palette = t.extended_palette();
                     let color = if i % 2 == 0 {
-                        t.extended_palette().background.weakest.color
+                        palette.background.weakest.color
                     } else {
-                        t.extended_palette().background.weaker.color
+                        palette.background.weaker.color
                     };
 
-                    container::Style::default().background(color)
+                    let mut style = container::Style::default().background(color);
+
+                    if is_match {
+                        let accent = palette.primary.base.color;
+                        style = style
+                            .background(palette.primary.weak.color)
+                            .border(iced::Border {
+                                color: accent,
+                                width: 2.0,
+                                radius: 4.0.into(),
+                            });
+                    }
+
+                    style
                 })
                 .padding([4, 6])
                 .width(Length::Fill);
@@ -182,7 +239,7 @@ impl ConfigWindow {
             .spacing(5)
             .id(PLAYLIST_SCROLLABLE_ID.clone());
 
-        col!(trow, playlist_scrollable).spacing(5)
+        col!(search_row, trow, playlist_scrollable).spacing(5)
     }
 
     fn build_statics_view(&'_ self, _dance_interpreter: &DanceInterpreter) -> Column<'_, Message> {
