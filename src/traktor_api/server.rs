@@ -35,8 +35,14 @@ struct TraktorServer {
     pending_images: Vec<String>,
 
     cover_socket_id: usize,
-    cover_sockets: HashMap<usize, UnboundedSender<warp::ws::Message>>,
-    client_addrs: HashMap<usize, Option<SocketAddr>>,
+    cover_sockets: HashMap<usize, CoverSocket>,
+}
+
+/// A live `/cover` WebSocket connection: the channel used to push it cover
+/// requests, plus the remote address it connected from (if known).
+struct CoverSocket {
+    sender: UnboundedSender<warp::ws::Message>,
+    addr: Option<SocketAddr>,
 }
 
 impl TraktorServer {
@@ -56,17 +62,22 @@ impl TraktorServer {
 
             cover_socket_id: 0,
             cover_sockets: HashMap::new(),
-            client_addrs: HashMap::new(),
         }
     }
 
     /// Builds the current client list and notifies the app of the change.
     async fn notify_clients_changed(&mut self) {
-        let clients = self
-            .client_addrs
-            .values()
-            .map(|addr| ClientInfo {
-                addr: *addr,
+        // Sort by connection id so the displayed client order stays stable
+        // across renders instead of following HashMap iteration order.
+        let mut sockets: Vec<(&usize, &CoverSocket)> = self.cover_sockets.iter().collect();
+        sockets.sort_by_key(|(id, _)| **id);
+
+        let clients = sockets
+            .into_iter()
+            .map(|(_, socket)| ClientInfo {
+                addr: socket.addr,
+                // TODO: the /cover WebSocket protocol carries no client name.
+                // If a future handshake reports one, populate it here.
                 name: None,
             })
             .collect();
@@ -122,7 +133,7 @@ impl TraktorServer {
 
         for img in new_images {
             for socket in self.cover_sockets.values_mut() {
-                _ = socket.send(warp::ws::Message::text(img)).await;
+                _ = socket.sender.send(warp::ws::Message::text(img)).await;
             }
         }
     }
@@ -224,15 +235,14 @@ impl TraktorServer {
             _ = tx.send(warp::ws::Message::text(img)).await;
         }
 
-        self.cover_sockets.insert(self.cover_socket_id, tx);
-        self.client_addrs.insert(self.cover_socket_id, addr);
+        self.cover_sockets
+            .insert(self.cover_socket_id, CoverSocket { sender: tx, addr });
         self.notify_clients_changed().await;
         self.cover_socket_id
     }
 
     async fn handle_socket_disconnect(&mut self, id: usize) {
         self.cover_sockets.remove(&id);
-        self.client_addrs.remove(&id);
         self.notify_clients_changed().await;
     }
 
@@ -1057,6 +1067,39 @@ mod tests {
             &msg,
             ServerMessage::ClientsChanged(clients) if clients.is_empty()
         ));
+    }
+
+    /// Two concurrently connected sockets are reported as two clients, each
+    /// carrying its own remote address.
+    #[tokio::test]
+    async fn multiple_clients_are_counted() {
+        let (state, mut rx) = new_state();
+        let addr_a: SocketAddr = "1.2.3.4:1111".parse().unwrap();
+        let addr_b: SocketAddr = "5.6.7.8:2222".parse().unwrap();
+
+        let (tx_a, _ws_a) = iced_mpsc::unbounded();
+        state
+            .lock()
+            .await
+            .handle_socket_connect(tx_a, Some(addr_a))
+            .await;
+        let _ = recv_msg(&mut rx).await; // first client
+
+        let (tx_b, _ws_b) = iced_mpsc::unbounded();
+        state
+            .lock()
+            .await
+            .handle_socket_connect(tx_b, Some(addr_b))
+            .await;
+
+        match recv_msg(&mut rx).await {
+            ServerMessage::ClientsChanged(clients) => {
+                assert_eq!(clients.len(), 2);
+                let addrs: Vec<_> = clients.iter().filter_map(|c| c.addr).collect();
+                assert!(addrs.contains(&addr_a) && addrs.contains(&addr_b));
+            }
+            other => panic!("expected ClientsChanged, got {:?}", other),
+        }
     }
 
     // -- /log endpoint --

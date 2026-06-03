@@ -140,6 +140,12 @@ impl TraktorDataProvider {
         &self.clients
     }
 
+    /// Forget all tracked clients (e.g. when the server is disabled). The live
+    /// list is rebuilt from `ClientsChanged` once the server is running again.
+    pub fn clear_clients(&mut self) {
+        self.clients.clear();
+    }
+
     #[allow(dead_code)]
     pub fn get_log(&self) -> &[String] {
         &self.log

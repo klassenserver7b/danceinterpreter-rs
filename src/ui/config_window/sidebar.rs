@@ -8,7 +8,9 @@ use crate::ui::widget::suggestion_text_input::SuggestionTextInput;
 use crate::ui::widget::{power_button, restart_button, suggestion_text_input};
 use crate::{DanceInterpreter, Message};
 use iced::alignment::Vertical;
-use iced::widget::{Column, Container, canvas, column as col, container, pick_list, row, text};
+use iced::widget::{
+    Column, Container, Space, canvas, column as col, container, pick_list, row, text,
+};
 use iced::{Alignment, Animation, Length, animation, border};
 use network_interface::Addr::V4;
 use network_interface::{NetworkInterface, NetworkInterfaceConfig};
@@ -159,7 +161,7 @@ impl Sidebar {
         let count = clients.len();
         let connected = count > 0;
 
-        let led = container(text(""))
+        let led = container(Space::new())
             .width(Length::Fixed(12.0))
             .height(Length::Fixed(12.0))
             .style(move |t: &iced::Theme| {
