@@ -21,7 +21,7 @@ use iced::widget::operation::{scroll_by, snap_to};
 use iced::widget::scrollable::{AbsoluteOffset, RelativeOffset};
 use iced::widget::space::horizontal;
 use iced::window::icon::from_file_data;
-use iced::{Element, Size, Subscription, Task, Theme, exit, keyboard, system, theme, window};
+use iced::{exit, keyboard, system, theme, window, Element, Size, Subscription, Task, Theme};
 use iced_aw::ICED_AW_FONT_BYTES;
 use rfd::FileDialog;
 use std::env::var;
@@ -174,6 +174,9 @@ impl DanceInterpreter {
     }
 
     pub fn update(&mut self, message: Message) -> Task<Message> {
+        self.config_window.sidebar.power_button_cache.clear();
+        self.config_window.sidebar.restart_button_cache.clear();
+
         match message {
             Message::WindowOpened(_) => ().into(),
             Message::WindowResized((window_id, size)) => {
@@ -373,7 +376,13 @@ impl DanceInterpreter {
             }
 
             Message::ChangeSongWindowScale(value) => {
-                self.song_window.scale = (value * 100.0).round() / 100.0;
+                if (0.5..=3.0).contains(&value) {
+                    self.song_window.scale = (value * 100.0).round() / 100.0;
+                } else {
+                    self.song_window.scale = (((self.song_window.scale + value) * 100.0).round()
+                        / 100.0)
+                        .clamp(0.5, 3.0);
+                }
                 ().into()
             }
 
@@ -433,8 +442,6 @@ impl DanceInterpreter {
 
                 TraktorMessage::EnableServer(enabled) => {
                     self.data_provider.traktor_provider.is_enabled = enabled;
-                    self.config_window.sidebar.power_button_cache.clear();
-                    self.config_window.sidebar.restart_button_cache.clear();
                     ().into()
                 }
 
@@ -464,7 +471,6 @@ impl DanceInterpreter {
 
                 TraktorMessage::Reconnect => {
                     self.data_provider.traktor_provider.reconnect();
-                    self.config_window.sidebar.restart_button_cache.clear();
                     ().into()
                 }
 
@@ -598,7 +604,12 @@ impl DanceInterpreter {
                     (Key::Character("n"), Modifiers::CTRL) => {
                         Some(Message::AddBlankSong(RelativeOffset::END))
                     }
-                    (Key::Character("r"), Modifiers::CTRL) => Some(Message::ReloadStatics),
+                    (Key::Character("+"), Modifiers::CTRL) => {
+                        Some(Message::ChangeSongWindowScale(0.1))
+                    }
+                    (Key::Character("-"), Modifiers::CTRL) => {
+                        Some(Message::ChangeSongWindowScale(-0.1))
+                    }
                     (Key::Character("c"), Modifiers::ALT) => {
                         Some(Message::Sidebar(SidebarMessage::Toggle))
                     }
