@@ -17,14 +17,16 @@ env:
   COVER_LOADER_PATH: traktor-api/cover-loader
 
 jobs:
-  test-rust:
-    uses: ./.github/workflows/cargo-check.yml
-    with:
-      release: true
+  pre-commit:
+    uses: ./.github/workflows/pre-commit.yml
+
+  check_and_test:
+    uses: ./.github/workflows/check-and-test.yml
+    needs: pre-commit
 
   dist-rust:
     name: Rust-dist
-    needs: [ test-rust ]
+    needs: [ check_and_test ]
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false # don't fail other jobs if one fails
