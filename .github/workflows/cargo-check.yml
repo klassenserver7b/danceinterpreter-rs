@@ -7,6 +7,11 @@ on:
     branches: [ "main", "iced-gui" ]
 
   workflow_call:
+    inputs:
+      release:
+        description: "Whether this workflow is called from a release workflow"
+        required: false
+        default: "false"
 
 permissions:
   contents: read
@@ -14,8 +19,6 @@ permissions:
 jobs:
   pre-commit:
     uses: ./.github/workflows/pre-commit.yml
-    with:
-      pull_request: ${{ github.event_name == 'pull_request' }}
 
   build_and_test:
     name: Build and Test
@@ -41,9 +44,11 @@ jobs:
         id: cargo-check
         with:
           command: check
+          args: ${{ inputs.release == 'true' && '--release' || '' }}
 
       - name: Cargo test
         uses: ClementTsang/cargo-action@v0.0.7
         id: cargo-test
         with:
           command: test
+          args: ${{ inputs.release == 'true' && '--release' || '' }}
