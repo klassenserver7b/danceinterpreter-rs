@@ -149,7 +149,7 @@ impl SongDataProvider {
             return;
         };
 
-        if current_index == self.playlist_songs.len() - 1 {
+        if current_index == self.playlist_songs.len().saturating_sub(1) {
             return;
         }
 
