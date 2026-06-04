@@ -21,7 +21,7 @@ use iced::widget::operation::{scroll_by, snap_to};
 use iced::widget::scrollable::{AbsoluteOffset, RelativeOffset};
 use iced::widget::space::horizontal;
 use iced::window::icon::from_file_data;
-use iced::{exit, keyboard, system, theme, window, Element, Size, Subscription, Task, Theme};
+use iced::{Element, Size, Subscription, Task, Theme, exit, keyboard, system, theme, window};
 use iced_aw::ICED_AW_FONT_BYTES;
 use rfd::FileDialog;
 use std::env::var;
