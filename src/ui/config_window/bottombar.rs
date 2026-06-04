@@ -1,4 +1,5 @@
 use crate::dataloading::dataprovider::song_data_provider::SongChange;
+use crate::ui::with_tooltip;
 use crate::{DanceInterpreter, Message};
 use iced::alignment::{Horizontal, Vertical};
 use iced::widget::scrollable::{Direction, Scrollbar};
@@ -46,13 +47,15 @@ pub(crate) fn get_statics_buttons(
         .iter()
         .enumerate()
         .map(|(idx, s)| {
-            button(text(&s.dance).font(bold_font))
-                .style(button::secondary)
-                .on_press(Message::SongChanged(SongChange::StaticAbsolute(idx)))
-                .into()
+            with_tooltip(
+                button(text(&s.dance).font(bold_font))
+                    .style(button::secondary)
+                    .on_press(Message::SongChanged(SongChange::StaticAbsolute(idx))),
+                format!("Show {} static", s.dance),
+            )
         })
         .collect();
-    statics.insert(0, btn_blank.into());
-    statics.insert(1, btn_traktor.into());
+    statics.insert(0, with_tooltip(btn_blank, "Show blank screen"));
+    statics.insert(1, with_tooltip(btn_traktor, "Show current Traktor song"));
     statics
 }

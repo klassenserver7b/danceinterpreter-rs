@@ -7,7 +7,7 @@ use crate::dataloading::dataprovider::song_data_provider::{
 };
 use crate::ui::config_window::sidebar::Sidebar;
 use crate::ui::widget::dynamic_text_input::DynamicTextInput;
-use crate::ui::{material_icon, material_icon_sized};
+use crate::ui::{material_icon, material_icon_sized, with_tooltip};
 use crate::{DanceInterpreter, Message, Window};
 use iced::alignment::Vertical;
 use iced::widget::{
@@ -141,17 +141,26 @@ impl ConfigWindow {
                     .on_change(move |v| Message::SongDataEdit(i, SongDataEdit::Dance(v))),
                 row![
                     Space::new().width(Length::Fill).height(Length::Shrink),
-                    material_icon_message_button(
-                        "smart_display",
-                        Message::SongChanged(SongChange::PlaylistAbsolute(i))
+                    with_tooltip(
+                        material_icon_message_button(
+                            "smart_display",
+                            Message::SongChanged(SongChange::PlaylistAbsolute(i))
+                        ),
+                        "Show now"
                     ),
-                    material_icon_message_button(
-                        "queue_play_next",
-                        Message::SetNextSong(SongDataSource::Playlist(i))
+                    with_tooltip(
+                        material_icon_message_button(
+                            "queue_play_next",
+                            Message::SetNextSong(SongDataSource::Playlist(i))
+                        ),
+                        "Set as next song"
                     ),
-                    material_icon_message_button(
-                        "delete",
-                        Message::DeleteSong(SongDataSource::Playlist(i))
+                    with_tooltip(
+                        material_icon_message_button(
+                            "delete",
+                            Message::DeleteSong(SongDataSource::Playlist(i))
+                        ),
+                        "Delete song"
                     ),
                 ]
                 .spacing(5)
