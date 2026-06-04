@@ -6,13 +6,22 @@ on:
   pull_request:
     branches: [ "main", "iced-gui" ]
 
+  workflow_call:
+
 permissions:
   contents: read
 
 jobs:
+  pre-commit:
+    uses: ./.github/workflows/pre-commit.yml
+    with:
+      pull_request: ${{ github.event_name == 'pull_request' }}
+
   build_and_test:
     name: Build and Test
     runs-on: ubuntu-latest
+    needs:
+      - pre-commit
     steps:
       - name: Checkout sources
         uses: actions/checkout@v6

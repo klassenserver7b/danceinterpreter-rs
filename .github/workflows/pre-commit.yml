@@ -1,0 +1,53 @@
+# yaml-language-server: $schema=https://json.schemastore.org/github-workflow
+
+name: pre-commit
+
+on:
+  workflow_call:
+    inputs:
+      pull_request:
+        type: boolean
+        default: false
+
+permissions:
+  contents: read #  to fetch code (actions/checkout)
+
+jobs:
+  pre-commit:
+    name: Detecting code style issues
+    runs-on: ubuntu-latest
+    steps:
+      - name: "Check out repository"
+        uses: actions/checkout@v6
+        with:
+          # Unfortunately we need the whole history and can't use a shallow clone
+          # because the Appstream Metadata hook parses the history to find the
+          # latest changelog modification date. Otherwise, `fetch-depth: 2` would
+          # suffice.
+          fetch-depth: 0
+
+      - name: "Detect code style issues"
+        uses: j178/prek-action@v2
+
+      - name: "Generate patch file"
+        if: failure()
+        run: |
+          git diff-index -p HEAD > "${PATCH_FILE}"
+          [ -s "${PATCH_FILE}" ] && echo "UPLOAD_PATCH_FILE=${PATCH_FILE}" >> "${GITHUB_ENV}"
+        shell: bash
+        env:
+          PATCH_FILE: pre-commit.patch
+
+      - name: "Upload patch artifact"
+        if: failure() && env.UPLOAD_PATCH_FILE != null
+        uses: actions/upload-artifact@v7.0.1
+        with:
+          archive: "false"
+          path: ${{ env.UPLOAD_PATCH_FILE }}
+
+      - name: "Upload pre-commit.log"
+        if: failure() && env.UPLOAD_PATCH_FILE == null
+        uses: actions/upload-artifact@v7.0.1
+        with:
+          archive: "false"
+          path: /github/home/.cache/pre-commit/pre-commit.log

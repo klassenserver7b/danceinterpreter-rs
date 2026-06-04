@@ -18,24 +18,7 @@ env:
 
 jobs:
   test-rust:
-    name: Test Rust
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout sources
-        uses: actions/checkout@v6
-        with:
-          submodules: true
-
-      - name: Install stable toolchain
-        uses: dtolnay/rust-toolchain@v1
-        with:
-          toolchain: stable
-
-      - name: Run cargo test
-        uses: ClementTsang/cargo-action@v0.0.7
-        with:
-          command: test
-          args: --release
+    uses: ./.github/workflows/cargo-check.yml
 
   dist-rust:
     name: Rust-dist
