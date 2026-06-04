@@ -5,7 +5,7 @@ on:
       release:
         description: "Whether this workflow is called from a release workflow"
         type: boolean
-        default: "false"
+        default: false
         required: false
 
 permissions:
