@@ -10,8 +10,9 @@ on:
     inputs:
       release:
         description: "Whether this workflow is called from a release workflow"
-        required: false
+        type: boolean
         default: "false"
+        required: false
 
 permissions:
   contents: read
