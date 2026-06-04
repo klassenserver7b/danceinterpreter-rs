@@ -114,8 +114,8 @@ pub(crate) fn build<'a>(
 
     let view_buttons = row![
         Space::new().width(Length::Fill),
-        with_tooltip(playlist_button, "Show playlist view"),
-        with_tooltip(statics_button, "Show statics view"),
+        with_tooltip(playlist_button, "Show Playlist"),
+        with_tooltip(statics_button, "Show Statics"),
         Space::new().width(Length::Fill)
     ]
     .width(Length::Fill)
@@ -132,7 +132,11 @@ pub(crate) fn build<'a>(
             Message::Sidebar(SidebarMessage::Toggle),
         )
         .padding([0, 4]),
-        "Toggle settings panel",
+        if config_window.sidebar.state.value() {
+            "Expand Traktor Panel"
+        } else {
+            "Collapse Traktor Panel"
+        },
     );
 
     stack![

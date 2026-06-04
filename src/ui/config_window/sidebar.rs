@@ -71,7 +71,7 @@ impl Sidebar {
                             )
                             .on_toggle(|b| Message::Traktor(TraktorMessage::EnableServer(b)))
                             .on_draw(power_button::draw),
-                            "Enable / disable Traktor server"
+                            "Toggle Traktor Server"
                         ),
                         text("Enable Server")
                     ]
@@ -84,7 +84,7 @@ impl Sidebar {
                             )
                             .on_toggle(|_| Message::Traktor(TraktorMessage::Reconnect))
                             .on_draw(restart_button::draw),
-                            "Restart Traktor server"
+                            "Restart Traktor Server"
                         ),
                         text("Restart Server")
                     ]

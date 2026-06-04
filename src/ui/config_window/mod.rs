@@ -146,7 +146,7 @@ impl ConfigWindow {
                             "smart_display",
                             Message::SongChanged(SongChange::PlaylistAbsolute(i))
                         ),
-                        "Play now"
+                        "Show now"
                     ),
                     with_tooltip(
                         material_icon_message_button(
