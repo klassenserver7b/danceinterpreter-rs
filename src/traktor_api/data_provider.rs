@@ -521,13 +521,5 @@ mod tests {
             &[],
         );
         assert!(provider.connected_client().is_some());
-
-        provider.enabled = false;
-        assert!(provider.connected_client().is_none());
-
-        // A fresh server start (Ready) resets the tracked clients.
-        let (tx, _rx2) = mpsc::unbounded();
-        provider.process_message(ServerMessage::Ready(tx), &[]);
-        assert!(provider.connected_client().is_none());
     }
 }

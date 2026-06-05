@@ -213,9 +213,9 @@ impl TraktorServer {
         self.cover_socket_id
     }
 
-    async fn handle_socket_disconnect(&mut self, id: usize, addr: Option<SocketAddr>) {
+    async fn handle_socket_disconnect(&mut self, id: usize) {
         self.cover_sockets.remove(&id);
-        self.send_message(ServerMessage::ClientChanged(addr)).await;
+        self.send_message(ServerMessage::ClientChanged(None)).await;
     }
 
     async fn handle_log(&mut self, msg: String) -> impl warp::Reply + use<> {
@@ -442,11 +442,7 @@ impl TraktorServer {
                             };
                         }
 
-                        state
-                            .lock()
-                            .await
-                            .handle_socket_disconnect(socket_id, None)
-                            .await;
+                        state.lock().await.handle_socket_disconnect(socket_id).await;
                         println!("websocket disconnected");
                     })
                 },
@@ -1291,6 +1287,38 @@ mod tests {
                 matches!(rebind, Ok(Ok(_))),
                 "port should be available after server drop"
             );
+        }
+
+        // -- client tracking (cover WebSocket connections) --
+
+        /// Connecting a cover socket emits ClientsChanged carrying the remote
+        /// address; disconnecting emits ClientsChanged with the client removed.
+        #[tokio::test]
+        async fn socket_connect_and_disconnect_emit_client_list() {
+            let (state, mut rx) = new_state();
+            let addr: SocketAddr = "1.2.3.4:5678".parse().unwrap();
+
+            let (tx, _ws_rx) = iced_mpsc::unbounded();
+            let id = state
+                .lock()
+                .await
+                .handle_socket_connect(tx, Some(addr))
+                .await;
+
+            let msg = recv_msg(&mut rx).await;
+            assert!(matches!(
+                &msg,
+                ServerMessage::ClientChanged(addr)
+                    if addr.is_some()
+            ));
+
+            state.lock().await.handle_socket_disconnect(id).await;
+
+            let msg = recv_msg(&mut rx).await;
+            assert!(matches!(
+                &msg,
+                ServerMessage::ClientChanged(client) if client.is_none()
+            ));
         }
     }
 }
