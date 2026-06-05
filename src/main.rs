@@ -441,7 +441,7 @@ impl DanceInterpreter {
                 }
 
                 TraktorMessage::EnableServer(enabled) => {
-                    self.data_provider.traktor_provider.is_enabled = enabled;
+                    self.data_provider.traktor_provider.set_enabled(enabled);
                     ().into()
                 }
 

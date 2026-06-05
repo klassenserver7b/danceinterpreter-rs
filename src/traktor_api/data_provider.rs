@@ -67,9 +67,9 @@ pub enum TraktorMessage {
 }
 
 pub struct TraktorDataProvider {
-    pub is_enabled: bool,
     pub address: String,
     pub submitted_address: String,
+    enabled: bool,
 
     pub next_mode: TraktorNextMode,
     pub next_mode_fallback: TraktorNextMode,
@@ -89,6 +89,8 @@ pub struct TraktorDataProvider {
     cached_sync_action: TraktorSyncAction,
     should_scroll: bool,
 
+    pub client: Option<SocketAddr>,
+
     pub debug_logging: bool,
     log: Vec<String>,
 }
@@ -96,7 +98,7 @@ pub struct TraktorDataProvider {
 impl Default for TraktorDataProvider {
     fn default() -> Self {
         Self {
-            is_enabled: false,
+            enabled: false,
             address: String::new(),
             submitted_address: String::new(),
             channel: None,
@@ -117,6 +119,8 @@ impl Default for TraktorDataProvider {
             cached_sync_action: TraktorSyncAction::Relative(0),
             should_scroll: false,
 
+            client: None,
+
             debug_logging: false,
             log: Vec::new(),
         }
@@ -124,8 +128,12 @@ impl Default for TraktorDataProvider {
 }
 
 impl TraktorDataProvider {
+    pub fn set_enabled(&mut self, enabled: bool) {
+        self.enabled = enabled;
+        self.client = None;
+    }
     pub fn is_ready(&self) -> bool {
-        self.is_enabled && self.channel.as_ref().is_some_and(|c| !c.is_closed())
+        self.enabled && self.channel.as_ref().is_some_and(|c| !c.is_closed())
     }
 
     #[allow(dead_code)]
@@ -150,7 +158,7 @@ impl TraktorDataProvider {
     }
 
     pub fn get_socket_addr(&self) -> Option<SocketAddr> {
-        if !self.is_enabled {
+        if !self.enabled {
             return None;
         }
 
@@ -175,6 +183,10 @@ impl TraktorDataProvider {
         }
 
         self.cached_next_song_info.as_ref()
+    }
+
+    pub fn connected_client(&self) -> Option<SocketAddr> {
+        self.client
     }
 
     fn get_deck_score(&self, deck: &DeckState, channel: &ChannelState, mixer: &MixerState) -> f64 {
@@ -446,6 +458,9 @@ impl TraktorDataProvider {
                     self.log.push(msg);
                 }
             }
+            ServerMessage::ClientChanged(addr) => {
+                self.client = addr;
+            }
         }
     }
 
@@ -475,5 +490,44 @@ impl TraktorDataProvider {
         {
             self.channel = None;
         }
+    }
+
+    pub fn enabled(&self) -> bool {
+        self.enabled
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use iced::futures::channel::mpsc;
+
+    /// `connected_client()` reflects the latest `ClientsChanged` only while the
+    /// server is ready, and `Ready` clears the list (server restarted).
+    #[test]
+    fn connected_clients_gating_and_reset() {
+        // Keep the receivers alive so the channel counts as "open" (ready).
+        let (tx, _rx) = mpsc::unbounded();
+        let mut provider = TraktorDataProvider {
+            enabled: true,
+            channel: Some(tx),
+            ..Default::default()
+        };
+
+        assert!(provider.connected_client().is_none());
+
+        provider.process_message(
+            ServerMessage::ClientChanged(Some("127.0.0.1:8080".parse().unwrap())),
+            &[],
+        );
+        assert!(provider.connected_client().is_some());
+
+        provider.enabled = false;
+        assert!(provider.connected_client().is_none());
+
+        // A fresh server start (Ready) resets the tracked clients.
+        let (tx, _rx2) = mpsc::unbounded();
+        provider.process_message(ServerMessage::Ready(tx), &[]);
+        assert!(provider.connected_client().is_none());
     }
 }

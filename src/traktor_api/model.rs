@@ -1,6 +1,7 @@
 use bytes::Bytes;
 use iced::futures::channel::mpsc;
 use serde::{Deserialize, Deserializer, Serialize};
+use std::net::SocketAddr;
 
 #[derive(Debug, Clone)]
 pub enum AppMessage {
@@ -19,6 +20,7 @@ pub enum ServerMessage {
         path: String,
         data: Bytes,
     },
+    ClientChanged(Option<SocketAddr>),
     Log(String),
 }
 
