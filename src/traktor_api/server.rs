@@ -487,8 +487,12 @@ async fn server_main(
         return;
     };
 
-    let server = warp::serve(routes).incoming(listener).graceful(async {
+    let state_clone = state.clone();
+    let server = warp::serve(routes).incoming(listener).graceful(async move {
         cancelled.await.ok();
+        for socket in state_clone.lock().await.cover_sockets.values_mut() {
+            let _ = socket.send(warp::ws::Message::close()).await;
+        }
     });
 
     tokio::task::spawn(server.run());
