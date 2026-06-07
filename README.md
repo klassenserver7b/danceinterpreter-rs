@@ -1,5 +1,5 @@
 [![CodeFactor](https://www.codefactor.io/repository/github/klassenserver7b/danceinterpreter-rs/badge)](https://www.codefactor.io/repository/github/klassenserver7b/danceinterpreter-rs)
-[![CI](https://github.com/klassenserver7b/danceinterpreter-rs/actions/workflows/cargo-check.yml/badge.svg)](https://github.com/klassenserver7b/danceinterpreter-rs/actions/workflows/cargo-check.yml)
+[![CI](https://github.com/klassenserver7b/danceinterpreter-rs/actions/workflows/check_and_test.yml/badge.svg)](https://github.com/klassenserver7b/danceinterpreter-rs/actions/workflows/cargo-check.yml)
 
 # danceinterpreter-rs
 
