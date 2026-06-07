@@ -195,7 +195,11 @@ impl TraktorServer {
         StatusCode::ACCEPTED
     }
 
-    async fn handle_socket_connect(&mut self, mut tx: UnboundedSender<warp::ws::Message>) -> usize {
+    async fn handle_socket_connect(
+        &mut self,
+        mut tx: UnboundedSender<warp::ws::Message>,
+        addr: Option<SocketAddr>,
+    ) -> usize {
         while self.cover_sockets.contains_key(&self.cover_socket_id) {
             self.cover_socket_id += 1;
         }
@@ -205,11 +209,13 @@ impl TraktorServer {
         }
 
         self.cover_sockets.insert(self.cover_socket_id, tx);
+        self.send_message(ServerMessage::ClientChanged(addr)).await;
         self.cover_socket_id
     }
 
-    fn handle_socket_disconnect(&mut self, id: usize) {
+    async fn handle_socket_disconnect(&mut self, id: usize) {
         self.cover_sockets.remove(&id);
+        self.send_message(ServerMessage::ClientChanged(None)).await;
     }
 
     async fn handle_log(&mut self, msg: String) -> impl warp::Reply + use<> {
@@ -405,39 +411,42 @@ impl TraktorServer {
     ) -> impl Filter<Extract = (impl warp::Reply,), Error = warp::Rejection> + Clone {
         warp::ws()
             .and(Self::with_state(state))
-            .map(|ws: warp::ws::Ws, state: Arc<Mutex<Self>>| {
-                ws.on_upgrade(move |socket| async move {
-                    let (mut ws_tx, mut ws_rx) = socket.split();
-                    let (tx, mut rx) = iced::futures::channel::mpsc::unbounded();
+            .and(warp::addr::remote())
+            .map(
+                |ws: warp::ws::Ws, state: Arc<Mutex<Self>>, addr: Option<SocketAddr>| {
+                    ws.on_upgrade(move |socket| async move {
+                        let (mut ws_tx, mut ws_rx) = socket.split();
+                        let (tx, mut rx) = iced::futures::channel::mpsc::unbounded();
 
-                    tokio::task::spawn(async move {
-                        while let Some(message) = rx.next().await {
-                            ws_tx
-                                .send(message)
-                                .unwrap_or_else(|e| {
-                                    println!("websocket send error: {}", e);
-                                })
-                                .await;
-                        }
-                    });
-
-                    let socket_id = state.lock().await.handle_socket_connect(tx).await;
-                    println!("websocket connected");
-
-                    while let Some(result) = ws_rx.next().await {
-                        match result {
-                            Ok(_) => {}
-                            Err(e) => {
-                                println!("websocket error: {}", e);
-                                break;
+                        tokio::task::spawn(async move {
+                            while let Some(message) = rx.next().await {
+                                ws_tx
+                                    .send(message)
+                                    .unwrap_or_else(|e| {
+                                        println!("websocket send error: {}", e);
+                                    })
+                                    .await;
                             }
-                        };
-                    }
+                        });
 
-                    state.lock().await.handle_socket_disconnect(socket_id);
-                    println!("websocket disconnected");
-                })
-            })
+                        let socket_id = state.lock().await.handle_socket_connect(tx, addr).await;
+                        println!("websocket connected");
+
+                        while let Some(result) = ws_rx.next().await {
+                            match result {
+                                Ok(_) => {}
+                                Err(e) => {
+                                    println!("websocket error: {}", e);
+                                    break;
+                                }
+                            };
+                        }
+
+                        state.lock().await.handle_socket_disconnect(socket_id).await;
+                        println!("websocket disconnected");
+                    })
+                },
+            )
     }
 
     fn route_log(
@@ -474,8 +483,12 @@ async fn server_main(
         return;
     };
 
-    let server = warp::serve(routes).incoming(listener).graceful(async {
+    let state_clone = state.clone();
+    let server = warp::serve(routes).incoming(listener).graceful(async move {
         cancelled.await.ok();
+        for socket in state_clone.lock().await.cover_sockets.values_mut() {
+            let _ = socket.send(warp::ws::Message::close()).await;
+        }
     });
 
     tokio::task::spawn(server.run());
@@ -546,10 +559,7 @@ mod tests {
     // -- Shared test helpers --
 
     /// Creates a fresh server state and returns the message receiver alongside it.
-    fn new_state() -> (
-        Arc<Mutex<TraktorServer>>,
-        iced_mpsc::UnboundedReceiver<ServerMessage>,
-    ) {
+    fn new_state() -> (Arc<Mutex<TraktorServer>>, UnboundedReceiver<ServerMessage>) {
         let (tx, rx) = iced_mpsc::unbounded();
         (Arc::new(Mutex::new(TraktorServer::new(tx))), rx)
     }
@@ -613,7 +623,7 @@ mod tests {
     }
 
     /// Awaits the next message with a 500 ms timeout, panicking on timeout.
-    async fn recv_msg(rx: &mut iced_mpsc::UnboundedReceiver<ServerMessage>) -> ServerMessage {
+    async fn recv_msg(rx: &mut UnboundedReceiver<ServerMessage>) -> ServerMessage {
         timeout(Duration::from_millis(500), rx.next())
             .await
             .expect("timeout waiting for ServerMessage")
@@ -621,7 +631,7 @@ mod tests {
     }
 
     /// Asserts that no message arrives within 500 ms.
-    async fn assert_no_msg(rx: &mut iced_mpsc::UnboundedReceiver<ServerMessage>) {
+    async fn assert_no_msg(rx: &mut UnboundedReceiver<ServerMessage>) {
         let result = timeout(Duration::from_millis(500), rx.next()).await;
         assert!(
             result.is_err(),
@@ -758,7 +768,7 @@ mod tests {
 
         let filter = TraktorServer::routes(state);
 
-        // Queue two mixer updates before initialising
+        // Queue two mixer updates before initializing
         for _ in 0..2 {
             warp::test::request()
                 .method("POST")
@@ -1277,6 +1287,38 @@ mod tests {
                 matches!(rebind, Ok(Ok(_))),
                 "port should be available after server drop"
             );
+        }
+
+        // -- client tracking (cover WebSocket connections) --
+
+        /// Connecting a cover socket emits ClientsChanged carrying the remote
+        /// address; disconnecting emits ClientsChanged with the client removed.
+        #[tokio::test]
+        async fn cover_loader_connect_disconnect_changes_state() {
+            let (state, mut rx) = new_state();
+            let addr: SocketAddr = "1.2.3.4:5678".parse().unwrap();
+
+            let (tx, _ws_rx) = iced_mpsc::unbounded();
+            let id = state
+                .lock()
+                .await
+                .handle_socket_connect(tx, Some(addr))
+                .await;
+
+            let msg = recv_msg(&mut rx).await;
+            assert!(matches!(
+                &msg,
+                ServerMessage::ClientChanged(addr)
+                    if addr.is_some()
+            ));
+
+            state.lock().await.handle_socket_disconnect(id).await;
+
+            let msg = recv_msg(&mut rx).await;
+            assert!(matches!(
+                &msg,
+                ServerMessage::ClientChanged(client) if client.is_none()
+            ));
         }
     }
 }

@@ -441,7 +441,7 @@ impl DanceInterpreter {
                 }
 
                 TraktorMessage::EnableServer(enabled) => {
-                    self.data_provider.traktor_provider.is_enabled = enabled;
+                    self.data_provider.traktor_provider.set_enabled(enabled);
                     ().into()
                 }
 
@@ -508,7 +508,7 @@ impl DanceInterpreter {
             .traktor_provider
             .state
             .as_ref()
-            .map(|s| s.mixer.clone())
+            .map(|s| s.mixer)
         {
             self.data_provider
                 .process_traktor_message(ServerMessage::Update(StateUpdate::Mixer(mixer_state)));

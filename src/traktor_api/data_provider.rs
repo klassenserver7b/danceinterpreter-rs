@@ -66,10 +66,18 @@ pub enum TraktorMessage {
     Reconnect,
 }
 
+#[derive(Debug, Clone, Copy)]
+pub enum ConnectionState {
+    Disconnected,
+    CoverLoader,
+    Traktor,
+    Connected,
+}
+
 pub struct TraktorDataProvider {
-    pub is_enabled: bool,
     pub address: String,
     pub submitted_address: String,
+    enabled: bool,
 
     pub next_mode: TraktorNextMode,
     pub next_mode_fallback: TraktorNextMode,
@@ -81,6 +89,7 @@ pub struct TraktorDataProvider {
     time_offset_ms: i64,
     pub state: Option<State>,
     covers: HashMap<String, image::Handle>,
+    pub cover_loader_addr: Option<SocketAddr>,
 
     sync_x_fader_is_left: bool,
 
@@ -96,7 +105,7 @@ pub struct TraktorDataProvider {
 impl Default for TraktorDataProvider {
     fn default() -> Self {
         Self {
-            is_enabled: false,
+            enabled: false,
             address: String::new(),
             submitted_address: String::new(),
             channel: None,
@@ -117,6 +126,8 @@ impl Default for TraktorDataProvider {
             cached_sync_action: TraktorSyncAction::Relative(0),
             should_scroll: false,
 
+            cover_loader_addr: None,
+
             debug_logging: false,
             log: Vec::new(),
         }
@@ -124,8 +135,13 @@ impl Default for TraktorDataProvider {
 }
 
 impl TraktorDataProvider {
+    pub fn set_enabled(&mut self, enabled: bool) {
+        self.enabled = enabled;
+        self.cover_loader_addr = None;
+        self.state = None;
+    }
     pub fn is_ready(&self) -> bool {
-        self.is_enabled && self.channel.as_ref().is_some_and(|c| !c.is_closed())
+        self.enabled && self.channel.as_ref().is_some_and(|c| !c.is_closed())
     }
 
     #[allow(dead_code)]
@@ -150,7 +166,7 @@ impl TraktorDataProvider {
     }
 
     pub fn get_socket_addr(&self) -> Option<SocketAddr> {
-        if !self.is_enabled {
+        if !self.enabled {
             return None;
         }
 
@@ -175,6 +191,20 @@ impl TraktorDataProvider {
         }
 
         self.cached_next_song_info.as_ref()
+    }
+
+    pub fn get_connection_state(&self) -> ConnectionState {
+        if !self.enabled {
+            ConnectionState::Disconnected
+        } else if self.cover_loader_addr.is_some() && self.state.is_some() {
+            ConnectionState::Connected
+        } else if self.state.is_some() {
+            ConnectionState::Traktor
+        } else if self.cover_loader_addr.is_some() {
+            ConnectionState::CoverLoader
+        } else {
+            ConnectionState::Disconnected
+        }
     }
 
     fn get_deck_score(&self, deck: &DeckState, channel: &ChannelState, mixer: &MixerState) -> f64 {
@@ -446,6 +476,9 @@ impl TraktorDataProvider {
                     self.log.push(msg);
                 }
             }
+            ServerMessage::ClientChanged(addr) => {
+                self.cover_loader_addr = addr;
+            }
         }
     }
 
@@ -474,6 +507,172 @@ impl TraktorDataProvider {
             && channel.unbounded_send(message).is_err()
         {
             self.channel = None;
+        }
+    }
+
+    pub fn enabled(&self) -> bool {
+        self.enabled
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::traktor_api::DeckPlayState;
+    use iced::futures::channel::mpsc;
+    use std::array;
+
+    /// After receiving a [ClientChanged](ServerMessage::ClientChanged) message with a [SockedAddr](SocketAddr), the provider should be in the [CoverLoader](ConnectionState::CoverLoader) state.
+    /// After receiving a [ClientChanged](ServerMessage::ClientChanged) message without a [SockedAddr](SocketAddr), the provider should return to the [Disconnected](ConnectionState::Disconnected) state.
+    #[test]
+    fn connecting_cover_loader_sets_connection_state() {
+        // Keep the receivers alive so the channel counts as "open" (ready).
+        let (tx, _rx) = mpsc::unbounded();
+        let mut provider = TraktorDataProvider {
+            enabled: true,
+            channel: Some(tx),
+            ..Default::default()
+        };
+
+        assert!(matches!(
+            provider.get_connection_state(),
+            ConnectionState::Disconnected
+        ));
+
+        provider.process_message(
+            ServerMessage::ClientChanged(Some("127.0.0.1:8080".parse().unwrap())),
+            &[],
+        );
+        assert!(matches!(
+            provider.get_connection_state(),
+            ConnectionState::CoverLoader
+        ));
+
+        provider.process_message(ServerMessage::ClientChanged(None), &[]);
+        assert!(matches!(
+            provider.get_connection_state(),
+            ConnectionState::Disconnected
+        ));
+    }
+
+    /// After receiving a [Connect](ServerMessage::Connect) message, the provider should be in the [Traktor](ConnectionState::Traktor) state.
+    #[test]
+    fn connecting_traktor_sets_connection_state() {
+        // Keep the receivers alive so the channel counts as "open" (ready).
+        let (tx, _rx) = mpsc::unbounded();
+        let mut provider = TraktorDataProvider {
+            enabled: true,
+            channel: Some(tx),
+            ..Default::default()
+        };
+
+        assert!(matches!(
+            provider.get_connection_state(),
+            ConnectionState::Disconnected
+        ));
+
+        let connect_message = ServerMessage::Connect {
+            time_offset_ms: 0,
+            initial_state: Box::new(get_sample_state()),
+        };
+
+        provider.process_message(connect_message, &[]);
+        assert!(matches!(
+            provider.get_connection_state(),
+            ConnectionState::Traktor
+        ));
+    }
+
+    /// After receiving a [ClientChanged](ServerMessage::ClientChanged) message with a [SockedAddr](SocketAddr), the provider should be in the [CoverLoader](ConnectionState::CoverLoader) state.
+    /// After receiving a [Connect](ServerMessage::Connect) message, the provider should be in the [Connected](ConnectionState::Connected) state.
+    /// After receiving a [ClientChanged](ServerMessage::ClientChanged) message without a [SockedAddr](SocketAddr), the provider should return to the [Traktor](ConnectionState::Traktor) state.
+    #[test]
+    fn connecting_cover_loader_and_traktor_sets_connection_state() {
+        // Keep the receivers alive so the channel counts as "open" (ready).
+        let (tx, _rx) = mpsc::unbounded();
+        let mut provider = TraktorDataProvider {
+            enabled: true,
+            channel: Some(tx),
+            ..Default::default()
+        };
+
+        assert!(matches!(
+            provider.get_connection_state(),
+            ConnectionState::Disconnected
+        ));
+
+        provider.process_message(
+            ServerMessage::ClientChanged(Some("127.0.0.1:8080".parse().unwrap())),
+            &[],
+        );
+        assert!(matches!(
+            provider.get_connection_state(),
+            ConnectionState::CoverLoader
+        ));
+
+        let connect_message = ServerMessage::Connect {
+            time_offset_ms: 0,
+            initial_state: Box::new(get_sample_state()),
+        };
+
+        provider.process_message(connect_message, &[]);
+        assert!(matches!(
+            provider.get_connection_state(),
+            ConnectionState::Connected
+        ));
+
+        provider.process_message(ServerMessage::ClientChanged(None), &[]);
+        assert!(matches!(
+            provider.get_connection_state(),
+            ConnectionState::Traktor
+        ));
+
+        provider.set_enabled(false);
+
+        assert!(matches!(
+            provider.get_connection_state(),
+            ConnectionState::Disconnected
+        ));
+    }
+
+    fn get_sample_state() -> State {
+        let deck_state = DeckState {
+            content: DeckContentState {
+                is_loaded: false,
+                number: 0,
+                title: "".to_string(),
+                artist: "".to_string(),
+                album: "".to_string(),
+                genre: "".to_string(),
+                comment: "".to_string(),
+                comment2: "".to_string(),
+                label: "".to_string(),
+                key: "".to_string(),
+                file_path: "".to_string(),
+                track_length: 0.0,
+                bpm: 0.0,
+            },
+            play_state: DeckPlayState {
+                timestamp: 0,
+                position: 0.0,
+                speed: 0.0,
+            },
+        };
+        State {
+            mixer: MixerState {
+                x_fader: 0.0,
+                master_volume: 0.0,
+                cue_volume: 0.0,
+                cue_mix: 0.0,
+                mic_volume: 0.0,
+            },
+            channels: [ChannelState {
+                cue: false,
+                volume: 0.0,
+                x_fader_left: false,
+                x_fader_right: false,
+            }; 4],
+            decks: array::from_fn(|_| deck_state.clone()),
         }
     }
 }

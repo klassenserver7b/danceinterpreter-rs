@@ -1,6 +1,6 @@
 use crate::dataloading::dataprovider::song_data_provider::SongDataProvider;
 use crate::traktor_api::{
-    TRAKTOR_SERVER_DEFAULT_ADDR, TraktorMessage, TraktorNextMode, TraktorSyncMode,
+    ConnectionState, TRAKTOR_SERVER_DEFAULT_ADDR, TraktorMessage, TraktorNextMode, TraktorSyncMode,
 };
 use crate::ui::config_window::labeled_message_toggler;
 use crate::ui::widget::canvas_toggle::CanvasToggle;
@@ -9,8 +9,10 @@ use crate::ui::widget::{power_button, restart_button, suggestion_text_input};
 use crate::ui::with_tooltip;
 use crate::{DanceInterpreter, Message};
 use iced::alignment::Vertical;
-use iced::widget::{Container, canvas, column as col, container, pick_list, row, text};
-use iced::{Alignment, Animation, Length, animation};
+use iced::widget::{
+    Column, Container, Space, canvas, column as col, container, pick_list, row, text,
+};
+use iced::{Alignment, Animation, Length, animation, border};
 use network_interface::Addr::V4;
 use network_interface::{NetworkInterface, NetworkInterfaceConfig};
 use std::time::Duration;
@@ -66,7 +68,7 @@ impl Sidebar {
                     col![
                         with_tooltip(
                             CanvasToggle::new(
-                                dance_interpreter.data_provider.traktor_provider.is_enabled,
+                                dance_interpreter.data_provider.traktor_provider.enabled(),
                                 &self.power_button_cache
                             )
                             .on_toggle(|b| Message::Traktor(TraktorMessage::EnableServer(b)))
@@ -79,7 +81,7 @@ impl Sidebar {
                     col![
                         with_tooltip(
                             CanvasToggle::new(
-                                dance_interpreter.data_provider.traktor_provider.is_enabled,
+                                dance_interpreter.data_provider.traktor_provider.enabled(),
                                 &self.restart_button_cache
                             )
                             .on_toggle(|_| Message::Traktor(TraktorMessage::Reconnect))
@@ -91,6 +93,7 @@ impl Sidebar {
                     .align_x(Alignment::Center)
                 ]
                 .spacing(10),
+                Self::build_client_status(dance_interpreter),
                 col![
                     text("Server Address: "),
                     self.build_network_interface_combo_box(dance_interpreter)
@@ -155,6 +158,21 @@ impl Sidebar {
         .align_y(Vertical::Top)
     }
 
+    pub fn update_network_interface_selection(&mut self, song_data_provider: &SongDataProvider) {
+        let mut detected_interfaces: Vec<String> =
+            get_formatted_network_interfaces(song_data_provider)
+                .into_iter()
+                .map(|(_, _, formatted)| formatted)
+                .collect();
+        detected_interfaces.push(TRAKTOR_SERVER_DEFAULT_ADDR.to_owned());
+        detected_interfaces.sort();
+
+        self.server_address_presets = suggestion_text_input::State::with_selection(
+            detected_interfaces,
+            Some(&song_data_provider.traktor_provider.address.clone()),
+        );
+    }
+
     fn build_network_interface_combo_box(
         &'_ self,
         dance_interpreter: &DanceInterpreter,
@@ -175,19 +193,60 @@ impl Sidebar {
         .on_close(Message::Traktor(TraktorMessage::SubmitAddress))
     }
 
-    pub fn update_network_interface_selection(&mut self, song_data_provider: &SongDataProvider) {
-        let mut detected_interfaces: Vec<String> =
-            get_formatted_network_interfaces(song_data_provider)
-                .into_iter()
-                .map(|(_, _, formatted)| formatted)
-                .collect();
-        detected_interfaces.push(TRAKTOR_SERVER_DEFAULT_ADDR.to_owned());
-        detected_interfaces.sort();
+    /// A small LED + label showing whether a Traktor client is
+    /// connected, listing client's IP available.
+    fn build_client_status<'a>(dance_interpreter: &DanceInterpreter) -> Column<'a, Message> {
+        let client_connection_state = dance_interpreter
+            .data_provider
+            .traktor_provider
+            .get_connection_state();
 
-        self.server_address_presets = suggestion_text_input::State::with_selection(
-            detected_interfaces,
-            Some(&song_data_provider.traktor_provider.address.clone()),
-        );
+        let led = container(Space::new())
+            .width(Length::Fixed(12.0))
+            .height(Length::Fixed(12.0))
+            .style(move |t: &iced::Theme| {
+                let palette = t.extended_palette();
+                let color = match client_connection_state {
+                    ConnectionState::Connected => palette.success.base.color,
+                    ConnectionState::CoverLoader | ConnectionState::Traktor => {
+                        palette.warning.base.color
+                    }
+                    ConnectionState::Disconnected => palette.background.strong.color,
+                };
+                container::Style {
+                    background: Some(color.into()),
+                    border: border::rounded(6.0),
+                    ..container::Style::default()
+                }
+            });
+
+        let summary = match client_connection_state {
+            ConnectionState::Connected => "Traktor & Cover Loader connected",
+            ConnectionState::Traktor => "Traktor connected",
+            ConnectionState::CoverLoader => "Cover Loader connected",
+            ConnectionState::Disconnected => "No client connected",
+        };
+
+        let mut column = col![
+            row![led, text(summary)]
+                .spacing(8)
+                .align_y(Alignment::Center)
+        ]
+        .spacing(4)
+        .width(Length::Fill)
+        .align_x(Alignment::Center);
+
+        let label = dance_interpreter
+            .data_provider
+            .traktor_provider
+            .cover_loader_addr
+            .map(|addr| addr.ip().to_string());
+
+        if let Some(label) = label {
+            column = column.push(text(label).size(12));
+        }
+
+        column
     }
 }
 
