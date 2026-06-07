@@ -116,7 +116,7 @@ impl<'de> Deserialize<'de> for State {
     }
 }
 
-#[derive(Debug, Deserialize, Clone)]
+#[derive(Debug, Deserialize, Clone, Copy)]
 #[serde(rename_all = "camelCase")]
 pub struct MixerState {
     pub x_fader: f64,
@@ -126,7 +126,7 @@ pub struct MixerState {
     pub mic_volume: f64,
 }
 
-#[derive(Debug, Deserialize, Clone)]
+#[derive(Debug, Deserialize, Clone, Copy)]
 #[serde(rename_all = "camelCase")]
 pub struct ChannelState {
     pub cue: bool,
@@ -161,7 +161,7 @@ pub struct DeckContentState {
     pub bpm: f64,
 }
 
-#[derive(Debug, Deserialize, Clone)]
+#[derive(Debug, Deserialize, Clone, Copy)]
 pub struct DeckPlayState {
     pub timestamp: u64,
     pub position: f64,
