@@ -66,6 +66,14 @@ pub enum TraktorMessage {
     Reconnect,
 }
 
+#[derive(Debug, Clone, Copy)]
+pub enum ConnectionState {
+    Disconnected,
+    CoverLoader,
+    Traktor,
+    Connected,
+}
+
 pub struct TraktorDataProvider {
     pub address: String,
     pub submitted_address: String,
@@ -81,6 +89,7 @@ pub struct TraktorDataProvider {
     time_offset_ms: i64,
     pub state: Option<State>,
     covers: HashMap<String, image::Handle>,
+    pub cover_loader_addr: Option<SocketAddr>,
 
     sync_x_fader_is_left: bool,
 
@@ -88,8 +97,6 @@ pub struct TraktorDataProvider {
     cached_next_song_info: Option<SongInfo>,
     cached_sync_action: TraktorSyncAction,
     should_scroll: bool,
-
-    pub client: Option<SocketAddr>,
 
     pub debug_logging: bool,
     log: Vec<String>,
@@ -119,7 +126,7 @@ impl Default for TraktorDataProvider {
             cached_sync_action: TraktorSyncAction::Relative(0),
             should_scroll: false,
 
-            client: None,
+            cover_loader_addr: None,
 
             debug_logging: false,
             log: Vec::new(),
@@ -130,7 +137,8 @@ impl Default for TraktorDataProvider {
 impl TraktorDataProvider {
     pub fn set_enabled(&mut self, enabled: bool) {
         self.enabled = enabled;
-        self.client = None;
+        self.cover_loader_addr = None;
+        self.state = None;
     }
     pub fn is_ready(&self) -> bool {
         self.enabled && self.channel.as_ref().is_some_and(|c| !c.is_closed())
@@ -185,8 +193,18 @@ impl TraktorDataProvider {
         self.cached_next_song_info.as_ref()
     }
 
-    pub fn connected_client(&self) -> Option<SocketAddr> {
-        self.client
+    pub fn get_connection_state(&self) -> ConnectionState {
+        if !self.enabled {
+            ConnectionState::Disconnected
+        } else if self.cover_loader_addr.is_some() && self.state.is_some() {
+            ConnectionState::Connected
+        } else if self.state.is_some() {
+            ConnectionState::Traktor
+        } else if self.cover_loader_addr.is_some() {
+            ConnectionState::CoverLoader
+        } else {
+            ConnectionState::Disconnected
+        }
     }
 
     fn get_deck_score(&self, deck: &DeckState, channel: &ChannelState, mixer: &MixerState) -> f64 {
@@ -459,7 +477,7 @@ impl TraktorDataProvider {
                 }
             }
             ServerMessage::ClientChanged(addr) => {
-                self.client = addr;
+                self.cover_loader_addr = addr;
             }
         }
     }
@@ -502,10 +520,9 @@ mod tests {
     use super::*;
     use iced::futures::channel::mpsc;
 
-    /// `connected_client()` reflects the latest `ClientsChanged` only while the
-    /// server is ready, and `Ready` clears the list (server restarted).
+    /// After receiving a ClientChanged message, the provider should be in the CoverLoader state.
     #[test]
-    fn connected_clients_gating_and_reset() {
+    fn connecting_cover_loader_and_trakor_sets_connection_state() {
         // Keep the receivers alive so the channel counts as "open" (ready).
         let (tx, _rx) = mpsc::unbounded();
         let mut provider = TraktorDataProvider {
@@ -514,12 +531,18 @@ mod tests {
             ..Default::default()
         };
 
-        assert!(provider.connected_client().is_none());
+        assert!(matches!(
+            provider.get_connection_state(),
+            ConnectionState::Disconnected
+        ));
 
         provider.process_message(
             ServerMessage::ClientChanged(Some("127.0.0.1:8080".parse().unwrap())),
             &[],
         );
-        assert!(provider.connected_client().is_some());
+        assert!(matches!(
+            provider.get_connection_state(),
+            ConnectionState::CoverLoader
+        ));
     }
 }

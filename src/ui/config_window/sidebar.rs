@@ -1,6 +1,6 @@
 use crate::dataloading::dataprovider::song_data_provider::SongDataProvider;
 use crate::traktor_api::{
-    TRAKTOR_SERVER_DEFAULT_ADDR, TraktorMessage, TraktorNextMode, TraktorSyncMode,
+    ConnectionState, TRAKTOR_SERVER_DEFAULT_ADDR, TraktorMessage, TraktorNextMode, TraktorSyncMode,
 };
 use crate::ui::config_window::labeled_message_toggler;
 use crate::ui::widget::canvas_toggle::CanvasToggle;
@@ -196,20 +196,22 @@ impl Sidebar {
     /// A small LED + label showing whether a Traktor client is
     /// connected, listing client's IP available.
     fn build_client_status<'a>(dance_interpreter: &DanceInterpreter) -> Column<'a, Message> {
-        let client = dance_interpreter
+        let client_connection_state = dance_interpreter
             .data_provider
             .traktor_provider
-            .connected_client();
+            .get_connection_state();
 
         let led = container(Space::new())
             .width(Length::Fixed(12.0))
             .height(Length::Fixed(12.0))
             .style(move |t: &iced::Theme| {
                 let palette = t.extended_palette();
-                let color = if client.is_some() {
-                    palette.success.base.color
-                } else {
-                    palette.background.strong.color
+                let color = match client_connection_state {
+                    ConnectionState::Connected => palette.success.base.color,
+                    ConnectionState::CoverLoader | ConnectionState::Traktor => {
+                        palette.warning.base.color
+                    }
+                    ConnectionState::Disconnected => palette.background.strong.color,
                 };
                 container::Style {
                     background: Some(color.into()),
@@ -218,10 +220,11 @@ impl Sidebar {
                 }
             });
 
-        let summary = if client.is_some() {
-            "Client connected".to_owned()
-        } else {
-            "No client connected".to_owned()
+        let summary = match client_connection_state {
+            ConnectionState::Connected => "Traktor & Cover Loader connected",
+            ConnectionState::Traktor => "Traktor connected",
+            ConnectionState::CoverLoader => "Cover Loader connected",
+            ConnectionState::Disconnected => "No client connected",
         };
 
         let mut column = col![
@@ -233,7 +236,11 @@ impl Sidebar {
         .width(Length::Fill)
         .align_x(Alignment::Center);
 
-        let label = client.map(|addr| addr.ip().to_string());
+        let label = dance_interpreter
+            .data_provider
+            .traktor_provider
+            .cover_loader_addr
+            .map(|addr| addr.ip().to_string());
 
         if let Some(label) = label {
             column = column.push(text(label).size(12));

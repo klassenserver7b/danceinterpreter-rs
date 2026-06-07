@@ -1294,7 +1294,7 @@ mod tests {
         /// Connecting a cover socket emits ClientsChanged carrying the remote
         /// address; disconnecting emits ClientsChanged with the client removed.
         #[tokio::test]
-        async fn socket_connect_and_disconnect_emit_client_list() {
+        async fn cover_loader_connect_disconnect_changes_state() {
             let (state, mut rx) = new_state();
             let addr: SocketAddr = "1.2.3.4:5678".parse().unwrap();
 
