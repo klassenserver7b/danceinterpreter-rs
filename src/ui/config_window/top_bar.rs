@@ -45,6 +45,11 @@ pub(crate) fn build<'a>(
                             config_window.follow_system_theme,
                             Message::EnableFollowSystemTheme
                         )),
+                        (labeled_message_checkbox(
+                            "Search",
+                            config_window.search_visible,
+                            |_| Message::ToggleSearch
+                        )),
                         (row![
                             text("Theme").width(Length::Shrink),
                             Space::new().width(Length::Fill),
