@@ -147,8 +147,13 @@ impl ConfigWindow {
             let is_match = !self.search_query.is_empty()
                 && matcher
                     .fuzzy_match(
-                        &format!("{} {} {}", song.title, song.artist, song.dance),
-                        &self.search_query,
+                        &format!(
+                            "{} {} {}",
+                            song.title.to_lowercase(),
+                            song.artist.to_lowercase(),
+                            song.dance.to_lowercase()
+                        ),
+                        &self.search_query.to_lowercase(),
                     )
                     .is_some();
 
