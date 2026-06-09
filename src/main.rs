@@ -15,6 +15,8 @@ use crate::traktor_api::{ServerMessage, StateUpdate, TraktorMessage, TraktorSync
 use crate::ui::config_window::sidebar::SidebarMessage;
 use crate::ui::config_window::{ConfigWindow, PLAYLIST_SCROLLABLE_ID};
 use crate::ui::song_window::SongWindow;
+use fuzzy_matcher::FuzzyMatcher;
+use fuzzy_matcher::skim::SkimMatcherV2 as Matcher;
 use iced::keyboard::key::Named;
 use iced::keyboard::{Key, Modifiers};
 use iced::widget::operation::{scroll_by, snap_to};
@@ -81,6 +83,10 @@ pub enum Message {
     AddBlankSong(RelativeOffset),
     Sidebar(SidebarMessage),
     Animate,
+
+    ToggleSearch,
+    SearchChanged(String),
+    ClearSearch,
 
     FileDropped(PathBuf),
     SongChanged(SongChange),
@@ -325,6 +331,24 @@ impl DanceInterpreter {
                 ().into()
             }
 
+            Message::ToggleSearch => {
+                self.config_window.search_visible = !self.config_window.search_visible;
+                if !self.config_window.search_visible {
+                    self.config_window.search_query.clear();
+                }
+                ().into()
+            }
+
+            Message::SearchChanged(query) => {
+                self.config_window.search_query = query;
+                self.scroll_to_first_search_match()
+            }
+
+            Message::ClearSearch => {
+                self.config_window.search_query.clear();
+                ().into()
+            }
+
             Message::FileDropped(path) => {
                 if let Ok(playlist) = load_tag_data_from_m3u(&path) {
                     self.data_provider.set_vec(playlist);
@@ -519,6 +543,41 @@ impl DanceInterpreter {
         }
     }
 
+    fn scroll_to_first_search_match(&mut self) -> Task<Message> {
+        if self.config_window.search_query.is_empty() {
+            return ().into();
+        }
+
+        let matcher = Matcher::default();
+        let query = &self.config_window.search_query;
+
+        let first_match = self
+            .data_provider
+            .playlist_songs
+            .iter()
+            .enumerate()
+            .find(|(_, song)| {
+                matcher
+                    .fuzzy_match(
+                        &format!("{} {} {}", song.title, song.artist, song.dance),
+                        query,
+                    )
+                    .is_some()
+            });
+
+        if let Some((index, _)) = first_match {
+            let offset_y =
+                index as f32 / std::cmp::max(1, self.data_provider.playlist_songs.len() - 1) as f32;
+
+            Task::done(Message::SnapTo(RelativeOffset {
+                x: 0.0,
+                y: offset_y,
+            }))
+        } else {
+            ().into()
+        }
+    }
+
     fn run_traktor_sync_action(&mut self) {
         let action = self.data_provider.traktor_provider.take_sync_action();
         if !self.data_provider.traktor_provider.sync {
@@ -610,6 +669,7 @@ impl DanceInterpreter {
                     (Key::Character("-"), Modifiers::CTRL) => {
                         Some(Message::ChangeSongWindowScale(-0.1))
                     }
+                    (Key::Character("f"), Modifiers::CTRL) => Some(Message::ToggleSearch),
                     (Key::Character("c"), Modifiers::ALT) => {
                         Some(Message::Sidebar(SidebarMessage::Toggle))
                     }
