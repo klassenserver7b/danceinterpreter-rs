@@ -122,6 +122,10 @@ impl ConfigWindow {
     }
 
     fn build_playlist_view(&'_ self, dance_interpreter: &DanceInterpreter) -> Column<'_, Message> {
+        if dance_interpreter.data_provider.playlist_songs.is_empty() {
+            return self.build_empty_playlist_view();
+        }
+
         let trow: Row<_> = row![
             text!("#").width(Length::Fixed(24.0)),
             text!("Title").width(Length::Fill),
@@ -258,9 +262,43 @@ impl ConfigWindow {
         col!(trow, playlist_scrollable).spacing(5)
     }
 
+    fn build_empty_playlist_view(&'_ self) -> Column<'_, Message> {
+        let empty_state_column = col![
+            text("No playlist loaded.").size(24),
+            text("Click the folder icon below to load a playlist (.m3u) file.").size(16),
+            button(material_icon_sized("folder_open", 64))
+                .style(empty_folder_button_style)
+                .on_press(Message::OpenPlaylist)
+                .padding(20)
+        ]
+        .spacing(20)
+        .align_x(Alignment::Center);
+
+        col![
+            Space::new().height(Length::Fill),
+            empty_state_column,
+            Space::new().height(Length::Fill)
+        ]
+        .width(Length::Fill)
+        .height(Length::Fill)
+        .align_x(Alignment::Center)
+    }
+
     fn build_statics_view(&'_ self, _dance_interpreter: &DanceInterpreter) -> Column<'_, Message> {
         col![].width(Length::Fill).height(Length::Fill)
     }
+}
+
+fn empty_folder_button_style(
+    theme: &Theme,
+    status: iced::widget::button::Status,
+) -> iced::widget::button::Style {
+    let palette = theme.extended_palette();
+    let mut style = button::text(theme, status);
+    style.text_color = palette.secondary.strong.color;
+    style.background = Some(palette.background.weakest.color.into());
+    style.border.radius = 12.0.into();
+    style
 }
 
 fn label_message_button_fill<'a>(
