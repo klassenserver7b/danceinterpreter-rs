@@ -5,7 +5,7 @@ pub mod top_bar;
 use crate::dataloading::dataprovider::song_data_provider::{
     SongChange, SongDataEdit, SongDataSource,
 };
-use crate::ui::config_window::sidebar::Sidebar;
+use crate::ui::config_window::sidebar::{Sidebar, SidebarMessage};
 use crate::ui::widget::dynamic_text_input::DynamicTextInput;
 use crate::ui::{material_icon, material_icon_sized, with_tooltip};
 use crate::{DanceInterpreter, Message, Window};
@@ -263,15 +263,41 @@ impl ConfigWindow {
     }
 
     fn build_empty_playlist_view(&'_ self) -> Column<'_, Message> {
-        let empty_state_column = col![
-            text("No playlist loaded.").size(24),
-            text("Click the folder icon below to load a playlist (.m3u) file.").size(16),
+        let playlist_col = col![
+            text("Load Playlist").size(20),
+            text("Click the folder icon below to load a playlist (.m3u) file.")
+                .size(16)
+                .width(Length::Fixed(300.0))
+                .align_x(Alignment::Center),
             button(material_icon_sized("folder_open", 64))
                 .style(empty_folder_button_style)
                 .on_press(Message::OpenPlaylist)
                 .padding(20)
         ]
         .spacing(20)
+        .align_x(Alignment::Center);
+
+        let traktor_col = col![
+            text("Use Traktor").size(20),
+            text("Open the sidebar to start the Traktor server and sync automatically.")
+                .size(16)
+                .width(Length::Fixed(300.0))
+                .align_x(Alignment::Center),
+            button(material_icon_sized("agriculture", 64))
+                .style(empty_folder_button_style)
+                .on_press(Message::Sidebar(SidebarMessage::Toggle))
+                .padding(20)
+        ]
+        .spacing(20)
+        .align_x(Alignment::Center);
+
+        let empty_state_column = col![
+            text("No playlist loaded.").size(24),
+            row![playlist_col, traktor_col]
+                .spacing(40)
+                .align_y(Alignment::Center)
+        ]
+        .spacing(40)
         .align_x(Alignment::Center);
 
         col![
