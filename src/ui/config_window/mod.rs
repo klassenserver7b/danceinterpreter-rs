@@ -5,6 +5,7 @@ pub mod top_bar;
 use crate::dataloading::dataprovider::song_data_provider::{
     SongChange, SongDataEdit, SongDataSource,
 };
+use crate::dataloading::songinfo::SongInfo;
 use crate::ui::config_window::sidebar::{Sidebar, SidebarMessage};
 use crate::ui::widget::dynamic_text_input::DynamicTextInput;
 use crate::ui::{material_icon, material_icon_sized, with_tooltip};
@@ -13,8 +14,8 @@ use fuzzy_matcher::FuzzyMatcher;
 use fuzzy_matcher::skim::SkimMatcherV2 as Matcher;
 use iced::alignment::Vertical;
 use iced::widget::{
-    Button, Column, Row, Scrollable, Space, TextInput, button, checkbox, column as col, container,
-    radio, row, scrollable, text, toggler,
+    Button, Column, Container, Row, Scrollable, Space, TextInput, button, checkbox, column as col,
+    container, radio, row, scrollable, text, toggler,
 };
 use iced::{Alignment, Element, Length, Pixels, Renderer, Size, Theme, window};
 use iced_aw::iced_aw_font;
@@ -140,117 +141,16 @@ impl ConfigWindow {
 
         let mut playlist_column: Column<'_, _, _, _> = col!();
 
-        let matcher = Matcher::default();
-
         for (i, song) in dance_interpreter
             .data_provider
             .playlist_songs
             .iter()
             .enumerate()
         {
-            let is_match = !self.search_query.is_empty()
-                && matcher
-                    .fuzzy_match(
-                        &format!(
-                            "{} {} {}",
-                            song.title.to_lowercase(),
-                            song.artist.to_lowercase(),
-                            song.dance.to_lowercase()
-                        ),
-                        &self.search_query.to_lowercase(),
-                    )
-                    .is_some();
-
-            let (is_current, is_next, is_traktor, is_played) =
-                dance_interpreter.data_provider.get_play_state(i);
-            let icon: Element<Message> = if is_traktor {
-                material_icon("agriculture")
-                    .width(Length::Fixed(24.0))
-                    .into()
-            } else if is_current {
-                material_icon("play_arrow")
-                    .width(Length::Fixed(24.0))
-                    .into()
-            } else if is_next {
-                material_icon("skip_next").width(Length::Fixed(24.0)).into()
-            } else if is_played {
-                material_icon("check").width(Length::Fixed(24.0)).into()
-            } else {
-                Space::new()
-                    .width(Length::Fixed(24.0))
-                    .height(Length::Shrink)
-                    .into()
-            };
-
-            let song_row = row![
-                icon,
-                DynamicTextInput::<'_, Message>::new("Title", &song.title)
-                    .width(Length::Fill)
-                    .on_change(move |v| Message::SongDataEdit(i, SongDataEdit::Title(v))),
-                DynamicTextInput::<'_, Message>::new("Artist", &song.artist)
-                    .width(Length::Fill)
-                    .on_change(move |v| Message::SongDataEdit(i, SongDataEdit::Artist(v))),
-                DynamicTextInput::<'_, Message>::new("Dance", &song.dance)
-                    .width(Length::Fill)
-                    .on_change(move |v| Message::SongDataEdit(i, SongDataEdit::Dance(v))),
-                row![
-                    Space::new().width(Length::Fill).height(Length::Shrink),
-                    with_tooltip(
-                        material_icon_message_button(
-                            "smart_display",
-                            Message::SongChanged(SongChange::PlaylistAbsolute(i))
-                        ),
-                        "Show now"
-                    ),
-                    with_tooltip(
-                        material_icon_message_button(
-                            "queue_play_next",
-                            Message::SetNextSong(SongDataSource::Playlist(i))
-                        ),
-                        "Set as next song"
-                    ),
-                    with_tooltip(
-                        material_icon_message_button(
-                            "delete",
-                            Message::DeleteSong(SongDataSource::Playlist(i))
-                        ),
-                        "Delete song"
-                    ),
-                ]
-                .spacing(5)
-                .align_y(Alignment::Center)
-                .width(Length::Fill),
-            ]
-            .align_y(Alignment::Center);
-
-            let song_row = container(song_row)
-                .style(move |t| {
-                    let palette = t.extended_palette();
-                    let color = if i % 2 == 0 {
-                        palette.background.weakest.color
-                    } else {
-                        palette.background.weaker.color
-                    };
-
-                    let mut style = container::Style::default().background(color);
-
-                    if is_match {
-                        let accent = palette.primary.base.color;
-                        style = style
-                            .background(palette.primary.weak.color)
-                            .border(iced::Border {
-                                color: accent,
-                                width: 2.0,
-                                radius: 4.0.into(),
-                            });
-                    }
-
-                    style
-                })
-                .padding([4, 6])
-                .width(Length::Fill);
-
-            playlist_column = playlist_column.push(song_row);
+            let is_match = Self::song_matches_search_query(&self.search_query, song);
+            let song_row = Self::build_song_row(dance_interpreter, song, i);
+            let sr_container = Self::build_song_row_container_styled(song_row, is_match, i);
+            playlist_column = playlist_column.push(sr_container);
         }
 
         let playlist_scrollable: Scrollable<'_, Message> = scrollable(playlist_column)
@@ -265,28 +165,32 @@ impl ConfigWindow {
     fn build_empty_playlist_view(&'_ self) -> Column<'_, Message> {
         let playlist_col = col![
             text("Load Playlist").size(20),
-            text("Click the folder icon below to load a playlist (.m3u) file.")
-                .size(16)
-                .width(Length::Fixed(300.0))
-                .align_x(Alignment::Center),
-            button(material_icon_sized("folder_open", 64))
-                .style(empty_folder_button_style)
-                .on_press(Message::OpenPlaylist)
-                .padding(20)
+            button(
+                col![
+                    material_icon_sized("folder_open", 64),
+                    text("Open playlist file").size(16)
+                ]
+                .align_x(Alignment::Center)
+            )
+            .style(empty_folder_button_style)
+            .on_press(Message::OpenPlaylist)
+            .padding(20)
         ]
         .spacing(20)
         .align_x(Alignment::Center);
 
         let traktor_col = col![
             text("Use Traktor").size(20),
-            text("Open the sidebar to start the Traktor server and sync automatically.")
-                .size(16)
-                .width(Length::Fixed(300.0))
-                .align_x(Alignment::Center),
-            button(material_icon_sized("agriculture", 64))
-                .style(empty_folder_button_style)
-                .on_press(Message::Sidebar(SidebarMessage::Toggle))
-                .padding(20)
+            button(
+                col![
+                    material_icon_sized("agriculture", 64),
+                    text("Open the sidebar").size(16)
+                ]
+                .align_x(Alignment::Center)
+            )
+            .style(empty_folder_button_style)
+            .on_press(Message::Sidebar(SidebarMessage::Toggle))
+            .padding(20)
         ]
         .spacing(20)
         .align_x(Alignment::Center);
@@ -313,12 +217,127 @@ impl ConfigWindow {
     fn build_statics_view(&'_ self, _dance_interpreter: &DanceInterpreter) -> Column<'_, Message> {
         col![].width(Length::Fill).height(Length::Fill)
     }
+
+    fn build_song_row<'a>(
+        dance_interpreter: &DanceInterpreter,
+        song: &SongInfo,
+        idx: usize,
+    ) -> Row<'a, Message> {
+        let (is_current, is_next, is_traktor, is_played) =
+            dance_interpreter.data_provider.get_play_state(idx);
+        let icon: Element<Message> = if is_traktor {
+            material_icon("agriculture")
+                .width(Length::Fixed(24.0))
+                .into()
+        } else if is_current {
+            material_icon("play_arrow")
+                .width(Length::Fixed(24.0))
+                .into()
+        } else if is_next {
+            material_icon("skip_next").width(Length::Fixed(24.0)).into()
+        } else if is_played {
+            material_icon("check").width(Length::Fixed(24.0)).into()
+        } else {
+            Space::new()
+                .width(Length::Fixed(24.0))
+                .height(Length::Shrink)
+                .into()
+        };
+
+        row![
+            icon,
+            DynamicTextInput::<'_, Message>::new("Title", &song.title)
+                .width(Length::Fill)
+                .on_change(move |v| Message::SongDataEdit(idx, SongDataEdit::Title(v))),
+            DynamicTextInput::<'_, Message>::new("Artist", &song.artist)
+                .width(Length::Fill)
+                .on_change(move |v| Message::SongDataEdit(idx, SongDataEdit::Artist(v))),
+            DynamicTextInput::<'_, Message>::new("Dance", &song.dance)
+                .width(Length::Fill)
+                .on_change(move |v| Message::SongDataEdit(idx, SongDataEdit::Dance(v))),
+            row![
+                Space::new().width(Length::Fill).height(Length::Shrink),
+                with_tooltip(
+                    material_icon_message_button(
+                        "smart_display",
+                        Message::SongChanged(SongChange::PlaylistAbsolute(idx))
+                    ),
+                    "Show now"
+                ),
+                with_tooltip(
+                    material_icon_message_button(
+                        "queue_play_next",
+                        Message::SetNextSong(SongDataSource::Playlist(idx))
+                    ),
+                    "Set as next song"
+                ),
+                with_tooltip(
+                    material_icon_message_button(
+                        "delete",
+                        Message::DeleteSong(SongDataSource::Playlist(idx))
+                    ),
+                    "Delete song"
+                ),
+            ]
+            .spacing(5)
+            .align_y(Alignment::Center)
+            .width(Length::Fill),
+        ]
+        .align_y(Alignment::Center)
+    }
+
+    fn build_song_row_container_styled(
+        song_row: Row<Message>,
+        highlight: bool,
+        idx: usize,
+    ) -> Container<Message> {
+        container(song_row)
+            .style(move |t| {
+                let palette = t.extended_palette();
+                let color = if idx.is_multiple_of(2) {
+                    palette.background.weakest.color
+                } else {
+                    palette.background.weaker.color
+                };
+
+                let mut style = container::Style::default().background(color);
+
+                if highlight {
+                    let accent = palette.primary.base.color;
+                    style = style
+                        .background(palette.primary.weak.color)
+                        .border(iced::Border {
+                            color: accent,
+                            width: 2.0,
+                            radius: 4.0.into(),
+                        });
+                }
+
+                style
+            })
+            .padding([4, 6])
+            .width(Length::Fill)
+    }
+
+    fn song_matches_search_query(search_query: &str, song: &SongInfo) -> bool {
+        let matcher = Matcher::default();
+
+        !search_query.is_empty()
+            && matcher
+                .fuzzy_match(
+                    &format!(
+                        "{} {} {}",
+                        song.title.to_lowercase(),
+                        song.artist.to_lowercase(),
+                        song.dance.to_lowercase()
+                    ),
+                    &search_query.to_lowercase(),
+                )
+                .is_some()
+    }
 }
 
-fn empty_folder_button_style(
-    theme: &Theme,
-    status: iced::widget::button::Status,
-) -> iced::widget::button::Style {
+fn empty_folder_button_style(theme: &Theme, status: button::Status) -> button::Style {
     let palette = theme.extended_palette();
     let mut style = button::text(theme, status);
     style.text_color = palette.secondary.strong.color;
