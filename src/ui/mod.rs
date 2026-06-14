@@ -33,9 +33,15 @@ pub fn material_icon_sized(
     material_icon(id, filled).size(size)
 }
 
-pub fn material_icon(id: &'_ str, _filled: bool) -> Text<'_, Theme, Renderer> {
+pub fn material_icon(id: &'_ str, filled: bool) -> Text<'_, Theme, Renderer> {
+    let font_name = if filled {
+        "Material Icons"
+    } else {
+        "Material Symbols Outlined"
+    };
+
     Text::new(id)
-        .font(Font::with_name("Material Symbols Outlined"))
+        .font(Font::with_name(font_name))
         .shaping(Shaping::Advanced)
         .width(Length::Shrink)
 }

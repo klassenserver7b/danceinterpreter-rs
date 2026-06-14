@@ -143,7 +143,12 @@ impl DanceInterpreter {
         tasks.push(system::theme().map(Message::ThemeChanged));
 
         tasks.push(
-            iced::font::load(include_bytes!(res_file!("symbols.ttf"))).map(|_| Message::Noop),
+            iced::font::load(include_bytes!(res_file!("material-symbols.ttf")))
+                .map(|_| Message::Noop),
+        );
+        tasks.push(
+            iced::font::load(include_bytes!(res_file!("material-icons.ttf")))
+                .map(|_| Message::Noop),
         );
 
         tasks.push(Task::done(Message::ReloadStatics));
