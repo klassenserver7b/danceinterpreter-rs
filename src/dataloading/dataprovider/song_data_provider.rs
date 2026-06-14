@@ -169,6 +169,22 @@ impl SongDataProvider {
         self.playlist_played.push(false);
     }
 
+    pub fn add_static(&mut self) {
+        self.statics.push(SongInfo::default());
+    }
+
+    pub fn toggle_static_favorite(&mut self, index: usize) {
+        if let Some(song) = self.statics.get_mut(index) {
+            song.is_favorite = !song.is_favorite;
+        }
+    }
+
+    pub fn update_static_name(&mut self, index: usize, name: String) {
+        if let Some(song) = self.statics.get_mut(index) {
+            song.dance = name;
+        }
+    }
+
     pub fn delete_song(&mut self, song: SongDataSource) {
         if let SongDataSource::Playlist(i) = song {
             self.playlist_songs.remove(i);

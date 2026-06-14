@@ -46,6 +46,7 @@ pub(crate) fn get_statics_buttons(
         .statics
         .iter()
         .enumerate()
+        .filter(|(_, s)| s.is_favorite)
         .map(|(idx, s)| {
             with_tooltip(
                 button(text(&s.dance).font(bold_font))

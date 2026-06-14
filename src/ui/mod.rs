@@ -25,15 +25,15 @@ pub fn with_tooltip<'a, Message: 'a>(
     .into()
 }
 
-pub fn material_icon_sized(id: &'_ str, size: impl Into<Pixels>) -> Text<'_, Theme, Renderer> {
-    Text::new(id)
-        .font(Font::with_name("Material Symbols Outlined"))
-        .size(size)
-        .shaping(Shaping::Advanced)
-        .width(Length::Shrink)
+pub fn material_icon_sized(
+    id: &'_ str,
+    filled: bool,
+    size: impl Into<Pixels>,
+) -> Text<'_, Theme, Renderer> {
+    material_icon(id, filled).size(size)
 }
 
-pub fn material_icon(id: &'_ str) -> Text<'_, Theme, Renderer> {
+pub fn material_icon(id: &'_ str, _filled: bool) -> Text<'_, Theme, Renderer> {
     Text::new(id)
         .font(Font::with_name("Material Symbols Outlined"))
         .shaping(Shaping::Advanced)

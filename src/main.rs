@@ -73,32 +73,40 @@ pub enum Message {
     ToggleFullscreen,
     SetFullscreen(bool),
 
-    OpenPlaylist,
-    ReloadStatics,
-    AddSong(SongInfo),
-    DeleteSong(SongDataSource),
-    ScrollBy(f32),
-    SnapTo(RelativeOffset),
     ToggleStaticsView,
-    AddBlankSong(RelativeOffset),
     Sidebar(SidebarMessage),
-    Animate,
-
-    ToggleSearch,
-    SearchChanged(String),
-    ClearSearch,
-
-    FileDropped(PathBuf),
-    SongChanged(SongChange),
-    SongDataEdit(usize, SongDataEdit),
-    SetNextSong(SongDataSource),
-
     EnableImage(bool),
     EnableNextDance(bool),
     ChangeSongWindowScale(f32),
     EnableAutoscroll(bool),
     EnableFollowSystemTheme(bool),
 
+    ToggleSearch,
+    SearchChanged(String),
+    ClearSearch,
+
+    ScrollBy(f32),
+    SnapTo(RelativeOffset),
+
+    OpenPlaylist,
+    AddBlankEntry,
+
+    AddSong(SongInfo),
+    DeleteSong(SongDataSource),
+    AddBlankSong(RelativeOffset),
+    SongDataEdit(usize, SongDataEdit),
+
+    ReloadStatics,
+    ToggleStaticFavorite(usize),
+    UpdateStaticName(usize, String),
+    AddBlankStatic,
+    DeleteStatic(usize),
+
+    FileDropped(PathBuf),
+    SongChanged(SongChange),
+    SetNextSong(SongDataSource),
+
+    Animate,
     Traktor(TraktorMessage),
 }
 
@@ -311,23 +319,49 @@ impl DanceInterpreter {
                 ().into()
             }
 
+            Message::AddBlankEntry => {
+                if self.config_window.is_statics_view {
+                    Task::done(Message::AddBlankStatic)
+                } else {
+                    Task::done(Message::AddBlankSong(RelativeOffset::END))
+                }
+            }
+
             Message::ReloadStatics => {
-                let file_content = std::fs::read_to_string("./statics.txt");
-                let statics = file_content
-                    .map(|c| {
-                        c.trim()
-                            .lines()
-                            .filter_map(|l| {
-                                let trimmed = l.trim();
-                                (!trimmed.is_empty()).then_some(trimmed)
-                            })
-                            .map(|l| SongInfo::with_dance(l.to_owned()))
-                            .collect()
-                    })
-                    .unwrap_or_default();
-
+                let statics = if let Ok(file_content) = std::fs::read_to_string("./statics.json")
+                    && let Ok(statics) = serde_json::from_str(&file_content)
+                {
+                    statics
+                } else {
+                    Vec::new()
+                };
                 self.data_provider.set_statics(statics);
+                self.save_statics();
 
+                ().into()
+            }
+
+            Message::ToggleStaticFavorite(i) => {
+                self.data_provider.toggle_static_favorite(i);
+                self.save_statics();
+                ().into()
+            }
+
+            Message::UpdateStaticName(i, name) => {
+                self.data_provider.update_static_name(i, name);
+                self.save_statics();
+                ().into()
+            }
+
+            Message::AddBlankStatic => {
+                self.data_provider.add_static();
+                self.save_statics();
+                ().into()
+            }
+
+            Message::DeleteStatic(i) => {
+                self.data_provider.delete_song(SongDataSource::Static(i));
+                self.save_statics();
                 ().into()
             }
 
@@ -543,6 +577,12 @@ impl DanceInterpreter {
         }
     }
 
+    fn save_statics(&self) {
+        if let Ok(json) = serde_json::to_string_pretty(&self.data_provider.statics) {
+            let _ = std::fs::write("./statics.json", json);
+        }
+    }
+
     fn scroll_to_first_search_match(&mut self) -> Task<Message> {
         if self.config_window.search_query.is_empty() {
             return ().into();
@@ -655,14 +695,12 @@ impl DanceInterpreter {
                     _ => None,
                 }
             }),
-            keyboard::listen().filter_map(|event| {
+            keyboard::listen().filter_map(move |event| {
                 let keyboard::Event::KeyPressed { key, modifiers, .. } = event else {
                     return None;
                 };
                 match (key.as_ref(), modifiers) {
-                    (Key::Character("n"), Modifiers::CTRL) => {
-                        Some(Message::AddBlankSong(RelativeOffset::END))
-                    }
+                    (Key::Character("n"), Modifiers::CTRL) => Some(Message::AddBlankEntry),
                     (Key::Character("+"), Modifiers::CTRL) => {
                         Some(Message::ChangeSongWindowScale(0.1))
                     }

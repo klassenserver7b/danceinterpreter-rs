@@ -106,7 +106,7 @@ impl ConfigWindow {
 
     fn build_search_bar<'a>(&self) -> Row<'a, Message> {
         row![
-            material_icon("search")
+            material_icon("search", false)
                 .width(Length::Fixed(24.0))
                 .align_y(Vertical::Center),
             TextInput::new("Search...", &self.search_query)
@@ -114,8 +114,8 @@ impl ConfigWindow {
                 .on_submit(Message::Noop)
                 .width(Length::Fill)
                 .padding([4, 8]),
-            material_icon_message_button("backspace", Message::ClearSearch),
-            material_icon_message_button("close", Message::ToggleSearch),
+            material_icon_message_button("backspace", false, Message::ClearSearch),
+            material_icon_message_button("close", false, Message::ToggleSearch),
         ]
         .spacing(5)
         .padding([5, 5])
@@ -167,7 +167,7 @@ impl ConfigWindow {
             text("Load Playlist").size(20),
             button(
                 col![
-                    material_icon_sized("folder_open", 64),
+                    material_icon_sized("folder_open", false, 64),
                     text("Open playlist file").size(16)
                 ]
                 .align_x(Alignment::Center)
@@ -183,7 +183,7 @@ impl ConfigWindow {
             text("Use Traktor").size(20),
             button(
                 col![
-                    material_icon_sized("agriculture", 64),
+                    material_icon_sized("agriculture", false, 64),
                     text("Open the sidebar").size(16)
                 ]
                 .align_x(Alignment::Center)
@@ -214,8 +214,67 @@ impl ConfigWindow {
         .align_x(Alignment::Center)
     }
 
-    fn build_statics_view(&'_ self, _dance_interpreter: &DanceInterpreter) -> Column<'_, Message> {
-        col![].width(Length::Fill).height(Length::Fill)
+    fn build_statics_view(&'_ self, dance_interpreter: &DanceInterpreter) -> Column<'_, Message> {
+        let trow = row![
+            text("Statics").size(24).width(Length::Fill),
+            button(row![material_icon("add", false), text("Add Static")].spacing(5))
+                .on_press(Message::AddBlankStatic)
+                .padding([5, 10])
+                .style(button::primary),
+        ]
+        .spacing(5);
+
+        let mut list_column = col!().spacing(5);
+
+        for (i, song) in dance_interpreter.data_provider.statics.iter().enumerate() {
+            let is_current = matches!(
+                dance_interpreter.data_provider.current,
+                SongDataSource::Static(idx) if idx == i
+            );
+            let static_row = Self::build_static_row(song, i);
+            let row_container = Self::build_song_row_container_styled(static_row, is_current, i);
+            list_column = list_column.push(row_container);
+        }
+
+        let statics_scrollable: Scrollable<'_, Message> = scrollable(list_column)
+            .width(Length::Fill)
+            .height(Length::Fill)
+            .spacing(5);
+
+        col!(trow, statics_scrollable).spacing(5)
+    }
+
+    fn build_static_row<'a>(song: &SongInfo, idx: usize) -> Row<'a, Message> {
+        row![
+            material_icon_message_button(
+                "star",
+                song.is_favorite,
+                Message::ToggleStaticFavorite(idx)
+            ),
+            DynamicTextInput::<'_, Message>::new("Static Name", &song.dance)
+                .width(Length::Fill)
+                .on_change(move |v| Message::UpdateStaticName(idx, v)),
+            row![
+                Space::new().width(Length::Fill).height(Length::Shrink),
+                with_tooltip(
+                    material_icon_message_button(
+                        "smart_display",
+                        false,
+                        Message::SongChanged(SongChange::StaticAbsolute(idx))
+                    ),
+                    "Show now"
+                ),
+                with_tooltip(
+                    material_icon_message_button("delete", false, Message::DeleteStatic(idx)),
+                    "Delete static"
+                ),
+            ]
+            .spacing(5)
+            .align_y(Alignment::Center)
+            .width(Length::Fill),
+        ]
+        .align_y(Alignment::Center)
+        .spacing(10)
     }
 
     fn build_song_row<'a>(
@@ -226,17 +285,21 @@ impl ConfigWindow {
         let (is_current, is_next, is_traktor, is_played) =
             dance_interpreter.data_provider.get_play_state(idx);
         let icon: Element<Message> = if is_traktor {
-            material_icon("agriculture")
+            material_icon("agriculture", false)
                 .width(Length::Fixed(24.0))
                 .into()
         } else if is_current {
-            material_icon("play_arrow")
+            material_icon("play_arrow", false)
                 .width(Length::Fixed(24.0))
                 .into()
         } else if is_next {
-            material_icon("skip_next").width(Length::Fixed(24.0)).into()
+            material_icon("skip_next", false)
+                .width(Length::Fixed(24.0))
+                .into()
         } else if is_played {
-            material_icon("check").width(Length::Fixed(24.0)).into()
+            material_icon("check", false)
+                .width(Length::Fixed(24.0))
+                .into()
         } else {
             Space::new()
                 .width(Length::Fixed(24.0))
@@ -260,6 +323,7 @@ impl ConfigWindow {
                 with_tooltip(
                     material_icon_message_button(
                         "smart_display",
+                        false,
                         Message::SongChanged(SongChange::PlaylistAbsolute(idx))
                     ),
                     "Show now"
@@ -267,6 +331,7 @@ impl ConfigWindow {
                 with_tooltip(
                     material_icon_message_button(
                         "queue_play_next",
+                        false,
                         Message::SetNextSong(SongDataSource::Playlist(idx))
                     ),
                     "Set as next song"
@@ -274,6 +339,7 @@ impl ConfigWindow {
                 with_tooltip(
                     material_icon_message_button(
                         "delete",
+                        false,
                         Message::DeleteSong(SongDataSource::Playlist(idx))
                     ),
                     "Delete song"
@@ -401,8 +467,12 @@ fn label_message_button_fill_opt(label: &'_ str, message: Option<Message>) -> Bu
     label_message_button_opt(label, message).width(Length::Fill)
 }
 
-fn material_icon_message_button(icon_id: &'_ str, message: Message) -> Button<'_, Message> {
-    button(material_icon(icon_id))
+fn material_icon_message_button(
+    icon_id: &'_ str,
+    filled: bool,
+    message: Message,
+) -> Button<'_, Message> {
+    button(material_icon(icon_id, filled))
         //.padding([4, 8])
         .style(button::secondary)
         .on_press(message)
@@ -411,10 +481,11 @@ fn material_icon_message_button(icon_id: &'_ str, message: Message) -> Button<'_
 
 fn material_icon_sized_message_button(
     icon_id: &'_ str,
+    filled: bool,
     size: impl Into<Pixels>,
     message: Message,
 ) -> Button<'_, Message> {
-    button(material_icon_sized(icon_id, size))
+    button(material_icon_sized(icon_id, filled, size))
         .style(button::secondary)
         .on_press(message)
         .width(Length::Shrink)

@@ -133,6 +133,7 @@ pub(crate) fn build<'a>(
             } else {
                 "right_panel_open"
             },
+            false,
             20.0,
             Message::Sidebar(SidebarMessage::Toggle),
         )
