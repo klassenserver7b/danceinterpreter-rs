@@ -8,7 +8,9 @@ use crate::dataloading::dataprovider::song_data_provider::{
 use crate::dataloading::songinfo::SongInfo;
 use crate::ui::config_window::sidebar::{Sidebar, SidebarMessage};
 use crate::ui::widget::dynamic_text_input::DynamicTextInput;
-use crate::ui::widgets::buttons::material_symbol_message_button;
+use crate::ui::widgets::buttons::{
+    material_symbol_message_button, material_symbol_message_button_colored,
+};
 use crate::ui::widgets::{material_symbol, material_symbol_sized};
 use crate::ui::with_tooltip;
 use crate::{DanceInterpreter, Message, Window};
@@ -19,7 +21,7 @@ use iced::widget::{
     Column, Container, Row, Scrollable, Space, TextInput, button, column as col, container, row,
     scrollable, text,
 };
-use iced::{Alignment, Element, Length, Size, Theme, window};
+use iced::{Alignment, Color, Element, Length, Size, Theme, window};
 use std::sync::LazyLock;
 use std::time::Instant;
 
@@ -228,12 +230,9 @@ impl ConfigWindow {
         let mut list_column = col!().spacing(5);
 
         for (i, song) in dance_interpreter.data_provider.statics.iter().enumerate() {
-            let is_current = matches!(
-                dance_interpreter.data_provider.current,
-                SongDataSource::Static(idx) if idx == i
-            );
+            let is_match = Self::song_matches_search_query(&self.search_query, song);
             let static_row = Self::build_static_row(song, i);
-            let row_container = Self::build_song_row_container_styled(static_row, is_current, i);
+            let row_container = Self::build_song_row_container_styled(static_row, is_match, i);
             list_column = list_column.push(row_container);
         }
 
@@ -247,11 +246,20 @@ impl ConfigWindow {
 
     fn build_static_row<'a>(song: &SongInfo, idx: usize) -> Row<'a, Message> {
         row![
-            material_symbol_message_button(
-                "star",
-                song.is_favorite,
-                Message::ToggleStaticFavorite(idx)
-            ),
+            if song.is_favorite {
+                material_symbol_message_button_colored(
+                    "star",
+                    song.is_favorite,
+                    Message::ToggleStaticFavorite(idx),
+                    Color::from_rgb8(255, 215, 0),
+                )
+            } else {
+                material_symbol_message_button(
+                    "star",
+                    song.is_favorite,
+                    Message::ToggleStaticFavorite(idx),
+                )
+            },
             DynamicTextInput::<'_, Message>::new("Static Name", &song.dance)
                 .width(Length::Fill)
                 .on_change(move |v| Message::UpdateStaticName(idx, v)),

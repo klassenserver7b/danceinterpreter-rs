@@ -1,8 +1,8 @@
 use crate::Message;
-use crate::ui::widgets::{material_symbol, material_symbol_sized};
+use crate::ui::widgets::{material_symbol, material_symbol_colored, material_symbol_sized};
 use iced::alignment::Vertical;
 use iced::widget::{Button, button, row, text};
-use iced::{Alignment, Length, Pixels, Renderer, Theme};
+use iced::{Alignment, Color, Length, Pixels, Renderer, Theme};
 use iced_aw::iced_aw_font;
 
 pub fn label_message_button<'a>(
@@ -44,6 +44,19 @@ pub fn label_message_button_fill_opt(
     message: Option<Message>,
 ) -> Button<'_, Message> {
     label_message_button_opt(label, message).width(Length::Fill)
+}
+
+pub fn material_symbol_message_button_colored(
+    icon_id: &'_ str,
+    filled: bool,
+    message: Message,
+    color: impl Into<Color>,
+) -> Button<'_, Message> {
+    button(material_symbol_colored(icon_id, filled, color))
+        //.padding([4, 8])
+        .style(button::secondary)
+        .on_press(message)
+        .width(Length::Shrink)
 }
 
 pub fn material_symbol_message_button(

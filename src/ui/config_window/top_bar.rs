@@ -9,7 +9,6 @@ use crate::ui::with_tooltip;
 use crate::{DanceInterpreter, Message};
 use iced::alignment::Vertical;
 use iced::border::Radius;
-use iced::widget::scrollable::RelativeOffset;
 use iced::widget::space::horizontal;
 use iced::widget::{Space, Stack, pick_list, row, stack, text};
 use iced::{Border, Length, Renderer, Theme};
@@ -65,7 +64,7 @@ pub(crate) fn build<'a>(
                         .spacing(5.0)
                         .width(Length::Fill)),
                         (label_message_button_fill("Reload Statics", Message::ReloadStatics)),
-                        (label_message_button_fill("Add blank song", Message::AddBlankSong(RelativeOffset::END))),
+                        (label_message_button_fill(format!("Add blank {}", if config_window.is_statics_view {"static"} else {"song"}), Message::AddBlankEntry)),
                     )
                 )
                 .spacing(5.0)

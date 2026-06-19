@@ -2,7 +2,7 @@ use crate::Message;
 use crate::ui::widget::dynamic_text_input::DynamicTextInput;
 use iced::advanced::text::Shaping;
 use iced::widget::{Column, Text, checkbox, column as col, radio, text, toggler};
-use iced::{Font, Length, Pixels, Renderer, Theme};
+use iced::{Color, Font, Length, Pixels, Renderer, Theme};
 
 pub mod buttons;
 
@@ -71,6 +71,14 @@ pub fn labeled_dynamic_text_input<'a>(
     }
 
     col!(text(label).width(Length::Fill), input,).width(Length::Fill)
+}
+
+pub fn material_symbol_colored(
+    id: &'_ str,
+    filled: bool,
+    color: impl Into<Color>,
+) -> Text<'_, Theme, Renderer> {
+    material_symbol(id, filled).color(color)
 }
 
 pub fn material_symbol_sized(
