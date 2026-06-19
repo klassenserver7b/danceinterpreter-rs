@@ -2,10 +2,10 @@ use crate::dataloading::dataprovider::song_data_provider::SongDataProvider;
 use crate::traktor_api::{
     ConnectionState, TRAKTOR_SERVER_DEFAULT_ADDR, TraktorMessage, TraktorNextMode, TraktorSyncMode,
 };
-use crate::ui::config_window::labeled_message_toggler;
 use crate::ui::widget::canvas_toggle::CanvasToggle;
 use crate::ui::widget::suggestion_text_input::SuggestionTextInput;
 use crate::ui::widget::{power_button, restart_button, suggestion_text_input};
+use crate::ui::widgets::labeled_message_toggler;
 use crate::ui::with_tooltip;
 use crate::{DanceInterpreter, Message};
 use iced::alignment::Vertical;

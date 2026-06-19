@@ -1,8 +1,10 @@
+use crate::ui::config_window::ConfigWindow;
 use crate::ui::config_window::sidebar::SidebarMessage;
-use crate::ui::config_window::{
-    ConfigWindow, label_message_button_fill, label_message_button_fill_opt,
-    label_message_button_shrink, labeled_message_checkbox, material_icon_sized_message_button,
+use crate::ui::widgets::buttons::{
+    label_message_button_fill, label_message_button_fill_opt, label_message_button_shrink,
+    material_symbol_sized_message_button,
 };
+use crate::ui::widgets::labeled_message_checkbox;
 use crate::ui::with_tooltip;
 use crate::{DanceInterpreter, Message};
 use iced::alignment::Vertical;
@@ -127,7 +129,7 @@ pub(crate) fn build<'a>(
     .spacing(5);
 
     let sidebar_button = with_tooltip(
-        material_icon_sized_message_button(
+        material_symbol_sized_message_button(
             if config_window.sidebar.state.value() {
                 "right_panel_close"
             } else {

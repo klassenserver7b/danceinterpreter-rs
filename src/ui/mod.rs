@@ -1,11 +1,10 @@
-use iced::widget::Text;
-use iced::widget::text::Shaping;
 use iced::widget::{container, text, tooltip};
-use iced::{Element, Font, Length, Pixels, Renderer, Theme};
+use iced::{Element, Theme};
 
 pub mod config_window;
 pub mod song_window;
 pub mod widget;
+pub mod widgets;
 
 /// Wraps a widget in a tooltip with a readable styled container.
 pub fn with_tooltip<'a, Message: 'a>(
@@ -23,25 +22,4 @@ pub fn with_tooltip<'a, Message: 'a>(
     )
     .gap(4)
     .into()
-}
-
-pub fn material_icon_sized(
-    id: &'_ str,
-    filled: bool,
-    size: impl Into<Pixels>,
-) -> Text<'_, Theme, Renderer> {
-    material_icon(id, filled).size(size)
-}
-
-pub fn material_icon(id: &'_ str, filled: bool) -> Text<'_, Theme, Renderer> {
-    let font_name = if filled {
-        "Material Icons"
-    } else {
-        "Material Symbols Outlined"
-    };
-
-    Text::new(id)
-        .font(Font::with_name(font_name))
-        .shaping(Shaping::Advanced)
-        .width(Length::Shrink)
 }
