@@ -16,7 +16,7 @@ use iced_aw::style::Status;
 use iced_aw::style::menu_bar::primary;
 use iced_aw::{Menu, menu, menu_bar, menu_items, number_input};
 
-pub(crate) fn build<'a>(
+pub fn build<'a>(
     config_window: &'a ConfigWindow,
     dance_interpreter: &'a DanceInterpreter,
 ) -> Stack<'a, Message, Theme, Renderer> {

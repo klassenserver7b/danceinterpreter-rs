@@ -43,7 +43,7 @@ fn main() -> iced::Result {
     .run()
 }
 
-pub(crate) trait Window {
+pub trait Window {
     fn new(id: window::Id) -> Self;
 
     fn on_resize(&mut self, size: Size);

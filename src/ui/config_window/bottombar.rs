@@ -6,7 +6,7 @@ use iced::widget::scrollable::{Direction, Scrollbar};
 use iced::widget::{Button, Column, button, column as col, container, row, scrollable, text};
 use iced::{Element, Font, Length, Theme, font};
 
-pub(crate) fn build(dance_interpreter: &'_ DanceInterpreter) -> Column<'_, Message> {
+pub fn build(dance_interpreter: &'_ DanceInterpreter) -> Column<'_, Message> {
     let statics_buttons = get_statics_buttons(dance_interpreter);
 
     let statics_scrollable = scrollable(row(statics_buttons).spacing(5))
@@ -26,9 +26,7 @@ pub(crate) fn build(dance_interpreter: &'_ DanceInterpreter) -> Column<'_, Messa
         .spacing(5)
 }
 
-pub(crate) fn get_statics_buttons(
-    dance_interpreter: &'_ DanceInterpreter,
-) -> Vec<Element<'_, Message>> {
+pub fn get_statics_buttons(dance_interpreter: &'_ DanceInterpreter) -> Vec<Element<'_, Message>> {
     let bold_font = Font {
         family: font::Family::SansSerif,
         weight: font::Weight::Bold,

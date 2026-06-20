@@ -17,12 +17,12 @@ use network_interface::Addr::V4;
 use network_interface::{NetworkInterface, NetworkInterfaceConfig};
 use std::time::Duration;
 
-pub(crate) struct Sidebar {
-    pub(crate) state: Animation<bool>,
-    pub(crate) power_button_cache: canvas::Cache,
-    pub(crate) restart_button_cache: canvas::Cache,
+pub struct Sidebar {
+    pub state: Animation<bool>,
+    pub power_button_cache: canvas::Cache,
+    pub restart_button_cache: canvas::Cache,
     server_address_presets: suggestion_text_input::State<String>,
-    pub(crate) server_address_text: String,
+    pub server_address_text: String,
 }
 
 #[derive(Debug, Clone)]
@@ -32,7 +32,7 @@ pub enum SidebarMessage {
 }
 
 impl Sidebar {
-    pub(crate) fn new() -> Self {
+    pub fn new() -> Self {
         Self {
             state: Animation::new(false)
                 .duration(Duration::from_millis(100))
@@ -44,10 +44,7 @@ impl Sidebar {
         }
     }
 
-    pub(crate) fn build<'a>(
-        &'a self,
-        dance_interpreter: &'a DanceInterpreter,
-    ) -> Container<'a, Message> {
+    pub fn build<'a>(&'a self, dance_interpreter: &'a DanceInterpreter) -> Container<'a, Message> {
         let sync_options = vec![
             TraktorSyncMode::Relative,
             TraktorSyncMode::AbsoluteByNumber,
@@ -158,7 +155,7 @@ impl Sidebar {
         .align_y(Vertical::Top)
     }
 
-    pub(crate) fn update_network_interface_selection(&mut self, data_provider: &DataProvider) {
+    pub fn update_network_interface_selection(&mut self, data_provider: &DataProvider) {
         let mut detected_interfaces: Vec<String> = get_formatted_network_interfaces(data_provider)
             .into_iter()
             .map(|(_, _, formatted)| formatted)
