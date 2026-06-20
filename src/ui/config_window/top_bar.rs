@@ -140,9 +140,9 @@ pub(crate) fn build<'a>(
         )
         .padding([0, 4]),
         if config_window.sidebar.state.value() {
-            "Expand Traktor Panel"
-        } else {
             "Collapse Traktor Panel"
+        } else {
+            "Expand Traktor Panel"
         },
     );
 

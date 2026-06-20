@@ -6,7 +6,7 @@ use iced::{Color, Font, Length, Pixels, Renderer, Theme};
 
 pub mod buttons;
 
-pub fn labeled_message_checkbox(
+pub(crate) fn labeled_message_checkbox(
     label: &'_ str,
     checked: bool,
     message: fn(bool) -> Message,
@@ -18,7 +18,7 @@ pub fn labeled_message_checkbox(
     //.style(checkbox::secondary)
 }
 
-pub fn labeled_message_toggler(
+pub(crate) fn labeled_message_toggler(
     label: &'_ str,
     checked: bool,
     message: fn(bool) -> Message,
@@ -30,7 +30,7 @@ pub fn labeled_message_toggler(
 }
 
 #[allow(dead_code)]
-pub fn labeled_message_radio<T: Copy + Eq>(
+pub(crate) fn labeled_message_radio<T: Copy + Eq>(
     label: &'_ str,
     value: T,
     selection: T,
@@ -41,7 +41,7 @@ pub fn labeled_message_radio<T: Copy + Eq>(
 }
 
 #[allow(dead_code)]
-pub fn labeled_message_checkbox_opt(
+pub(crate) fn labeled_message_checkbox_opt(
     label: &'_ str,
     checked: bool,
     message: Option<fn(bool) -> Message>,
@@ -55,7 +55,7 @@ pub fn labeled_message_checkbox_opt(
 }
 
 #[allow(dead_code)]
-pub fn labeled_dynamic_text_input<'a>(
+pub(crate) fn labeled_dynamic_text_input<'a>(
     label: &'a str,
     placeholder: &'a str,
     value: &'a str,
@@ -73,7 +73,7 @@ pub fn labeled_dynamic_text_input<'a>(
     col!(text(label).width(Length::Fill), input,).width(Length::Fill)
 }
 
-pub fn material_symbol_colored(
+pub(crate) fn material_symbol_colored(
     id: &'_ str,
     filled: bool,
     color: impl Into<Color>,
@@ -81,7 +81,7 @@ pub fn material_symbol_colored(
     material_symbol(id, filled).color(color)
 }
 
-pub fn material_symbol_sized(
+pub(crate) fn material_symbol_sized(
     id: &'_ str,
     filled: bool,
     size: impl Into<Pixels>,
@@ -89,7 +89,7 @@ pub fn material_symbol_sized(
     material_symbol(id, filled).size(size)
 }
 
-pub fn material_symbol(id: &'_ str, filled: bool) -> Text<'_, Theme, Renderer> {
+pub(crate) fn material_symbol(id: &'_ str, filled: bool) -> Text<'_, Theme, Renderer> {
     let font_name = if filled {
         "Material Icons"
     } else {

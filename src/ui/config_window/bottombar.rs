@@ -12,7 +12,7 @@ pub(crate) fn build(dance_interpreter: &'_ DanceInterpreter) -> Column<'_, Messa
     let statics_scrollable = scrollable(row(statics_buttons).spacing(5))
         .direction(Direction::Horizontal(Scrollbar::new()))
         .spacing(5)
-        .width(Length::Fill);
+        .width(Length::Shrink);
 
     let statics_bar = container(statics_scrollable)
         .width(Length::Shrink)
@@ -20,7 +20,7 @@ pub(crate) fn build(dance_interpreter: &'_ DanceInterpreter) -> Column<'_, Messa
             container::Style::default().background(t.extended_palette().background.weakest.color)
         });
 
-    col![statics_bar].align_x(Horizontal::Left).spacing(5)
+    col![statics_bar].align_x(Horizontal::Center).spacing(5)
 }
 
 pub(crate) fn get_statics_buttons(

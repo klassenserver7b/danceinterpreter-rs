@@ -231,7 +231,8 @@ impl ConfigWindow {
 
         for (i, song) in dance_interpreter.data_provider.statics.iter().enumerate() {
             let is_match = Self::song_matches_search_query(&self.search_query, song);
-            let static_row = Self::build_static_row(song, i);
+            let static_row =
+                Self::build_static_row(song, i, self.theme.extended_palette().primary.weak.color);
             let row_container = Self::build_song_row_container_styled(static_row, is_match, i);
             list_column = list_column.push(row_container);
         }
@@ -244,14 +245,18 @@ impl ConfigWindow {
         col!(trow, statics_scrollable).spacing(5)
     }
 
-    fn build_static_row<'a>(song: &SongInfo, idx: usize) -> Row<'a, Message> {
+    fn build_static_row<'a>(
+        song: &SongInfo,
+        idx: usize,
+        color: impl Into<Color>,
+    ) -> Row<'a, Message> {
         row![
             if song.is_favorite {
                 material_symbol_message_button_colored(
                     "star",
                     song.is_favorite,
                     Message::ToggleStaticFavorite(idx),
-                    Color::from_rgb8(255, 215, 0),
+                    color,
                 )
             } else {
                 material_symbol_message_button(
