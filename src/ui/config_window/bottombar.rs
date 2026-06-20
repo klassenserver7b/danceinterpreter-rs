@@ -20,7 +20,10 @@ pub(crate) fn build(dance_interpreter: &'_ DanceInterpreter) -> Column<'_, Messa
             container::Style::default().background(t.extended_palette().background.weakest.color)
         });
 
-    col![statics_bar].align_x(Horizontal::Center).spacing(5)
+    col![statics_bar]
+        .width(Length::Fill)
+        .align_x(Horizontal::Center)
+        .spacing(5)
 }
 
 pub(crate) fn get_statics_buttons(
