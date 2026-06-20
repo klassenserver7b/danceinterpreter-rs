@@ -5,8 +5,8 @@ mod traktor_api;
 mod ui;
 
 use crate::async_utils::run_subscription_with;
-use crate::dataloading::dataprovider::song_data_provider::{
-    SongChange, SongDataEdit, SongDataProvider, SongDataSource,
+use crate::dataloading::dataprovider::{
+    DataProvider, ItemChange, ItemSource, SongDataEdit, StaticDataEdit,
 };
 use crate::dataloading::id3tagreader::read_song_info_from_filepath;
 use crate::dataloading::m3uloader::load_tag_data_from_m3u;
@@ -56,7 +56,7 @@ struct DanceInterpreter {
     config_window: ConfigWindow,
     song_window: SongWindow,
 
-    data_provider: SongDataProvider,
+    data_provider: DataProvider,
 }
 
 #[derive(Debug, Clone)]
@@ -92,19 +92,18 @@ pub enum Message {
     AddBlankEntry,
 
     AddSong(SongInfo),
-    DeleteSong(SongDataSource),
+    DeleteItem(ItemSource),
     AddBlankSong(RelativeOffset),
     SongDataEdit(usize, SongDataEdit),
 
     ReloadStatics,
     ToggleStaticFavorite(usize),
-    UpdateStaticName(usize, String),
+    UpdateStaticName(usize, StaticDataEdit),
     AddBlankStatic,
-    DeleteStatic(usize),
 
     FileDropped(PathBuf),
-    SongChanged(SongChange),
-    SetNextSong(SongDataSource),
+    ItemChanged(ItemChange),
+    SetNextItem(ItemSource),
 
     Animate,
     Traktor(TraktorMessage),
@@ -135,7 +134,7 @@ impl DanceInterpreter {
             config_window,
             song_window,
 
-            data_provider: SongDataProvider::default(),
+            data_provider: DataProvider::default(),
         };
 
         tasks.push(cw_opened);
@@ -352,20 +351,14 @@ impl DanceInterpreter {
                 ().into()
             }
 
-            Message::UpdateStaticName(i, name) => {
-                self.data_provider.update_static_name(i, name);
+            Message::UpdateStaticName(i, edit) => {
+                self.data_provider.handle_static_data_edit(i, edit);
                 self.save_statics();
                 ().into()
             }
 
             Message::AddBlankStatic => {
                 self.data_provider.add_static();
-                self.save_statics();
-                ().into()
-            }
-
-            Message::DeleteStatic(i) => {
-                self.data_provider.delete_song(SongDataSource::Static(i));
                 self.save_statics();
                 ().into()
             }
@@ -398,8 +391,8 @@ impl DanceInterpreter {
                 ().into()
             }
 
-            Message::SongChanged(song_change) => {
-                self.data_provider.handle_song_change(song_change);
+            Message::ItemChanged(song_change) => {
+                self.data_provider.handle_item_change(song_change);
                 self.try_scroll_to_song()
             }
 
@@ -418,12 +411,12 @@ impl DanceInterpreter {
                 Task::done(Message::SnapTo(offset))
             }
 
-            Message::DeleteSong(song) => {
-                self.data_provider.delete_song(song);
+            Message::DeleteItem(song) => {
+                self.data_provider.delete_item(song);
                 ().into()
             }
 
-            Message::SetNextSong(i) => {
+            Message::SetNextItem(i) => {
                 self.data_provider.set_next(i);
                 ().into()
             }
@@ -642,8 +635,7 @@ impl DanceInterpreter {
                 }
             }
             TraktorSyncAction::PlaylistAbsolute(pos) => {
-                self.data_provider
-                    .set_current(SongDataSource::Playlist(pos));
+                self.data_provider.set_current(ItemSource::Playlist(pos));
             }
         }
     }
@@ -685,13 +677,13 @@ impl DanceInterpreter {
 
                 match key {
                     Key::Named(Named::ArrowRight) | Key::Named(Named::Space) => {
-                        Some(Message::SongChanged(SongChange::Next))
+                        Some(Message::ItemChanged(ItemChange::Next))
                     }
                     Key::Named(Named::ArrowLeft) => {
-                        Some(Message::SongChanged(SongChange::Previous))
+                        Some(Message::ItemChanged(ItemChange::Previous))
                     }
                     Key::Named(Named::End) => {
-                        Some(Message::SongChanged(SongChange::StaticAbsolute(0)))
+                        Some(Message::ItemChanged(ItemChange::StaticAbsolute(0)))
                     }
                     Key::Named(Named::F11) => Some(Message::ToggleFullscreen),
                     Key::Named(Named::F5) => Some(Message::ReloadStatics),

@@ -1,4 +1,4 @@
-use crate::dataloading::dataprovider::song_data_provider::SongChange;
+use crate::dataloading::dataprovider::ItemChange;
 use crate::ui::with_tooltip;
 use crate::{DanceInterpreter, Message};
 use iced::alignment::{Horizontal, Vertical};
@@ -39,11 +39,11 @@ pub(crate) fn get_statics_buttons(
     let btn_blank: Button<Message> =
         button(text("Blank").align_y(Vertical::Center).font(bold_font))
             .style(button::secondary)
-            .on_press(Message::SongChanged(SongChange::Blank));
+            .on_press(Message::ItemChanged(ItemChange::Blank));
     let btn_traktor: Button<Message> =
         button(text("Traktor").align_y(Vertical::Center).font(bold_font))
             .style(button::secondary)
-            .on_press(Message::SongChanged(SongChange::Traktor));
+            .on_press(Message::ItemChanged(ItemChange::Traktor));
     let mut statics: Vec<Element<_>> = dance_interpreter
         .data_provider
         .statics
@@ -52,10 +52,10 @@ pub(crate) fn get_statics_buttons(
         .filter(|(_, s)| s.is_favorite)
         .map(|(idx, s)| {
             with_tooltip(
-                button(text(&s.dance).font(bold_font))
+                button(text(&s.name).font(bold_font))
                     .style(button::secondary)
-                    .on_press(Message::SongChanged(SongChange::StaticAbsolute(idx))),
-                format!("Show {} static", s.dance),
+                    .on_press(Message::ItemChanged(ItemChange::StaticAbsolute(idx))),
+                format!("Show {} static", s.name),
             )
         })
         .collect();

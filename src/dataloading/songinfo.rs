@@ -1,16 +1,12 @@
 use iced::widget::image;
-use serde::{Deserialize, Serialize};
 
-#[derive(Default, Clone, Debug, PartialEq, Serialize, Deserialize)]
-#[serde(default)]
+#[derive(Default, Clone, Debug, PartialEq)]
 pub struct SongInfo {
     pub track_number: u32,
     pub title: String,
     pub artist: String,
     pub dance: String,
-    #[serde(skip)]
     pub album_art: Option<image::Handle>,
-    pub is_favorite: bool,
 }
 
 impl SongInfo {
@@ -34,7 +30,6 @@ impl SongInfo {
             artist,
             dance,
             album_art,
-            is_favorite: false,
         }
     }
 }

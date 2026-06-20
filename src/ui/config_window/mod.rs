@@ -2,10 +2,10 @@ pub mod bottombar;
 pub mod sidebar;
 pub mod top_bar;
 
-use crate::dataloading::dataprovider::song_data_provider::{
-    SongChange, SongDataEdit, SongDataSource,
-};
+use crate::dataloading::dataprovider::{ItemChange, ItemSource, SongDataEdit, StaticDataEdit};
+use crate::dataloading::displayable_data::DisplayableData;
 use crate::dataloading::songinfo::SongInfo;
+use crate::dataloading::staticinfo::StaticInfo;
 use crate::ui::config_window::sidebar::{Sidebar, SidebarMessage};
 use crate::ui::widget::dynamic_text_input::DynamicTextInput;
 use crate::ui::widgets::buttons::{
@@ -150,9 +150,9 @@ impl ConfigWindow {
             .iter()
             .enumerate()
         {
-            let is_match = Self::song_matches_search_query(&self.search_query, song);
+            let is_match = Self::data_matches_search_query(&self.search_query, song.into());
             let song_row = Self::build_song_row(dance_interpreter, song, i);
-            let sr_container = Self::build_song_row_container_styled(song_row, is_match, i);
+            let sr_container = Self::build_item_row_container_styled(song_row, is_match, i);
             playlist_column = playlist_column.push(sr_container);
         }
 
@@ -229,11 +229,14 @@ impl ConfigWindow {
 
         let mut list_column = col!().spacing(5);
 
-        for (i, song) in dance_interpreter.data_provider.statics.iter().enumerate() {
-            let is_match = Self::song_matches_search_query(&self.search_query, song);
-            let static_row =
-                Self::build_static_row(song, i, self.theme.extended_palette().primary.weak.color);
-            let row_container = Self::build_song_row_container_styled(static_row, is_match, i);
+        for (i, static_info) in dance_interpreter.data_provider.statics.iter().enumerate() {
+            let is_match = Self::data_matches_search_query(&self.search_query, static_info.into());
+            let static_row = Self::build_static_row(
+                static_info,
+                i,
+                self.theme.extended_palette().primary.weak.color,
+            );
+            let row_container = Self::build_item_row_container_styled(static_row, is_match, i);
             list_column = list_column.push(row_container);
         }
 
@@ -246,40 +249,44 @@ impl ConfigWindow {
     }
 
     fn build_static_row<'a>(
-        song: &SongInfo,
+        static_info: &StaticInfo,
         idx: usize,
         color: impl Into<Color>,
     ) -> Row<'a, Message> {
         row![
-            if song.is_favorite {
+            if static_info.is_favorite {
                 material_symbol_message_button_colored(
                     "star",
-                    song.is_favorite,
+                    static_info.is_favorite,
                     Message::ToggleStaticFavorite(idx),
                     color,
                 )
             } else {
                 material_symbol_message_button(
                     "star",
-                    song.is_favorite,
+                    static_info.is_favorite,
                     Message::ToggleStaticFavorite(idx),
                 )
             },
-            DynamicTextInput::<'_, Message>::new("Static Name", &song.dance)
+            DynamicTextInput::<'_, Message>::new("Static Name", &static_info.name)
                 .width(Length::Fill)
-                .on_change(move |v| Message::UpdateStaticName(idx, v)),
+                .on_change(move |v| Message::UpdateStaticName(idx, StaticDataEdit::Name(v))),
             row![
                 Space::new().width(Length::Fill).height(Length::Shrink),
                 with_tooltip(
                     material_symbol_message_button(
                         "smart_display",
                         false,
-                        Message::SongChanged(SongChange::StaticAbsolute(idx))
+                        Message::ItemChanged(ItemChange::StaticAbsolute(idx))
                     ),
                     "Show now"
                 ),
                 with_tooltip(
-                    material_symbol_message_button("delete", false, Message::DeleteStatic(idx)),
+                    material_symbol_message_button(
+                        "delete",
+                        false,
+                        Message::DeleteItem(ItemSource::Static(idx))
+                    ),
                     "Delete static"
                 ),
             ]
@@ -338,7 +345,7 @@ impl ConfigWindow {
                     material_symbol_message_button(
                         "smart_display",
                         false,
-                        Message::SongChanged(SongChange::PlaylistAbsolute(idx))
+                        Message::ItemChanged(ItemChange::PlaylistAbsolute(idx))
                     ),
                     "Show now"
                 ),
@@ -346,7 +353,7 @@ impl ConfigWindow {
                     material_symbol_message_button(
                         "queue_play_next",
                         false,
-                        Message::SetNextSong(SongDataSource::Playlist(idx))
+                        Message::SetNextItem(ItemSource::Playlist(idx))
                     ),
                     "Set as next song"
                 ),
@@ -354,7 +361,7 @@ impl ConfigWindow {
                     material_symbol_message_button(
                         "delete",
                         false,
-                        Message::DeleteSong(SongDataSource::Playlist(idx))
+                        Message::DeleteItem(ItemSource::Playlist(idx))
                     ),
                     "Delete song"
                 ),
@@ -366,7 +373,7 @@ impl ConfigWindow {
         .align_y(Alignment::Center)
     }
 
-    fn build_song_row_container_styled(
+    fn build_item_row_container_styled(
         song_row: Row<Message>,
         highlight: bool,
         idx: usize,
@@ -399,18 +406,19 @@ impl ConfigWindow {
             .width(Length::Fill)
     }
 
-    fn song_matches_search_query(search_query: &str, song: &SongInfo) -> bool {
+    fn data_matches_search_query(search_query: &str, data: DisplayableData) -> bool {
         let matcher = Matcher::default();
 
         !search_query.is_empty()
             && matcher
                 .fuzzy_match(
-                    &format!(
+                    format!(
                         "{} {} {}",
-                        song.title.to_lowercase(),
-                        song.artist.to_lowercase(),
-                        song.dance.to_lowercase()
-                    ),
+                        data.headline.to_lowercase(),
+                        data.subline_upper.to_lowercase(),
+                        data.subline_lower.to_lowercase()
+                    )
+                    .trim(),
                     &search_query.to_lowercase(),
                 )
                 .is_some()

@@ -46,7 +46,7 @@ impl Window for SongWindow {
 
 impl SongWindow {
     pub fn view<'a>(&self, state: &'a DanceInterpreter) -> Element<'a, Message> {
-        let Some(song_info) = state.data_provider.get_current_song_info() else {
+        let Some(displayable_data) = state.data_provider.get_current_displayable_data() else {
             return horizontal().into();
         };
 
@@ -64,24 +64,24 @@ impl SongWindow {
             + song_spacing
             + LineHeight::default().to_absolute(artist_size.into());
 
-        let text_dance = Text::new(&song_info.dance)
+        let text_dance = Text::new(displayable_data.headline)
             .size(dance_size)
             .height(Length::Fill)
             .align_y(Vertical::Bottom)
             .shaping(Shaping::Advanced);
 
         let column_title_artist = column![
-            Text::new(&song_info.title)
+            Text::new(displayable_data.subline_upper)
                 .size(title_size)
                 .shaping(Shaping::Advanced),
-            Text::new(&song_info.artist)
+            Text::new(displayable_data.subline_lower)
                 .size(artist_size)
                 .shaping(Shaping::Advanced),
         ]
         .spacing(song_spacing);
 
         let row_bottom = (if self.enable_image {
-            if let Some(image_handle) = song_info.album_art.as_ref() {
+            if let Some(image_handle) = displayable_data.subline_image.as_ref() {
                 row![
                     image(image_handle).height(cover_height),
                     column_title_artist
@@ -103,7 +103,7 @@ impl SongWindow {
             .spacing(dance_spacing);
 
         (if self.enable_next_dance {
-            if let Some(next_song_info) = state.data_provider.get_next_song_info() {
+            if let Some(next_displayable_data) = state.data_provider.get_next_displayable_data() {
                 stack![
                     column_center,
                     row![
@@ -115,7 +115,7 @@ impl SongWindow {
                                 .align_x(Horizontal::Right)
                                 .align_y(Vertical::Bottom)
                                 .shaping(Shaping::Advanced),
-                            Text::new(&next_song_info.dance)
+                            Text::new(next_displayable_data.headline)
                                 .size(next_dance_size)
                                 .align_x(Horizontal::Right)
                                 .align_y(Vertical::Bottom)

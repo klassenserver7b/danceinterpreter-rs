@@ -1,4 +1,4 @@
-use crate::dataloading::dataprovider::song_data_provider::SongDataProvider;
+use crate::dataloading::dataprovider::DataProvider;
 use crate::traktor_api::{
     ConnectionState, TRAKTOR_SERVER_DEFAULT_ADDR, TraktorMessage, TraktorNextMode, TraktorSyncMode,
 };
@@ -158,21 +158,17 @@ impl Sidebar {
         .align_y(Vertical::Top)
     }
 
-    pub(crate) fn update_network_interface_selection(
-        &mut self,
-        song_data_provider: &SongDataProvider,
-    ) {
-        let mut detected_interfaces: Vec<String> =
-            get_formatted_network_interfaces(song_data_provider)
-                .into_iter()
-                .map(|(_, _, formatted)| formatted)
-                .collect();
+    pub(crate) fn update_network_interface_selection(&mut self, data_provider: &DataProvider) {
+        let mut detected_interfaces: Vec<String> = get_formatted_network_interfaces(data_provider)
+            .into_iter()
+            .map(|(_, _, formatted)| formatted)
+            .collect();
         detected_interfaces.push(TRAKTOR_SERVER_DEFAULT_ADDR.to_owned());
         detected_interfaces.sort();
 
         self.server_address_presets = suggestion_text_input::State::with_selection(
             detected_interfaces,
-            Some(&song_data_provider.traktor_provider.address.clone()),
+            Some(&data_provider.traktor_provider.address.clone()),
         );
     }
 
@@ -272,11 +268,11 @@ fn get_network_interfaces() -> Vec<(String, String)> {
 }
 
 fn get_formatted_network_interfaces(
-    song_data_provider: &'_ SongDataProvider,
+    data_provider: &'_ DataProvider,
 ) -> Vec<(String, String, String)> {
     let interfaces = get_network_interfaces();
 
-    let original_addr = song_data_provider
+    let original_addr = data_provider
         .traktor_provider
         .get_socket_addr()
         .unwrap_or(TRAKTOR_SERVER_DEFAULT_ADDR.parse().unwrap());
