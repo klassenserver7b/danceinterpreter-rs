@@ -1,4 +1,4 @@
-use crate::dataloading::dataprovider::song_data_provider::SongChange;
+use crate::dataloading::dataprovider::ItemChange;
 use crate::ui::with_tooltip;
 use crate::{DanceInterpreter, Message};
 use iced::alignment::{Horizontal, Vertical};
@@ -6,13 +6,13 @@ use iced::widget::scrollable::{Direction, Scrollbar};
 use iced::widget::{Button, Column, button, column as col, container, row, scrollable, text};
 use iced::{Element, Font, Length, Theme, font};
 
-pub(crate) fn build(dance_interpreter: &'_ DanceInterpreter) -> Column<'_, Message> {
+pub fn build(dance_interpreter: &'_ DanceInterpreter) -> Column<'_, Message> {
     let statics_buttons = get_statics_buttons(dance_interpreter);
 
     let statics_scrollable = scrollable(row(statics_buttons).spacing(5))
         .direction(Direction::Horizontal(Scrollbar::new()))
         .spacing(5)
-        .width(Length::Fill);
+        .width(Length::Shrink);
 
     let statics_bar = container(statics_scrollable)
         .width(Length::Shrink)
@@ -20,12 +20,13 @@ pub(crate) fn build(dance_interpreter: &'_ DanceInterpreter) -> Column<'_, Messa
             container::Style::default().background(t.extended_palette().background.weakest.color)
         });
 
-    col![statics_bar].align_x(Horizontal::Left).spacing(5)
+    col![statics_bar]
+        .width(Length::Fill)
+        .align_x(Horizontal::Center)
+        .spacing(5)
 }
 
-pub(crate) fn get_statics_buttons(
-    dance_interpreter: &'_ DanceInterpreter,
-) -> Vec<Element<'_, Message>> {
+pub fn get_statics_buttons(dance_interpreter: &'_ DanceInterpreter) -> Vec<Element<'_, Message>> {
     let bold_font = Font {
         family: font::Family::SansSerif,
         weight: font::Weight::Bold,
@@ -36,22 +37,23 @@ pub(crate) fn get_statics_buttons(
     let btn_blank: Button<Message> =
         button(text("Blank").align_y(Vertical::Center).font(bold_font))
             .style(button::secondary)
-            .on_press(Message::SongChanged(SongChange::Blank));
+            .on_press(Message::ItemChanged(ItemChange::Blank));
     let btn_traktor: Button<Message> =
         button(text("Traktor").align_y(Vertical::Center).font(bold_font))
             .style(button::secondary)
-            .on_press(Message::SongChanged(SongChange::Traktor));
+            .on_press(Message::ItemChanged(ItemChange::Traktor));
     let mut statics: Vec<Element<_>> = dance_interpreter
         .data_provider
         .statics
         .iter()
         .enumerate()
+        .filter(|(_, s)| s.is_favorite)
         .map(|(idx, s)| {
             with_tooltip(
-                button(text(&s.dance).font(bold_font))
+                button(text(&s.name).font(bold_font))
                     .style(button::secondary)
-                    .on_press(Message::SongChanged(SongChange::StaticAbsolute(idx))),
-                format!("Show {} static", s.dance),
+                    .on_press(Message::ItemChanged(ItemChange::StaticAbsolute(idx))),
+                format!("Show {} static", s.name),
             )
         })
         .collect();

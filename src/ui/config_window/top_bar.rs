@@ -1,13 +1,14 @@
+use crate::ui::config_window::ConfigWindow;
 use crate::ui::config_window::sidebar::SidebarMessage;
-use crate::ui::config_window::{
-    ConfigWindow, label_message_button_fill, label_message_button_fill_opt,
-    label_message_button_shrink, labeled_message_checkbox, material_icon_sized_message_button,
+use crate::ui::widgets::buttons::{
+    label_message_button_fill, label_message_button_fill_opt, label_message_button_shrink,
+    material_symbol_sized_message_button,
 };
+use crate::ui::widgets::labeled_message_checkbox;
 use crate::ui::with_tooltip;
 use crate::{DanceInterpreter, Message};
 use iced::alignment::Vertical;
 use iced::border::Radius;
-use iced::widget::scrollable::RelativeOffset;
 use iced::widget::space::horizontal;
 use iced::widget::{Space, Stack, pick_list, row, stack, text};
 use iced::{Border, Length, Renderer, Theme};
@@ -15,7 +16,7 @@ use iced_aw::style::Status;
 use iced_aw::style::menu_bar::primary;
 use iced_aw::{Menu, menu, menu_bar, menu_items, number_input};
 
-pub(crate) fn build<'a>(
+pub fn build<'a>(
     config_window: &'a ConfigWindow,
     dance_interpreter: &'a DanceInterpreter,
 ) -> Stack<'a, Message, Theme, Renderer> {
@@ -63,7 +64,7 @@ pub(crate) fn build<'a>(
                         .spacing(5.0)
                         .width(Length::Fill)),
                         (label_message_button_fill("Reload Statics", Message::ReloadStatics)),
-                        (label_message_button_fill("Add blank song", Message::AddBlankSong(RelativeOffset::END))),
+                        (label_message_button_fill(format!("Add blank {}", if config_window.is_statics_view {"static"} else {"song"}), Message::AddBlankEntry)),
                     )
                 )
                 .spacing(5.0)
@@ -127,20 +128,21 @@ pub(crate) fn build<'a>(
     .spacing(5);
 
     let sidebar_button = with_tooltip(
-        material_icon_sized_message_button(
+        material_symbol_sized_message_button(
             if config_window.sidebar.state.value() {
                 "right_panel_close"
             } else {
                 "right_panel_open"
             },
+            false,
             20.0,
             Message::Sidebar(SidebarMessage::Toggle),
         )
         .padding([0, 4]),
         if config_window.sidebar.state.value() {
-            "Expand Traktor Panel"
-        } else {
             "Collapse Traktor Panel"
+        } else {
+            "Expand Traktor Panel"
         },
     );
 

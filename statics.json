@@ -1,0 +1,66 @@
+[
+  {
+    "name": "Discofox",
+    "is_favorite": true
+  },
+  {
+    "name": "Cha Cha Cha",
+    "is_favorite": true
+  },
+  {
+    "name": "Rumba",
+    "is_favorite": true
+  },
+  {
+    "name": "Jive",
+    "is_favorite": true
+  },
+  {
+    "name": "Samba",
+    "is_favorite": true
+  },
+  {
+    "name": "Salsa",
+    "is_favorite": true
+  },
+  {
+    "name": "Langsamer Walzer",
+    "is_favorite": true
+  },
+  {
+    "name": "Wiener Walzer",
+    "is_favorite": true
+  },
+  {
+    "name": "Tango",
+    "is_favorite": true
+  },
+  {
+    "name": "Quickstep",
+    "is_favorite": true
+  },
+  {
+    "name": "Foxtrott",
+    "is_favorite": false
+  },
+  {
+    "name": "Rock 'n' Roll",
+    "is_favorite": false
+  },
+  {
+    "name": "Slowfox",
+    "is_favorite": true
+  },
+  {
+    "name": "Quickstep / Foxtrott",
+    "is_favorite": false
+  },
+  {
+    "name": "Samba / Salsa",
+    "is_favorite": false
+  },
+  {
+    "name": "Jive / Rock 'n' Roll",
+    "is_favorite": false
+  }
+]

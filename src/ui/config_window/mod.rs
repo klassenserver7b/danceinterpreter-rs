@@ -2,23 +2,26 @@ pub mod bottombar;
 pub mod sidebar;
 pub mod top_bar;
 
-use crate::dataloading::dataprovider::song_data_provider::{
-    SongChange, SongDataEdit, SongDataSource,
-};
+use crate::dataloading::dataprovider::{ItemChange, ItemSource, SongDataEdit, StaticDataEdit};
+use crate::dataloading::displayable_data::DisplayableData;
 use crate::dataloading::songinfo::SongInfo;
+use crate::dataloading::staticinfo::StaticInfo;
 use crate::ui::config_window::sidebar::{Sidebar, SidebarMessage};
 use crate::ui::widget::dynamic_text_input::DynamicTextInput;
-use crate::ui::{material_icon, material_icon_sized, with_tooltip};
+use crate::ui::widgets::buttons::{
+    material_symbol_message_button, material_symbol_message_button_colored,
+};
+use crate::ui::widgets::{material_symbol, material_symbol_sized};
+use crate::ui::with_tooltip;
 use crate::{DanceInterpreter, Message, Window};
 use fuzzy_matcher::FuzzyMatcher;
 use fuzzy_matcher::skim::SkimMatcherV2 as Matcher;
 use iced::alignment::Vertical;
 use iced::widget::{
-    Button, Column, Container, Row, Scrollable, Space, TextInput, button, checkbox, column as col,
-    container, radio, row, scrollable, text, toggler,
+    Column, Container, Row, Scrollable, Space, TextInput, button, column as col, container, row,
+    scrollable, text,
 };
-use iced::{Alignment, Element, Length, Pixels, Renderer, Size, Theme, window};
-use iced_aw::iced_aw_font;
+use iced::{Alignment, Color, Element, Length, Size, Theme, window};
 use std::sync::LazyLock;
 use std::time::Instant;
 
@@ -106,7 +109,7 @@ impl ConfigWindow {
 
     fn build_search_bar<'a>(&self) -> Row<'a, Message> {
         row![
-            material_icon("search")
+            material_symbol("search", false)
                 .width(Length::Fixed(24.0))
                 .align_y(Vertical::Center),
             TextInput::new("Search...", &self.search_query)
@@ -114,8 +117,8 @@ impl ConfigWindow {
                 .on_submit(Message::Noop)
                 .width(Length::Fill)
                 .padding([4, 8]),
-            material_icon_message_button("backspace", Message::ClearSearch),
-            material_icon_message_button("close", Message::ToggleSearch),
+            material_symbol_message_button("backspace", false, Message::ClearSearch),
+            material_symbol_message_button("close", false, Message::ToggleSearch),
         ]
         .spacing(5)
         .padding([5, 5])
@@ -147,9 +150,9 @@ impl ConfigWindow {
             .iter()
             .enumerate()
         {
-            let is_match = Self::song_matches_search_query(&self.search_query, song);
+            let is_match = Self::data_matches_search_query(&self.search_query, song.into());
             let song_row = Self::build_song_row(dance_interpreter, song, i);
-            let sr_container = Self::build_song_row_container_styled(song_row, is_match, i);
+            let sr_container = Self::build_item_row_container_styled(song_row, is_match, i);
             playlist_column = playlist_column.push(sr_container);
         }
 
@@ -167,7 +170,7 @@ impl ConfigWindow {
             text("Load Playlist").size(20),
             button(
                 col![
-                    material_icon_sized("folder_open", 64),
+                    material_symbol_sized("folder_open", false, 64),
                     text("Open playlist file").size(16)
                 ]
                 .align_x(Alignment::Center)
@@ -183,7 +186,7 @@ impl ConfigWindow {
             text("Use Traktor").size(20),
             button(
                 col![
-                    material_icon_sized("agriculture", 64),
+                    material_symbol_sized("agriculture", false, 64),
                     text("Open the sidebar").size(16)
                 ]
                 .align_x(Alignment::Center)
@@ -214,8 +217,92 @@ impl ConfigWindow {
         .align_x(Alignment::Center)
     }
 
-    fn build_statics_view(&'_ self, _dance_interpreter: &DanceInterpreter) -> Column<'_, Message> {
-        col![].width(Length::Fill).height(Length::Fill)
+    fn build_statics_view(&'_ self, dance_interpreter: &DanceInterpreter) -> Column<'_, Message> {
+        let trow = container(
+            row![
+                text("Fav").width(Length::Fixed(42.0)),
+                text!("Name").width(Length::Fill),
+                Space::new().width(Length::Fill).height(Length::Shrink),
+                button(row![material_symbol("add", false), text("Add Static")].spacing(5))
+                    .on_press(Message::AddBlankStatic)
+                    .padding([5, 10])
+                    .style(button::primary),
+            ]
+            .align_y(Vertical::Bottom)
+            .spacing(5),
+        )
+        .padding([4, 6])
+        .width(Length::Fill);
+
+        let mut list_column = col!().spacing(5);
+
+        for (i, static_info) in dance_interpreter.data_provider.statics.iter().enumerate() {
+            let is_match = Self::data_matches_search_query(&self.search_query, static_info.into());
+            let static_row = Self::build_static_row(
+                static_info,
+                i,
+                self.theme.extended_palette().primary.weak.color,
+            );
+            let row_container = Self::build_item_row_container_styled(static_row, is_match, i);
+            list_column = list_column.push(row_container);
+        }
+
+        let statics_scrollable: Scrollable<'_, Message> = scrollable(list_column)
+            .width(Length::Fill)
+            .height(Length::Fill)
+            .spacing(5);
+
+        col!(trow, statics_scrollable).spacing(5)
+    }
+
+    fn build_static_row<'a>(
+        static_info: &StaticInfo,
+        idx: usize,
+        color: impl Into<Color>,
+    ) -> Row<'a, Message> {
+        row![
+            if static_info.is_favorite {
+                material_symbol_message_button_colored(
+                    "star",
+                    static_info.is_favorite,
+                    Message::ToggleStaticFavorite(idx),
+                    color,
+                )
+            } else {
+                material_symbol_message_button(
+                    "star",
+                    static_info.is_favorite,
+                    Message::ToggleStaticFavorite(idx),
+                )
+            },
+            DynamicTextInput::<'_, Message>::new("Static Name", &static_info.name)
+                .width(Length::Fill)
+                .on_change(move |v| Message::UpdateStaticName(idx, StaticDataEdit::Name(v))),
+            row![
+                Space::new().width(Length::Fill).height(Length::Shrink),
+                with_tooltip(
+                    material_symbol_message_button(
+                        "smart_display",
+                        false,
+                        Message::ItemChanged(ItemChange::StaticAbsolute(idx))
+                    ),
+                    "Show now"
+                ),
+                with_tooltip(
+                    material_symbol_message_button(
+                        "delete",
+                        false,
+                        Message::DeleteItem(ItemSource::Static(idx))
+                    ),
+                    "Delete static"
+                ),
+            ]
+            .spacing(5)
+            .align_y(Alignment::Center)
+            .width(Length::Fill),
+        ]
+        .align_y(Alignment::Center)
+        .spacing(10)
     }
 
     fn build_song_row<'a>(
@@ -226,17 +313,21 @@ impl ConfigWindow {
         let (is_current, is_next, is_traktor, is_played) =
             dance_interpreter.data_provider.get_play_state(idx);
         let icon: Element<Message> = if is_traktor {
-            material_icon("agriculture")
+            material_symbol("agriculture", false)
                 .width(Length::Fixed(24.0))
                 .into()
         } else if is_current {
-            material_icon("play_arrow")
+            material_symbol("play_arrow", false)
                 .width(Length::Fixed(24.0))
                 .into()
         } else if is_next {
-            material_icon("skip_next").width(Length::Fixed(24.0)).into()
+            material_symbol("skip_next", false)
+                .width(Length::Fixed(24.0))
+                .into()
         } else if is_played {
-            material_icon("check").width(Length::Fixed(24.0)).into()
+            material_symbol("check", false)
+                .width(Length::Fixed(24.0))
+                .into()
         } else {
             Space::new()
                 .width(Length::Fixed(24.0))
@@ -258,23 +349,26 @@ impl ConfigWindow {
             row![
                 Space::new().width(Length::Fill).height(Length::Shrink),
                 with_tooltip(
-                    material_icon_message_button(
+                    material_symbol_message_button(
                         "smart_display",
-                        Message::SongChanged(SongChange::PlaylistAbsolute(idx))
+                        false,
+                        Message::ItemChanged(ItemChange::PlaylistAbsolute(idx))
                     ),
                     "Show now"
                 ),
                 with_tooltip(
-                    material_icon_message_button(
+                    material_symbol_message_button(
                         "queue_play_next",
-                        Message::SetNextSong(SongDataSource::Playlist(idx))
+                        false,
+                        Message::SetNextItem(ItemSource::Playlist(idx))
                     ),
                     "Set as next song"
                 ),
                 with_tooltip(
-                    material_icon_message_button(
+                    material_symbol_message_button(
                         "delete",
-                        Message::DeleteSong(SongDataSource::Playlist(idx))
+                        false,
+                        Message::DeleteItem(ItemSource::Playlist(idx))
                     ),
                     "Delete song"
                 ),
@@ -286,7 +380,7 @@ impl ConfigWindow {
         .align_y(Alignment::Center)
     }
 
-    fn build_song_row_container_styled(
+    fn build_item_row_container_styled(
         song_row: Row<Message>,
         highlight: bool,
         idx: usize,
@@ -319,18 +413,19 @@ impl ConfigWindow {
             .width(Length::Fill)
     }
 
-    fn song_matches_search_query(search_query: &str, song: &SongInfo) -> bool {
+    fn data_matches_search_query(search_query: &str, data: DisplayableData) -> bool {
         let matcher = Matcher::default();
 
         !search_query.is_empty()
             && matcher
                 .fuzzy_match(
-                    &format!(
+                    format!(
                         "{} {} {}",
-                        song.title.to_lowercase(),
-                        song.artist.to_lowercase(),
-                        song.dance.to_lowercase()
-                    ),
+                        data.headline.to_lowercase(),
+                        data.subline_upper.to_lowercase(),
+                        data.subline_lower.to_lowercase()
+                    )
+                    .trim(),
                     &search_query.to_lowercase(),
                 )
                 .is_some()
@@ -344,145 +439,4 @@ fn empty_folder_button_style(theme: &Theme, status: button::Status) -> button::S
     style.background = Some(palette.background.weakest.color.into());
     style.border.radius = 12.0.into();
     style
-}
-
-fn label_message_button_fill<'a>(
-    label: impl text::IntoFragment<'a>,
-    message: Message,
-) -> Button<'a, Message> {
-    label_message_button(label, message).width(Length::Fill)
-}
-
-fn label_message_button_shrink<'a>(
-    label: impl text::IntoFragment<'a>,
-    message: Message,
-) -> Button<'a, Message> {
-    label_message_button(label, message).width(Length::Shrink)
-}
-
-fn label_message_button<'a>(
-    label: impl text::IntoFragment<'a>,
-    message: Message,
-) -> Button<'a, Message> {
-    button(text(label).align_y(Vertical::Center))
-        .padding([4, 8])
-        .style(button::secondary)
-        .on_press(message)
-}
-
-#[allow(dead_code)]
-fn submenu_button(label: &'_ str) -> Button<'_, Message, Theme, Renderer> {
-    button(
-        row![
-            text(label).width(Length::Fill).align_y(Vertical::Center),
-            iced_aw_font::right_open()
-                .width(Length::Shrink)
-                .align_y(Vertical::Center),
-        ]
-        .align_y(Alignment::Center),
-    )
-    .padding([4, 8])
-    .style(button::text)
-    .on_press(Message::Noop)
-    .width(Length::Fill)
-}
-
-fn label_message_button_opt(label: &'_ str, message: Option<Message>) -> Button<'_, Message> {
-    if let Some(message) = message {
-        label_message_button(label, message)
-    } else {
-        button(text(label).align_y(Vertical::Center))
-            .padding([4, 8])
-            .style(button::primary)
-    }
-}
-
-fn label_message_button_fill_opt(label: &'_ str, message: Option<Message>) -> Button<'_, Message> {
-    label_message_button_opt(label, message).width(Length::Fill)
-}
-
-fn material_icon_message_button(icon_id: &'_ str, message: Message) -> Button<'_, Message> {
-    button(material_icon(icon_id))
-        //.padding([4, 8])
-        .style(button::secondary)
-        .on_press(message)
-        .width(Length::Shrink)
-}
-
-fn material_icon_sized_message_button(
-    icon_id: &'_ str,
-    size: impl Into<Pixels>,
-    message: Message,
-) -> Button<'_, Message> {
-    button(material_icon_sized(icon_id, size))
-        .style(button::secondary)
-        .on_press(message)
-        .width(Length::Shrink)
-}
-
-fn labeled_message_checkbox(
-    label: &'_ str,
-    checked: bool,
-    message: fn(bool) -> Message,
-) -> checkbox::Checkbox<'_, Message> {
-    checkbox(checked)
-        .label(label)
-        .on_toggle(message)
-        .width(Length::Fill)
-    //.style(checkbox::secondary)
-}
-
-fn labeled_message_toggler(
-    label: &'_ str,
-    checked: bool,
-    message: fn(bool) -> Message,
-) -> toggler::Toggler<'_, Message> {
-    toggler(checked)
-        .label(label)
-        .on_toggle(message)
-        .width(Length::Fill)
-}
-
-#[allow(dead_code)]
-fn labeled_message_radio<T: Copy + Eq>(
-    label: &'_ str,
-    value: T,
-    selection: T,
-    message: fn(T) -> Message,
-) -> radio::Radio<'_, Message> {
-    radio(label, value, Some(selection), message).width(Length::Fill)
-    //.style(checkbox::secondary)
-}
-
-#[allow(dead_code)]
-fn labeled_message_checkbox_opt(
-    label: &'_ str,
-    checked: bool,
-    message: Option<fn(bool) -> Message>,
-) -> checkbox::Checkbox<'_, Message> {
-    if let Some(message) = message {
-        labeled_message_checkbox(label, checked, message)
-    } else {
-        checkbox(checked).label(label).width(Length::Fill)
-        //.style(checkbox::secondary)
-    }
-}
-
-#[allow(dead_code)]
-fn labeled_dynamic_text_input<'a>(
-    label: &'a str,
-    placeholder: &'a str,
-    value: &'a str,
-    message: fn(String) -> Message,
-    submit_message: Option<Message>,
-) -> Column<'a, Message> {
-    let mut input = DynamicTextInput::<Message>::new(placeholder, value)
-        .width(Length::Fill)
-        .on_change(message);
-
-    if let Some(submit_message) = submit_message {
-        input = input.on_submit(submit_message);
-    }
-
-    col!(text(label).width(Length::Fill), input,).width(Length::Fill)
 }
