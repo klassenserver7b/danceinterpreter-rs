@@ -218,14 +218,21 @@ impl ConfigWindow {
     }
 
     fn build_statics_view(&'_ self, dance_interpreter: &DanceInterpreter) -> Column<'_, Message> {
-        let trow = row![
-            text("Statics").size(24).width(Length::Fill),
-            button(row![material_symbol("add", false), text("Add Static")].spacing(5))
-                .on_press(Message::AddBlankStatic)
-                .padding([5, 10])
-                .style(button::primary),
-        ]
-        .spacing(5);
+        let trow = container(
+            row![
+                text("Fav").width(Length::Fixed(42.0)),
+                text!("Name").width(Length::Fill),
+                Space::new().width(Length::Fill).height(Length::Shrink),
+                button(row![material_symbol("add", false), text("Add Static")].spacing(5))
+                    .on_press(Message::AddBlankStatic)
+                    .padding([5, 10])
+                    .style(button::primary),
+            ]
+            .align_y(Vertical::Bottom)
+            .spacing(5),
+        )
+        .padding([4, 6])
+        .width(Length::Fill);
 
         let mut list_column = col!().spacing(5);
 
