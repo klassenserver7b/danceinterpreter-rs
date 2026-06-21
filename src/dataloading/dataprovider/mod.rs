@@ -195,6 +195,12 @@ impl DataProvider {
     }
 
     pub fn delete_item(&mut self, song: ItemSource) {
+        if self.current == song {
+            self.current = ItemSource::Blank;
+        } else if self.next == Some(song.clone()) {
+            self.next = None;
+        }
+
         if let ItemSource::Playlist(i) = song {
             self.playlist_songs.remove(i);
             self.playlist_played.remove(i);

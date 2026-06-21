@@ -1,114 +1,66 @@
 [
   {
-    "track_number": 0,
-    "title": "",
-    "artist": "",
-    "dance": "Discofox",
+    "name": "Discofox",
     "is_favorite": true
   },
   {
-    "track_number": 0,
-    "title": "",
-    "artist": "",
-    "dance": "Cha Cha Cha",
+    "name": "Cha Cha Cha",
     "is_favorite": true
   },
   {
-    "track_number": 0,
-    "title": "",
-    "artist": "",
-    "dance": "Rumba",
+    "name": "Rumba",
     "is_favorite": true
   },
   {
-    "track_number": 0,
-    "title": "",
-    "artist": "",
-    "dance": "Jive",
+    "name": "Jive",
     "is_favorite": true
   },
   {
-    "track_number": 0,
-    "title": "",
-    "artist": "",
-    "dance": "Samba",
+    "name": "Samba",
     "is_favorite": true
   },
   {
-    "track_number": 0,
-    "title": "",
-    "artist": "",
-    "dance": "Salsa",
+    "name": "Salsa",
     "is_favorite": true
   },
   {
-    "track_number": 0,
-    "title": "",
-    "artist": "",
-    "dance": "Langsamer Walzer",
+    "name": "Langsamer Walzer",
     "is_favorite": true
   },
   {
-    "track_number": 0,
-    "title": "",
-    "artist": "",
-    "dance": "Wiener Walzer",
+    "name": "Wiener Walzer",
     "is_favorite": true
   },
   {
-    "track_number": 0,
-    "title": "",
-    "artist": "",
-    "dance": "Tango",
+    "name": "Tango",
     "is_favorite": true
   },
   {
-    "track_number": 0,
-    "title": "",
-    "artist": "",
-    "dance": "Quickstep",
+    "name": "Quickstep",
     "is_favorite": true
   },
   {
-    "track_number": 0,
-    "title": "",
-    "artist": "",
-    "dance": "Foxtrott",
+    "name": "Foxtrott",
     "is_favorite": false
   },
   {
-    "track_number": 0,
-    "title": "",
-    "artist": "",
-    "dance": "Rock 'n' Roll",
+    "name": "Rock 'n' Roll",
     "is_favorite": false
   },
   {
-    "track_number": 0,
-    "title": "",
-    "artist": "",
-    "dance": "Slowfox",
+    "name": "Slowfox",
     "is_favorite": true
   },
   {
-    "track_number": 0,
-    "title": "",
-    "artist": "",
-    "dance": "Quickstep / Foxtrott",
+    "name": "Quickstep / Foxtrott",
     "is_favorite": false
   },
   {
-    "track_number": 0,
-    "title": "",
-    "artist": "",
-    "dance": "Samba / Salsa",
+    "name": "Samba / Salsa",
     "is_favorite": false
   },
   {
-    "track_number": 0,
-    "title": "",
-    "artist": "",
-    "dance": "Jive / Rock 'n' Roll",
+    "name": "Jive / Rock 'n' Roll",
     "is_favorite": false
   }
 ]
