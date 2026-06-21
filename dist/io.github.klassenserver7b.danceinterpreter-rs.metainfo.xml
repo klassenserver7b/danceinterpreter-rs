@@ -43,6 +43,12 @@
     <content_rating type="oars-1.1"/>
 
     <releases>
+	<release version="0.8.3" date="2026-06-21">
+            <url type="details">https://github.com/klassenserver7b/danceinterpreter-rs/releases/tag/v0.8.3</url>
+            <description>
+                <p>Populate statics view: Now shows all statics and allows to add / edit / remove / star them. Only stared ones are shown in the bottom_bar</p>
+            </description>
+        </release>
         <release version="0.8.2" date="2026-06-08">
             <url type="details">https://github.com/klassenserver7b/danceinterpreter-rs/releases/tag/v0.8.2</url>
             <description>
