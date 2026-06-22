@@ -65,6 +65,7 @@ pub fn build<'a>(
                         .width(Length::Fill)),
                         (label_message_button_fill("Reload Statics", Message::ReloadStatics)),
                         (label_message_button_fill(format!("Add blank {}", if config_window.is_statics_view {"static"} else {"song"}), Message::AddBlankEntry)),
+                        (label_message_button_fill("Undo Delete (Ctrl+Z)", Message::UndoDelete)),
                     )
                 )
                 .spacing(5.0)

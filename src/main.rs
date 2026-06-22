@@ -57,6 +57,7 @@ struct DanceInterpreter {
     song_window: SongWindow,
 
     data_provider: DataProvider,
+    modifiers: Modifiers,
 }
 
 #[derive(Debug, Clone)]
@@ -107,6 +108,12 @@ pub enum Message {
 
     Animate,
     Traktor(TraktorMessage),
+
+    RequestDelete(ItemSource),
+    ConfirmDelete,
+    CancelDelete,
+    UndoDelete,
+    ModifiersChanged(Modifiers),
 }
 
 impl DanceInterpreter {
@@ -135,6 +142,7 @@ impl DanceInterpreter {
             song_window,
 
             data_provider: DataProvider::default(),
+            modifiers: Modifiers::default(),
         };
 
         tasks.push(cw_opened);
@@ -197,6 +205,10 @@ impl DanceInterpreter {
 
         match message {
             Message::WindowOpened(_) => ().into(),
+            Message::ModifiersChanged(modifiers) => {
+                self.modifiers = modifiers;
+                ().into()
+            }
             Message::WindowResized((window_id, size)) => {
                 if self.config_window.id == window_id {
                     self.config_window.on_resize(size);
@@ -413,6 +425,33 @@ impl DanceInterpreter {
 
             Message::DeleteItem(song) => {
                 self.data_provider.delete_item(song);
+                ().into()
+            }
+
+            Message::UndoDelete => {
+                self.data_provider.undo_delete();
+                self.save_statics();
+                ().into()
+            }
+
+            Message::RequestDelete(source) => {
+                if self.modifiers.shift() {
+                    return Task::done(Message::DeleteItem(source));
+                }
+
+                self.config_window.pending_delete = Some(source);
+                ().into()
+            }
+
+            Message::ConfirmDelete => {
+                if let Some(source) = self.config_window.pending_delete.take() {
+                    return Task::done(Message::DeleteItem(source));
+                }
+                ().into()
+            }
+
+            Message::CancelDelete => {
+                self.config_window.pending_delete = None;
                 ().into()
             }
 
@@ -671,6 +710,9 @@ impl DanceInterpreter {
                 _ => Message::Noop,
             }),
             keyboard::listen().filter_map(|event| {
+                if let keyboard::Event::ModifiersChanged(modifiers) = event {
+                    return Some(Message::ModifiersChanged(modifiers));
+                }
                 let keyboard::Event::KeyPressed { key, .. } = event else {
                     return None;
                 };
@@ -698,6 +740,7 @@ impl DanceInterpreter {
                 };
                 match (key.as_ref(), modifiers) {
                     (Key::Character("n"), Modifiers::CTRL) => Some(Message::AddBlankEntry),
+                    (Key::Character("z"), Modifiers::CTRL) => Some(Message::UndoDelete),
                     (Key::Character("+"), Modifiers::CTRL) => {
                         Some(Message::ChangeSongWindowScale(0.1))
                     }

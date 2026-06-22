@@ -18,8 +18,8 @@ use fuzzy_matcher::FuzzyMatcher;
 use fuzzy_matcher::skim::SkimMatcherV2 as Matcher;
 use iced::alignment::Vertical;
 use iced::widget::{
-    Column, Container, Row, Scrollable, Space, TextInput, button, column as col, container, row,
-    scrollable, text,
+    Column, Container, Row, Scrollable, Space, TextInput, button, column as col, container,
+    mouse_area, opaque, row, scrollable, stack, text,
 };
 use iced::{Alignment, Color, Element, Length, Size, Theme, window};
 use std::sync::LazyLock;
@@ -37,6 +37,8 @@ pub struct ConfigWindow {
 
     pub search_visible: bool,
     pub search_query: String,
+
+    pub pending_delete: Option<ItemSource>,
 }
 
 pub static PLAYLIST_SCROLLABLE_ID: LazyLock<iced::widget::Id> =
@@ -57,6 +59,7 @@ impl Window for ConfigWindow {
 
             search_visible: false,
             search_query: String::new(),
+            pending_delete: None,
         }
     }
 
@@ -101,10 +104,83 @@ impl ConfigWindow {
                 Instant::now(),
             ));
         let bottom_bar = bottombar::build(dance_interpreter);
+        let main_view = col![row![main_column, side_bar], bottom_bar].spacing(5);
 
-        col![row![main_column, side_bar], bottom_bar]
-            .spacing(5)
-            .into()
+        if let Some(source) = &self.pending_delete {
+            let target_name = match source {
+                ItemSource::Playlist(i) => dance_interpreter
+                    .data_provider
+                    .playlist_songs
+                    .get(*i)
+                    .map(|s| s.title.clone())
+                    .unwrap_or_default(),
+                ItemSource::Static(i) => dance_interpreter
+                    .data_provider
+                    .statics
+                    .get(*i)
+                    .map(|s| s.name.clone())
+                    .unwrap_or_default(),
+                _ => String::new(),
+            };
+
+            let dialog = self.build_delete_dialog(target_name);
+            stack![main_view, dialog].into()
+        } else {
+            main_view.into()
+        }
+    }
+
+    fn build_delete_dialog(&self, target: String) -> Element<'_, Message> {
+        let card = container(
+            col![
+                text("Delete item?").size(20),
+                text(target),
+                row![
+                    button(text("Cancel").align_x(Alignment::Center))
+                        .padding([4, 8])
+                        .style(button::secondary)
+                        .on_press(Message::CancelDelete)
+                        .width(Length::Fill),
+                    button(text("Delete").align_x(Alignment::Center))
+                        .padding([4, 8])
+                        .style(button::danger)
+                        .on_press(Message::ConfirmDelete)
+                        .width(Length::Fill),
+                ]
+                .spacing(10),
+            ]
+            .spacing(15)
+            .width(Length::Fixed(360.0)),
+        )
+        .padding(20)
+        .style(|t: &Theme| {
+            let palette = t.extended_palette();
+            container::Style::default()
+                .background(palette.background.base.color)
+                .border(iced::Border {
+                    color: palette.background.strong.color,
+                    width: 1.0,
+                    radius: 8.0.into(),
+                })
+        });
+
+        let backdrop = mouse_area(
+            container(Space::new().width(Length::Fill).height(Length::Fill))
+                .width(Length::Fill)
+                .height(Length::Fill)
+                .style(|_t: &Theme| {
+                    container::Style::default().background(Color::from_rgba(0.0, 0.0, 0.0, 0.5))
+                }),
+        )
+        .on_press(Message::CancelDelete);
+
+        let centered_card = container(opaque(card))
+            .width(Length::Fill)
+            .height(Length::Fill)
+            .align_x(Alignment::Center)
+            .align_y(Alignment::Center);
+
+        opaque(stack![backdrop, centered_card])
     }
 
     fn build_search_bar<'a>(&self) -> Row<'a, Message> {
@@ -292,7 +368,7 @@ impl ConfigWindow {
                     material_symbol_message_button(
                         "delete",
                         false,
-                        Message::DeleteItem(ItemSource::Static(idx))
+                        Message::RequestDelete(ItemSource::Static(idx))
                     ),
                     "Delete static"
                 ),
@@ -368,7 +444,7 @@ impl ConfigWindow {
                     material_symbol_message_button(
                         "delete",
                         false,
-                        Message::DeleteItem(ItemSource::Playlist(idx))
+                        Message::RequestDelete(ItemSource::Playlist(idx))
                     ),
                     "Delete song"
                 ),
