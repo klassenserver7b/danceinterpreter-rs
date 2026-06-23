@@ -5,6 +5,18 @@ use crate::traktor_api;
 use crate::traktor_api::TraktorDataProvider;
 use std::cmp::PartialEq;
 
+pub enum DeletedItem {
+    Playlist {
+        index: usize,
+        song: SongInfo,
+        played: bool,
+    },
+    Static {
+        index: usize,
+        static_info: StaticInfo,
+    },
+}
+
 #[derive(Default, Debug, PartialEq, Clone)]
 pub enum ItemSource {
     #[default]
@@ -42,6 +54,8 @@ pub struct DataProvider {
     pub playlist_played: Vec<bool>,
 
     pub statics: Vec<StaticInfo>,
+
+    pub deleted_items: Vec<DeletedItem>,
 
     pub traktor_provider: TraktorDataProvider,
 
@@ -202,10 +216,39 @@ impl DataProvider {
         }
 
         if let ItemSource::Playlist(i) = song {
-            self.playlist_songs.remove(i);
-            self.playlist_played.remove(i);
+            let song_info = self.playlist_songs.remove(i);
+            let played = self.playlist_played.remove(i);
+            self.deleted_items.push(DeletedItem::Playlist {
+                index: i,
+                song: song_info,
+                played,
+            });
         } else if let ItemSource::Static(i) = song {
-            self.statics.remove(i);
+            let static_info = self.statics.remove(i);
+            self.deleted_items.push(DeletedItem::Static {
+                index: i,
+                static_info,
+            });
+        }
+    }
+
+    pub fn undo_delete(&mut self) {
+        if let Some(item) = self.deleted_items.pop() {
+            match item {
+                DeletedItem::Playlist {
+                    index,
+                    song,
+                    played,
+                } => {
+                    let insert_idx = index.min(self.playlist_songs.len());
+                    self.playlist_songs.insert(insert_idx, song);
+                    self.playlist_played.insert(insert_idx, played);
+                }
+                DeletedItem::Static { index, static_info } => {
+                    let insert_idx = index.min(self.statics.len());
+                    self.statics.insert(insert_idx, static_info);
+                }
+            }
         }
     }
 
