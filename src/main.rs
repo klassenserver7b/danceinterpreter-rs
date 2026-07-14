@@ -5,9 +5,7 @@ mod traktor_api;
 mod ui;
 
 use crate::async_utils::run_subscription_with;
-use crate::dataloading::dataprovider::{
-    DataProvider, ItemChange, ItemSource, SongDataEdit, StaticDataEdit,
-};
+use crate::dataloading::dataprovider::{DataProvider, ItemChange, ItemSource, SongDataEdit};
 use crate::dataloading::id3tagreader::read_song_info_from_filepath;
 use crate::dataloading::m3uloader::load_tag_data_from_m3u;
 use crate::dataloading::songinfo::SongInfo;
@@ -98,9 +96,23 @@ pub enum Message {
     SongDataEdit(usize, SongDataEdit),
 
     ReloadStatics,
-    ToggleStaticFavorite(usize),
-    UpdateStaticName(usize, StaticDataEdit),
+    ToggleStaticFavorite(String),
+    UpdateStaticName(String, String),
+    SubmitStaticName(String),
+    UpdateStaticColor(String, iced::Color),
+    PreviewStaticColor(String, iced::Color),
+    ToggleStaticColorPicker(String),
     AddBlankStatic,
+    RequestStaticMerge(String, String),
+    ConfirmStaticMerge(String, String),
+    CancelDialog,
+
+    UpdateDummySongTitle(String),
+    UpdateDummySongArtist(String),
+    UpdateDummySongDance(String),
+    SubmitDummySong,
+
+    AddTraktorSong,
 
     FileDropped(PathBuf),
     ItemChanged(ItemChange),
@@ -357,15 +369,150 @@ impl DanceInterpreter {
                 ().into()
             }
 
-            Message::ToggleStaticFavorite(i) => {
-                self.data_provider.toggle_static_favorite(i);
+            Message::ToggleStaticFavorite(name) => {
+                self.data_provider.toggle_static_favorite(&name);
                 self.save_statics();
                 ().into()
             }
 
-            Message::UpdateStaticName(i, edit) => {
-                self.data_provider.handle_static_data_edit(i, edit);
+            Message::UpdateStaticName(old_name, new_name) => {
+                if let Some(static_info) = self.data_provider.statics.get_mut(&old_name) {
+                    static_info.name = new_name;
+                }
+                ().into()
+            }
+
+            Message::SubmitStaticName(old_name) => {
+                if let Some(static_info) = self.data_provider.statics.get(&old_name) {
+                    let new_name = static_info.name.clone();
+                    if old_name != new_name {
+                        if self.data_provider.statics.contains_key(&new_name) {
+                            return Task::perform(async move { new_name }, move |new_name| {
+                                Message::RequestStaticMerge(old_name.clone(), new_name)
+                            });
+                        } else {
+                            if let Some(mut static_info) =
+                                self.data_provider.statics.shift_remove(&old_name)
+                            {
+                                static_info.name = new_name.clone();
+                                self.data_provider
+                                    .statics
+                                    .insert(new_name.clone(), static_info);
+                                for song in &mut self.data_provider.playlist_songs {
+                                    if song.dance == old_name {
+                                        song.dance = new_name.clone();
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
                 self.save_statics();
+                ().into()
+            }
+
+            Message::UpdateStaticColor(name, mut color) => {
+                color.a = 1.0;
+                if let Some(static_info) = self.data_provider.statics.get_mut(&name) {
+                    static_info.color = Some(color);
+                }
+                self.save_statics();
+                self.config_window.color_picker_open = None;
+                self.config_window.color_picker_old_color = None;
+                ().into()
+            }
+
+            Message::PreviewStaticColor(name, mut color) => {
+                color.a = 1.0;
+                if let Some(static_info) = self.data_provider.statics.get_mut(&name) {
+                    static_info.color = Some(color);
+                }
+                ().into()
+            }
+
+            Message::ToggleStaticColorPicker(name) => {
+                if self.config_window.color_picker_open.as_ref() == Some(&name) {
+                    if let Some(static_info) = self.data_provider.statics.get_mut(&name) {
+                        static_info.color = self.config_window.color_picker_old_color.take();
+                    }
+                    self.config_window.color_picker_open = None;
+                } else {
+                    if let Some(static_info) = self.data_provider.statics.get(&name) {
+                        self.config_window.color_picker_old_color = static_info.color;
+                    }
+                    self.config_window.color_picker_open = Some(name);
+                }
+                ().into()
+            }
+
+            Message::UpdateDummySongTitle(title) => {
+                self.config_window.dummy_song_title = title;
+                ().into()
+            }
+            Message::UpdateDummySongArtist(artist) => {
+                self.config_window.dummy_song_artist = artist;
+                ().into()
+            }
+            Message::UpdateDummySongDance(dance) => {
+                self.config_window.dummy_song_dance = dance;
+                ().into()
+            }
+            Message::SubmitDummySong => {
+                let song = SongInfo {
+                    title: self.config_window.dummy_song_title.clone(),
+                    artist: self.config_window.dummy_song_artist.clone(),
+                    dance: self.config_window.dummy_song_dance.clone(),
+                    ..Default::default()
+                };
+                self.data_provider.append_song(song);
+                self.config_window.dummy_song_title.clear();
+                self.config_window.dummy_song_artist.clear();
+                self.config_window.dummy_song_dance.clear();
+                self.data_provider.ensure_statics_for_playlist();
+                self.save_statics();
+                ().into()
+            }
+
+            Message::AddTraktorSong => {
+                if let Some(song) = self.data_provider.traktor_provider.get_song_info() {
+                    let in_playlist = self
+                        .data_provider
+                        .playlist_songs
+                        .iter()
+                        .any(|s| s.title == song.title && s.artist == song.artist);
+                    if !in_playlist {
+                        self.data_provider.append_song(song.clone());
+                        self.data_provider.ensure_statics_for_playlist();
+                        self.save_statics();
+                    }
+                }
+                ().into()
+            }
+
+            Message::RequestStaticMerge(old_name, new_name) => {
+                self.config_window.active_dialog =
+                    Some(crate::ui::config_window::DialogState::MergeStatic { old_name, new_name });
+                ().into()
+            }
+            Message::ConfirmStaticMerge(old_name, new_name) => {
+                self.data_provider.statics.shift_remove(&old_name);
+                for song in &mut self.data_provider.playlist_songs {
+                    if song.dance == old_name {
+                        song.dance = new_name.clone();
+                    }
+                }
+                self.save_statics();
+                self.config_window.active_dialog = None;
+                ().into()
+            }
+            Message::CancelDialog => {
+                if let Some(crate::ui::config_window::DialogState::MergeStatic { old_name, .. }) =
+                    &self.config_window.active_dialog
+                    && let Some(static_info) = self.data_provider.statics.get_mut(old_name)
+                {
+                    static_info.name = old_name.clone();
+                }
+                self.config_window.active_dialog = None;
                 ().into()
             }
 
@@ -434,24 +581,26 @@ impl DanceInterpreter {
                 ().into()
             }
 
-            Message::RequestDelete(source) => {
+            Message::RequestDelete(item) => {
                 if self.modifiers.shift() {
-                    return Task::done(Message::DeleteItem(source));
+                    return Task::done(Message::DeleteItem(item));
                 }
 
-                self.config_window.pending_delete = Some(source);
+                self.config_window.active_dialog =
+                    Some(crate::ui::config_window::DialogState::Delete(item));
                 ().into()
             }
-
             Message::ConfirmDelete => {
-                if let Some(source) = self.config_window.pending_delete.take() {
-                    return Task::done(Message::DeleteItem(source));
+                if let Some(crate::ui::config_window::DialogState::Delete(item)) =
+                    self.config_window.active_dialog.take()
+                {
+                    self.data_provider.delete_item(item);
+                    self.save_statics();
                 }
                 ().into()
             }
-
             Message::CancelDelete => {
-                self.config_window.pending_delete = None;
+                self.config_window.active_dialog = None;
                 ().into()
             }
 
@@ -615,7 +764,9 @@ impl DanceInterpreter {
     }
 
     fn save_statics(&self) {
-        if let Ok(json) = serde_json::to_string_pretty(&self.data_provider.statics) {
+        let values: Vec<&crate::dataloading::staticinfo::StaticInfo> =
+            self.data_provider.statics.values().collect();
+        if let Ok(json) = serde_json::to_string_pretty(&values) {
             let _ = std::fs::write("./statics.json", json);
         }
     }
@@ -724,9 +875,9 @@ impl DanceInterpreter {
                     Key::Named(Named::ArrowLeft) => {
                         Some(Message::ItemChanged(ItemChange::Previous))
                     }
-                    Key::Named(Named::End) => {
-                        Some(Message::ItemChanged(ItemChange::StaticAbsolute(0)))
-                    }
+                    Key::Named(Named::End) => Some(Message::ItemChanged(
+                        ItemChange::StaticAbsolute("".to_string()),
+                    )),
                     Key::Named(Named::F11) => Some(Message::ToggleFullscreen),
                     Key::Named(Named::F5) => Some(Message::ReloadStatics),
                     Key::Named(Named::PageUp) => Some(Message::ScrollBy(-10.0)),

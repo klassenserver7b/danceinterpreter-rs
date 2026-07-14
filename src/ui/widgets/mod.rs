@@ -5,7 +5,7 @@ use iced::widget::{Column, Text, checkbox, column as col, radio, text, toggler};
 use iced::{Color, Font, Length, Pixels, Renderer, Theme};
 
 pub mod buttons;
-
+pub mod color_swatch;
 pub fn labeled_message_checkbox(
     label: &'_ str,
     checked: bool,

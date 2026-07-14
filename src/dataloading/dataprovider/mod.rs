@@ -12,7 +12,7 @@ pub enum DeletedItem {
         played: bool,
     },
     Static {
-        index: usize,
+        name: String,
         static_info: StaticInfo,
     },
 }
@@ -23,15 +23,15 @@ pub enum ItemSource {
     Blank,
     Traktor,
     Other(SongInfo),
-    Static(usize),
+    Static(String),
     Playlist(usize),
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 pub enum ItemChange {
     Blank,
     Traktor,
-    StaticAbsolute(usize),
+    StaticAbsolute(String),
     PlaylistAbsolute(usize),
     Previous,
     Next,
@@ -43,17 +43,14 @@ pub enum SongDataEdit {
     Dance(String),
 }
 
-#[derive(Debug, Clone)]
-pub enum StaticDataEdit {
-    Name(String),
-}
+use indexmap::IndexMap;
 
 #[derive(Default)]
 pub struct DataProvider {
     pub playlist_songs: Vec<SongInfo>,
     pub playlist_played: Vec<bool>,
 
-    pub statics: Vec<StaticInfo>,
+    pub statics: IndexMap<String, StaticInfo>,
 
     pub deleted_items: Vec<DeletedItem>,
 
@@ -70,6 +67,15 @@ impl DataProvider {
         self.playlist_songs = vec;
         self.playlist_played = vec![false; self.playlist_songs.len()];
 
+        let dances: Vec<String> = self
+            .playlist_songs
+            .iter()
+            .map(|s| s.dance.clone())
+            .collect();
+        for dance in dances {
+            self.ensure_static(&dance);
+        }
+
         if !self.playlist_songs.is_empty() {
             self.current = ItemSource::Playlist(0);
         } else {
@@ -78,7 +84,7 @@ impl DataProvider {
     }
 
     pub fn set_statics(&mut self, vec: Vec<StaticInfo>) {
-        self.statics = vec;
+        self.statics = vec.into_iter().map(|s| (s.name.clone(), s)).collect();
     }
 
     fn set_current_as_played(&mut self) {
@@ -100,7 +106,7 @@ impl DataProvider {
 
     pub fn get_current_displayable_data(&self) -> Option<DisplayableData> {
         match self.current {
-            ItemSource::Static(i) => self.statics.get(i).map(|s| s.into()),
+            ItemSource::Static(ref name) => self.statics.get(name).map(|s| s.into()),
             ItemSource::Playlist(i) => self.playlist_songs.get(i).map(|s| s.into()),
             ItemSource::Other(ref song) => Some(song.into()),
             ItemSource::Blank => None,
@@ -110,7 +116,7 @@ impl DataProvider {
     pub fn get_next_displayable_data(&self) -> Option<DisplayableData> {
         if let Some(next) = self.next.as_ref() {
             return match next {
-                ItemSource::Static(i) => self.statics.get(*i).map(|s| s.into()),
+                ItemSource::Static(name) => self.statics.get(name).map(|s| s.into()),
                 ItemSource::Playlist(i) => self.playlist_songs.get(*i).map(|s| s.into()),
                 ItemSource::Other(song) => Some(song.into()),
                 ItemSource::Blank => None,
@@ -167,8 +173,8 @@ impl DataProvider {
         self.set_current_as_played();
 
         match n {
-            ItemSource::Static(i) => {
-                if self.playlist_songs.get(i).is_some() {
+            ItemSource::Static(ref name) => {
+                if self.statics.get(name).is_some() {
                     self.current = n;
                 }
             }
@@ -186,27 +192,36 @@ impl DataProvider {
     }
 
     pub fn append_song(&mut self, song: SongInfo) {
+        self.ensure_static(&song.dance);
         self.playlist_songs.push(song);
         self.playlist_played.push(false);
     }
 
-    pub fn add_static(&mut self) {
-        self.statics.push(StaticInfo::default());
+    pub fn ensure_static(&mut self, dance: &str) {
+        let trimmed = dance.trim();
+        if !trimmed.is_empty() && !self.statics.contains_key(trimmed) {
+            self.statics
+                .insert(trimmed.to_string(), StaticInfo::new(trimmed.to_string()));
+        }
     }
 
-    pub fn toggle_static_favorite(&mut self, index: usize) {
-        if let Some(song) = self.statics.get_mut(index) {
+    pub fn add_static(&mut self) {
+        let mut name = "New Static".to_string();
+        let mut counter = 1;
+        while self.statics.contains_key(&name) {
+            counter += 1;
+            name = format!("New Static {}", counter);
+        }
+        self.statics.insert(name.clone(), StaticInfo::new(name));
+    }
+
+    pub fn toggle_static_favorite(&mut self, name: &str) {
+        if let Some(song) = self.statics.get_mut(name) {
             song.is_favorite = !song.is_favorite;
         }
     }
 
-    pub fn handle_static_data_edit(&mut self, index: usize, edit: StaticDataEdit) {
-        if let Some(s) = self.statics.get_mut(index) {
-            match edit {
-                StaticDataEdit::Name(name) => s.name = name,
-            }
-        }
-    }
+    // handle_static_data_edit removed (handled in main.rs now)
 
     pub fn delete_item(&mut self, song: ItemSource) {
         if self.current == song {
@@ -223,10 +238,11 @@ impl DataProvider {
                 song: song_info,
                 played,
             });
-        } else if let ItemSource::Static(i) = song {
-            let static_info = self.statics.remove(i);
+        } else if let ItemSource::Static(ref name) = song
+            && let Some(static_info) = self.statics.shift_remove(name)
+        {
             self.deleted_items.push(DeletedItem::Static {
-                index: i,
+                name: name.clone(),
                 static_info,
             });
         }
@@ -244,9 +260,8 @@ impl DataProvider {
                     self.playlist_songs.insert(insert_idx, song);
                     self.playlist_played.insert(insert_idx, played);
                 }
-                DeletedItem::Static { index, static_info } => {
-                    let insert_idx = index.min(self.statics.len());
-                    self.statics.insert(insert_idx, static_info);
+                DeletedItem::Static { name, static_info } => {
+                    self.statics.insert(name, static_info);
                 }
             }
         }
@@ -281,6 +296,7 @@ impl DataProvider {
     }
 
     pub fn handle_song_data_edit(&mut self, i: usize, edit: SongDataEdit) {
+        let mut new_dance = None;
         if let Some(song) = self.playlist_songs.get_mut(i) {
             match edit {
                 SongDataEdit::Title(title) => {
@@ -289,10 +305,14 @@ impl DataProvider {
                 SongDataEdit::Artist(artist) => {
                     song.artist = artist;
                 }
-                SongDataEdit::Dance(dance) => {
-                    song.dance = dance;
+                SongDataEdit::Dance(v) => {
+                    song.dance = v.clone();
+                    new_dance = Some(v);
                 }
             }
+        }
+        if let Some(dance) = new_dance {
+            self.ensure_static(&dance);
         }
     }
 
@@ -348,5 +368,27 @@ impl DataProvider {
         }
 
         (is_current, is_next, is_traktor, is_played)
+    }
+
+    pub fn ensure_statics_for_playlist(&mut self) {
+        for song in &self.playlist_songs {
+            if song.dance.is_empty() {
+                continue;
+            }
+            if !self.statics.contains_key(&song.dance) {
+                self.statics.insert(
+                    song.dance.clone(),
+                    StaticInfo {
+                        name: song.dance.clone(),
+                        is_favorite: false,
+                        color: None,
+                    },
+                );
+            }
+        }
+    }
+
+    pub fn get_dance_color(&self, dance: &str) -> Option<iced::Color> {
+        self.statics.get(dance).and_then(|s| s.color)
     }
 }

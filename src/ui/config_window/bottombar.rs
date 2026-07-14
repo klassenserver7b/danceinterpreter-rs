@@ -46,13 +46,14 @@ pub fn get_statics_buttons(dance_interpreter: &'_ DanceInterpreter) -> Vec<Eleme
         .data_provider
         .statics
         .iter()
-        .enumerate()
         .filter(|(_, s)| s.is_favorite)
-        .map(|(idx, s)| {
+        .map(|(name, s)| {
             with_tooltip(
                 button(text(&s.name).font(bold_font))
                     .style(button::secondary)
-                    .on_press(Message::ItemChanged(ItemChange::StaticAbsolute(idx))),
+                    .on_press(Message::ItemChanged(ItemChange::StaticAbsolute(
+                        name.clone(),
+                    ))),
                 format!("Show {} static", s.name),
             )
         })

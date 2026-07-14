@@ -2,7 +2,7 @@ pub mod bottombar;
 pub mod sidebar;
 pub mod top_bar;
 
-use crate::dataloading::dataprovider::{ItemChange, ItemSource, SongDataEdit, StaticDataEdit};
+use crate::dataloading::dataprovider::{ItemChange, ItemSource, SongDataEdit};
 use crate::dataloading::displayable_data::DisplayableData;
 use crate::dataloading::songinfo::SongInfo;
 use crate::dataloading::staticinfo::StaticInfo;
@@ -25,6 +25,11 @@ use iced::{Alignment, Color, Element, Length, Size, Theme, window};
 use std::sync::LazyLock;
 use std::time::Instant;
 
+pub enum DialogState {
+    Delete(ItemSource),
+    MergeStatic { old_name: String, new_name: String },
+}
+
 pub struct ConfigWindow {
     pub id: window::Id,
     pub closed: bool,
@@ -37,8 +42,13 @@ pub struct ConfigWindow {
 
     pub search_visible: bool,
     pub search_query: String,
+    pub active_dialog: Option<DialogState>,
+    pub color_picker_open: Option<String>,
+    pub color_picker_old_color: Option<iced::Color>,
 
-    pub pending_delete: Option<ItemSource>,
+    pub dummy_song_title: String,
+    pub dummy_song_artist: String,
+    pub dummy_song_dance: String,
 }
 
 pub static PLAYLIST_SCROLLABLE_ID: LazyLock<iced::widget::Id> =
@@ -59,7 +69,13 @@ impl Window for ConfigWindow {
 
             search_visible: false,
             search_query: String::new(),
-            pending_delete: None,
+            active_dialog: None,
+            color_picker_open: None,
+            color_picker_old_color: None,
+
+            dummy_song_title: String::new(),
+            dummy_song_artist: String::new(),
+            dummy_song_dance: String::new(),
         }
     }
 
@@ -106,45 +122,71 @@ impl ConfigWindow {
         let bottom_bar = bottombar::build(dance_interpreter);
         let main_view = col![row![main_column, side_bar], bottom_bar].spacing(5);
 
-        if let Some(source) = &self.pending_delete {
-            let target_name = match source {
-                ItemSource::Playlist(i) => dance_interpreter
-                    .data_provider
-                    .playlist_songs
-                    .get(*i)
-                    .map(|s| s.title.clone())
-                    .unwrap_or_default(),
-                ItemSource::Static(i) => dance_interpreter
-                    .data_provider
-                    .statics
-                    .get(*i)
-                    .map(|s| s.name.clone())
-                    .unwrap_or_default(),
-                _ => String::new(),
+        if let Some(state) = &self.active_dialog {
+            let dialog = match state {
+                DialogState::Delete(source) => {
+                    let target_name = match source {
+                        ItemSource::Playlist(i) => dance_interpreter
+                            .data_provider
+                            .playlist_songs
+                            .get(*i)
+                            .map(|s| s.title.clone())
+                            .unwrap_or_default(),
+                        ItemSource::Static(name) => name.clone(),
+                        _ => String::new(),
+                    };
+                    self.build_action_dialog(
+                        "Delete item?".to_string(),
+                        target_name,
+                        "Delete".to_string(),
+                        button::danger,
+                        Message::CancelDelete,
+                        Message::ConfirmDelete,
+                    )
+                }
+                DialogState::MergeStatic { old_name, new_name } => self.build_action_dialog(
+                    "Merge Statics?".to_string(),
+                    format!(
+                        "A static named '{}' already exists.\nMerge '{}' into it?",
+                        new_name, old_name
+                    ),
+                    "Merge".to_string(),
+                    button::primary,
+                    Message::CancelDialog,
+                    Message::ConfirmStaticMerge(old_name.clone(), new_name.clone()),
+                ),
             };
-
-            let dialog = self.build_delete_dialog(target_name);
             stack![main_view, dialog].into()
         } else {
             main_view.into()
         }
     }
 
-    fn build_delete_dialog(&self, target: String) -> Element<'_, Message> {
+    fn build_action_dialog(
+        &self,
+        title: String,
+        target: String,
+        confirm_text: String,
+        confirm_style: impl Fn(&Theme, iced::widget::button::Status) -> iced::widget::button::Style
+        + 'static,
+        cancel_msg: Message,
+        confirm_msg: Message,
+    ) -> Element<'_, Message> {
+        let cancel_msg_clone = cancel_msg.clone();
         let card = container(
             col![
-                text("Delete item?").size(20),
+                text(title).size(20),
                 text(target),
                 row![
                     button(text("Cancel").align_x(Alignment::Center))
                         .padding([4, 8])
                         .style(button::secondary)
-                        .on_press(Message::CancelDelete)
+                        .on_press(cancel_msg)
                         .width(Length::Fill),
-                    button(text("Delete").align_x(Alignment::Center))
+                    button(text(confirm_text).align_x(Alignment::Center))
                         .padding([4, 8])
-                        .style(button::danger)
-                        .on_press(Message::ConfirmDelete)
+                        .style(confirm_style)
+                        .on_press(confirm_msg)
                         .width(Length::Fill),
                 ]
                 .spacing(10),
@@ -172,7 +214,7 @@ impl ConfigWindow {
                     container::Style::default().background(Color::from_rgba(0.0, 0.0, 0.0, 0.5))
                 }),
         )
-        .on_press(Message::CancelDelete);
+        .on_press(cancel_msg_clone);
 
         let centered_card = container(opaque(card))
             .width(Length::Fill)
@@ -203,20 +245,49 @@ impl ConfigWindow {
 
     fn build_playlist_view(&'_ self, dance_interpreter: &DanceInterpreter) -> Column<'_, Message> {
         if dance_interpreter.data_provider.playlist_songs.is_empty() {
-            return self.build_empty_playlist_view();
+            return self.build_empty_playlist_view(dance_interpreter);
         }
 
-        let trow: Row<_> = row![
-            text!("#").width(Length::Fixed(24.0)),
-            text!("Title").width(Length::Fill),
-            text!("Artist").width(Length::Fill),
-            text!("Dance").width(Length::Fill),
-            Space::new().width(Length::Fill).height(Length::Shrink),
+        let mut header_items: Vec<Element<'_, Message>> = vec![
+            text!("#").width(Length::Fixed(24.0)).into(),
+            text!("Title").width(Length::Fill).into(),
+            text!("Artist").width(Length::Fill).into(),
+            text!("Dance").width(Length::Fill).into(),
             Space::new()
-                .width(Length::Fixed(10.0))
-                .height(Length::Shrink),
-        ]
-        .spacing(5);
+                .width(Length::Fill)
+                .height(Length::Shrink)
+                .into(),
+        ];
+
+        if dance_interpreter
+            .data_provider
+            .traktor_provider
+            .get_song_info()
+            .is_some()
+        {
+            header_items.push(
+                button(row![material_symbol("add", false), text("Add Traktor")].spacing(5))
+                    .on_press(Message::AddTraktorSong)
+                    .padding([5, 10])
+                    .style(button::primary)
+                    .into(),
+            );
+        } else {
+            header_items.push(
+                Space::new()
+                    .width(Length::Fixed(10.0))
+                    .height(Length::Shrink)
+                    .into(),
+            );
+        }
+
+        let trow = container(
+            Row::with_children(header_items)
+                .spacing(5)
+                .align_y(Vertical::Bottom),
+        )
+        .padding([4, 6])
+        .width(Length::Fill);
 
         let mut playlist_column: Column<'_, _, _, _> = col!();
 
@@ -228,9 +299,42 @@ impl ConfigWindow {
         {
             let is_match = Self::data_matches_search_query(&self.search_query, song.into());
             let song_row = Self::build_song_row(dance_interpreter, song, i);
-            let sr_container = Self::build_item_row_container_styled(song_row, is_match, i);
+            let accent_color = dance_interpreter.data_provider.get_dance_color(&song.dance);
+            let sr_container =
+                Self::build_item_row_container_styled(song_row, is_match, i, accent_color);
             playlist_column = playlist_column.push(sr_container);
         }
+
+        let dummy_row = row![
+            text!("*").width(Length::Fixed(24.0)),
+            iced::widget::text_input("Title...", &self.dummy_song_title)
+                .width(Length::Fill)
+                .on_input(Message::UpdateDummySongTitle)
+                .on_submit(Message::SubmitDummySong),
+            iced::widget::text_input("Artist...", &self.dummy_song_artist)
+                .width(Length::Fill)
+                .on_input(Message::UpdateDummySongArtist)
+                .on_submit(Message::SubmitDummySong),
+            iced::widget::text_input("Dance...", &self.dummy_song_dance)
+                .width(Length::Fill)
+                .on_input(Message::UpdateDummySongDance)
+                .on_submit(Message::SubmitDummySong),
+            Space::new().width(Length::Fill).height(Length::Shrink),
+            Space::new()
+                .width(Length::Fixed(10.0))
+                .height(Length::Shrink),
+        ]
+        .spacing(5)
+        .align_y(Alignment::Center);
+
+        playlist_column = playlist_column.push(
+            container(row![
+                container(Space::new().width(4).height(Length::Fill)),
+                dummy_row,
+            ])
+            .padding([4, 6])
+            .width(Length::Fill),
+        );
 
         let playlist_scrollable: Scrollable<'_, Message> = scrollable(playlist_column)
             .width(Length::Fill)
@@ -241,7 +345,10 @@ impl ConfigWindow {
         col!(trow, playlist_scrollable).spacing(5)
     }
 
-    fn build_empty_playlist_view(&'_ self) -> Column<'_, Message> {
+    fn build_empty_playlist_view(
+        &'_ self,
+        dance_interpreter: &DanceInterpreter,
+    ) -> Column<'_, Message> {
         let playlist_col = col![
             text("Load Playlist").size(20),
             button(
@@ -258,21 +365,44 @@ impl ConfigWindow {
         .spacing(20)
         .align_x(Alignment::Center);
 
-        let traktor_col = col![
-            text("Use Traktor").size(20),
-            button(
-                col![
-                    material_symbol_sized("agriculture", false, 64),
-                    text("Open the sidebar").size(16)
-                ]
-                .align_x(Alignment::Center)
-            )
-            .style(empty_folder_button_style)
-            .on_press(Message::Sidebar(SidebarMessage::Toggle))
-            .padding(20)
-        ]
-        .spacing(20)
-        .align_x(Alignment::Center);
+        let traktor_col = if dance_interpreter
+            .data_provider
+            .traktor_provider
+            .get_song_info()
+            .is_some()
+        {
+            col![
+                text("Song Playing!").size(20),
+                button(
+                    col![
+                        material_symbol_sized("add", false, 64),
+                        text("Add Traktor Song").size(16)
+                    ]
+                    .align_x(Alignment::Center)
+                )
+                .style(empty_folder_button_style)
+                .on_press(Message::AddTraktorSong)
+                .padding(20)
+            ]
+            .spacing(20)
+            .align_x(Alignment::Center)
+        } else {
+            col![
+                text("Use Traktor").size(20),
+                button(
+                    col![
+                        material_symbol_sized("agriculture", false, 64),
+                        text("Open the sidebar").size(16)
+                    ]
+                    .align_x(Alignment::Center)
+                )
+                .style(empty_folder_button_style)
+                .on_press(Message::Sidebar(SidebarMessage::Toggle))
+                .padding(20)
+            ]
+            .spacing(20)
+            .align_x(Alignment::Center)
+        };
 
         let empty_state_column = col![
             text("No playlist loaded.").size(24),
@@ -312,14 +442,17 @@ impl ConfigWindow {
 
         let mut list_column = col!().spacing(5);
 
-        for (i, static_info) in dance_interpreter.data_provider.statics.iter().enumerate() {
+        for (i, (name, static_info)) in dance_interpreter.data_provider.statics.iter().enumerate() {
             let is_match = Self::data_matches_search_query(&self.search_query, static_info.into());
             let static_row = Self::build_static_row(
                 static_info,
-                i,
+                name.clone(),
                 self.theme.extended_palette().primary.weak.color,
+                self.color_picker_open.as_ref() == Some(name),
             );
-            let row_container = Self::build_item_row_container_styled(static_row, is_match, i);
+            let accent_color = static_info.color;
+            let row_container =
+                Self::build_item_row_container_styled(static_row, is_match, i, accent_color);
             list_column = list_column.push(row_container);
         }
 
@@ -333,34 +466,64 @@ impl ConfigWindow {
 
     fn build_static_row<'a>(
         static_info: &StaticInfo,
-        idx: usize,
+        name: String,
         color: impl Into<Color>,
+        color_picker_open: bool,
     ) -> Row<'a, Message> {
+        let swatch_color = static_info.color.unwrap_or(Color::TRANSPARENT);
+        let name_clone1 = name.clone();
+        let name_clone2 = name.clone();
+        let name_clone3 = name.clone();
+        let name_clone4 = name.clone();
+        let name_clone5 = name.clone();
+
+        let color_swatch = crate::ui::widgets::color_swatch::color_swatch(
+            swatch_color,
+            Message::ToggleStaticColorPicker(name.clone()),
+        );
+
+        let color_element: Element<'a, Message> = if color_picker_open {
+            iced_aw::ColorPicker::new(
+                true,
+                swatch_color,
+                color_swatch,
+                Message::ToggleStaticColorPicker(name_clone1),
+                move |c| Message::UpdateStaticColor(name_clone2.clone(), c),
+            )
+            .on_color_change(move |c| Message::PreviewStaticColor(name_clone3.clone(), c))
+            .into()
+        } else {
+            color_swatch
+        };
+
         row![
             if static_info.is_favorite {
                 material_symbol_message_button_colored(
                     "star",
                     static_info.is_favorite,
-                    Message::ToggleStaticFavorite(idx),
+                    Message::ToggleStaticFavorite(name.clone()),
                     color,
                 )
             } else {
                 material_symbol_message_button(
                     "star",
                     static_info.is_favorite,
-                    Message::ToggleStaticFavorite(idx),
+                    Message::ToggleStaticFavorite(name.clone()),
                 )
             },
+            Space::new().width(5),
+            color_element,
             DynamicTextInput::<'_, Message>::new("Static Name", &static_info.name)
                 .width(Length::Fill)
-                .on_change(move |v| Message::UpdateStaticName(idx, StaticDataEdit::Name(v))),
+                .on_change(move |v| Message::UpdateStaticName(name_clone4.clone(), v))
+                .on_submit(Message::SubmitStaticName(name_clone5.clone())),
             row![
                 Space::new().width(Length::Fill).height(Length::Shrink),
                 with_tooltip(
                     material_symbol_message_button(
                         "smart_display",
                         false,
-                        Message::ItemChanged(ItemChange::StaticAbsolute(idx))
+                        Message::ItemChanged(ItemChange::StaticAbsolute(name.clone()))
                     ),
                     "Show now"
                 ),
@@ -368,7 +531,7 @@ impl ConfigWindow {
                     material_symbol_message_button(
                         "delete",
                         false,
-                        Message::RequestDelete(ItemSource::Static(idx))
+                        Message::RequestDelete(ItemSource::Static(name.clone()))
                     ),
                     "Delete static"
                 ),
@@ -460,33 +623,46 @@ impl ConfigWindow {
         song_row: Row<Message>,
         highlight: bool,
         idx: usize,
+        accent_color: Option<Color>,
     ) -> Container<Message> {
-        container(song_row)
-            .style(move |t| {
-                let palette = t.extended_palette();
-                let color = if idx.is_multiple_of(2) {
-                    palette.background.weakest.color
-                } else {
-                    palette.background.weaker.color
-                };
+        let accent = accent_color;
+        container(
+            row![
+                container(Space::new().width(4).height(40.0))
+                    .height(Length::Fixed(40.0))
+                    .style(move |_t: &Theme| {
+                        container::Style::default().background(accent.unwrap_or(Color::TRANSPARENT))
+                    }),
+                song_row,
+            ]
+            .align_y(iced::Alignment::Center)
+            .spacing(6),
+        )
+        .style(move |t| {
+            let palette = t.extended_palette();
+            let color = if idx.is_multiple_of(2) {
+                palette.background.weakest.color
+            } else {
+                palette.background.weaker.color
+            };
 
-                let mut style = container::Style::default().background(color);
+            let mut style = container::Style::default().background(color);
 
-                if highlight {
-                    let accent = palette.primary.base.color;
-                    style = style
-                        .background(palette.primary.weak.color)
-                        .border(iced::Border {
-                            color: accent,
-                            width: 2.0,
-                            radius: 4.0.into(),
-                        });
-                }
+            if highlight {
+                let accent = palette.primary.base.color;
+                style = style
+                    .background(palette.primary.weak.color)
+                    .border(iced::Border {
+                        color: accent,
+                        width: 2.0,
+                        radius: 4.0.into(),
+                    });
+            }
 
-                style
-            })
-            .padding([4, 6])
-            .width(Length::Fill)
+            style
+        })
+        .padding([4, 6])
+        .width(Length::Fill)
     }
 
     fn data_matches_search_query(search_query: &str, data: DisplayableData) -> bool {
