@@ -289,7 +289,6 @@ impl DataProvider {
     }
 
     pub fn handle_song_data_edit(&mut self, i: usize, edit: SongDataEdit) {
-        let mut new_dance = None;
         if let Some(song) = self.playlist.get_mut(i).map(|item| &mut item.song) {
             match edit {
                 SongDataEdit::Title(title) => {
@@ -299,13 +298,9 @@ impl DataProvider {
                     song.artist = artist;
                 }
                 SongDataEdit::Dance(v) => {
-                    song.dance = v.clone();
-                    new_dance = Some(v);
+                    song.dance = v;
                 }
             }
-        }
-        if let Some(dance) = new_dance {
-            self.ensure_static(&dance);
         }
     }
 

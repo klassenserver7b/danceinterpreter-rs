@@ -94,6 +94,7 @@ pub enum Message {
     DeleteItem(ItemSource),
     AddBlankSong(RelativeOffset),
     SongDataEdit(usize, SongDataEdit),
+    SubmitPlaylistDance(usize),
 
     ReloadStatics,
     ToggleStaticFavorite(String),
@@ -545,6 +546,15 @@ impl DanceInterpreter {
 
             Message::SongDataEdit(i, edit) => {
                 self.data_provider.handle_song_data_edit(i, edit);
+                ().into()
+            }
+
+            Message::SubmitPlaylistDance(i) => {
+                if let Some(item) = self.data_provider.playlist.get(i) {
+                    let dance = item.song.dance.clone();
+                    self.data_provider.ensure_static(&dance);
+                    self.save_statics();
+                }
                 ().into()
             }
 

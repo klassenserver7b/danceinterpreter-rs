@@ -584,7 +584,8 @@ impl ConfigWindow {
                 .on_change(move |v| Message::SongDataEdit(idx, SongDataEdit::Artist(v))),
             DynamicTextInput::<'_, Message>::new("Dance", &song.dance)
                 .width(Length::Fill)
-                .on_change(move |v| Message::SongDataEdit(idx, SongDataEdit::Dance(v))),
+                .on_change(move |v| Message::SongDataEdit(idx, SongDataEdit::Dance(v)))
+                .on_submit(Message::SubmitPlaylistDance(idx)),
             row![
                 Space::new().width(Length::Fill).height(Length::Shrink),
                 with_tooltip(
