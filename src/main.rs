@@ -924,13 +924,13 @@ impl DanceInterpreter {
     }
 }
 
-fn get_statics_path() -> std::path::PathBuf {
+fn get_statics_path() -> PathBuf {
     if let Some(mut path) = dirs::config_dir() {
         path.push("danceinterpreter");
         let _ = std::fs::create_dir_all(&path);
         path.push("statics.json");
         path
     } else {
-        std::path::PathBuf::from("./statics.json")
+        PathBuf::from("./statics.json")
     }
 }
