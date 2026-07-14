@@ -45,10 +45,15 @@ pub enum SongDataEdit {
 
 use indexmap::IndexMap;
 
+#[derive(Debug, Clone, PartialEq)]
+pub struct PlaylistItem {
+    pub song: SongInfo,
+    pub played: bool,
+}
+
 #[derive(Default)]
 pub struct DataProvider {
-    pub playlist_songs: Vec<SongInfo>,
-    playlist_played: Vec<bool>,
+    pub playlist: Vec<PlaylistItem>,
 
     pub statics: IndexMap<String, StaticInfo>,
 
@@ -64,19 +69,24 @@ pub struct DataProvider {
 
 impl DataProvider {
     pub fn set_vec(&mut self, vec: Vec<SongInfo>) {
-        self.playlist_songs = vec;
-        self.playlist_played = vec![false; self.playlist_songs.len()];
+        self.playlist = vec
+            .into_iter()
+            .map(|song| PlaylistItem {
+                song,
+                played: false,
+            })
+            .collect();
 
         let dances: Vec<String> = self
-            .playlist_songs
+            .playlist
             .iter()
-            .map(|s| s.dance.clone())
+            .map(|item| item.song.dance.clone())
             .collect();
         for dance in dances {
             self.ensure_static(&dance);
         }
 
-        if !self.playlist_songs.is_empty() {
+        if !self.playlist.is_empty() {
             self.current = ItemSource::Playlist(0);
         } else {
             self.current = ItemSource::Blank;
@@ -90,7 +100,7 @@ impl DataProvider {
     pub fn get_current_displayable_data(&self) -> Option<DisplayableData> {
         match self.current {
             ItemSource::Static(ref name) => self.statics.get(name).map(|s| s.into()),
-            ItemSource::Playlist(i) => self.playlist_songs.get(i).map(|s| s.into()),
+            ItemSource::Playlist(i) => self.playlist.get(i).map(|item| (&item.song).into()),
             ItemSource::Other(ref song) => Some(song.into()),
             ItemSource::Blank => None,
             ItemSource::Traktor => self.traktor_provider.get_song_info().map(|s| s.into()),
@@ -100,7 +110,7 @@ impl DataProvider {
         if let Some(next) = self.next.as_ref() {
             return match next {
                 ItemSource::Static(name) => self.statics.get(name).map(|s| s.into()),
-                ItemSource::Playlist(i) => self.playlist_songs.get(*i).map(|s| s.into()),
+                ItemSource::Playlist(i) => self.playlist.get(*i).map(|item| (&item.song).into()),
                 ItemSource::Other(song) => Some(song.into()),
                 ItemSource::Blank => None,
                 ItemSource::Traktor => self.traktor_provider.get_next_song_info().map(|s| s.into()),
@@ -109,7 +119,7 @@ impl DataProvider {
 
         match self.current {
             ItemSource::Static(_) => None,
-            ItemSource::Playlist(i) => self.playlist_songs.get(i + 1).map(|s| s.into()),
+            ItemSource::Playlist(i) => self.playlist.get(i + 1).map(|item| (&item.song).into()),
             ItemSource::Other(ref song) => Some(song.into()),
             ItemSource::Blank => None,
             ItemSource::Traktor => self.traktor_provider.get_next_song_info().map(|s| s.into()),
@@ -144,7 +154,7 @@ impl DataProvider {
             return;
         };
 
-        if current_index == self.playlist_songs.len() - 1 {
+        if current_index == self.playlist.len() - 1 {
             return;
         }
 
@@ -162,7 +172,7 @@ impl DataProvider {
                 }
             }
             ItemSource::Playlist(i) => {
-                if self.playlist_songs.get(i).is_some() {
+                if self.playlist.get(i).is_some() {
                     self.current = n;
                 }
             }
@@ -176,8 +186,10 @@ impl DataProvider {
 
     pub fn append_song(&mut self, song: SongInfo) {
         self.ensure_static(&song.dance);
-        self.playlist_songs.push(song);
-        self.playlist_played.push(false);
+        self.playlist.push(PlaylistItem {
+            song,
+            played: false,
+        });
     }
 
     pub fn ensure_static(&mut self, dance: &str) {
@@ -213,12 +225,11 @@ impl DataProvider {
         }
 
         if let ItemSource::Playlist(i) = song {
-            let song_info = self.playlist_songs.remove(i);
-            let played = self.playlist_played.remove(i);
+            let item = self.playlist.remove(i);
             self.deleted_items.push(DeletedItem::Playlist {
                 index: i,
-                song: song_info,
-                played,
+                song: item.song,
+                played: item.played,
             });
         } else if let ItemSource::Static(ref name) = song
             && let Some(static_info) = self.statics.shift_remove(name)
@@ -238,9 +249,9 @@ impl DataProvider {
                     song,
                     played,
                 } => {
-                    let insert_idx = index.min(self.playlist_songs.len());
-                    self.playlist_songs.insert(insert_idx, song);
-                    self.playlist_played.insert(insert_idx, played);
+                    let insert_idx = index.min(self.playlist.len());
+                    self.playlist
+                        .insert(insert_idx, PlaylistItem { song, played });
                 }
                 DeletedItem::Static { name, static_info } => {
                     self.statics.insert(name, static_info);
@@ -279,7 +290,7 @@ impl DataProvider {
 
     pub fn handle_song_data_edit(&mut self, i: usize, edit: SongDataEdit) {
         let mut new_dance = None;
-        if let Some(song) = self.playlist_songs.get_mut(i) {
+        if let Some(song) = self.playlist.get_mut(i).map(|item| &mut item.song) {
             match edit {
                 SongDataEdit::Title(title) => {
                     song.title = title;
@@ -300,13 +311,24 @@ impl DataProvider {
 
     pub fn process_traktor_message(&mut self, message: traktor_api::ServerMessage) {
         self.set_current_as_played();
-        self.traktor_provider
-            .process_message(message, &self.playlist_songs);
+        self.traktor_provider.process_message(
+            message,
+            &self
+                .playlist
+                .iter()
+                .map(|i| i.song.clone())
+                .collect::<Vec<_>>(),
+        );
     }
 
     pub fn get_current_traktor_index(&self) -> Option<usize> {
-        self.traktor_provider
-            .get_current_index(&self.playlist_songs)
+        self.traktor_provider.get_current_index(
+            &self
+                .playlist
+                .iter()
+                .map(|i| i.song.clone())
+                .collect::<Vec<_>>(),
+        )
     }
 
     pub fn take_scroll_index(&mut self) -> Option<usize> {
@@ -329,9 +351,9 @@ impl DataProvider {
         let mut is_next = false;
         let mut is_traktor = false;
         let is_played = self
-            .playlist_played
+            .playlist
             .get(playlist_index)
-            .copied()
+            .map(|item| item.played)
             .unwrap_or(false);
 
         if let ItemSource::Playlist(i) = self.current {
@@ -354,9 +376,9 @@ impl DataProvider {
 
     pub fn ensure_statics_for_playlist(&mut self) {
         let dances: Vec<String> = self
-            .playlist_songs
+            .playlist
             .iter()
-            .map(|song| song.dance.clone())
+            .map(|item| item.song.dance.clone())
             .collect();
         for dance in dances {
             self.ensure_static(&dance);
@@ -375,9 +397,9 @@ impl DataProvider {
         if let Some(mut static_info) = self.statics.shift_remove(old_name) {
             static_info.name = new_name.to_string();
             self.statics.insert(new_name.to_string(), static_info);
-            for song in &mut self.playlist_songs {
-                if song.dance == old_name {
-                    song.dance = new_name.to_string();
+            for item in &mut self.playlist {
+                if item.song.dance == old_name {
+                    item.song.dance = new_name.to_string();
                 }
             }
             Ok(())
@@ -392,9 +414,9 @@ impl DataProvider {
         }
 
         if self.statics.shift_remove(old_name).is_some() {
-            for song in &mut self.playlist_songs {
-                if song.dance == old_name {
-                    song.dance = new_name.to_string();
+            for item in &mut self.playlist {
+                if item.song.dance == old_name {
+                    item.song.dance = new_name.to_string();
                 }
             }
             Ok(())
@@ -415,8 +437,8 @@ impl DataProvider {
             _ => return,
         };
 
-        if let Some(v) = self.playlist_played.get_mut(i) {
-            *v = true;
+        if let Some(item) = self.playlist.get_mut(i) {
+            item.played = true;
         }
     }
 }
@@ -457,12 +479,14 @@ mod tests {
             dance: "Waltz".to_string(),
             ..Default::default()
         };
-        provider.playlist_songs.push(song);
-        provider.playlist_played.push(false);
+        provider.playlist.push(PlaylistItem {
+            song,
+            played: false,
+        });
 
         provider.handle_song_data_edit(0, SongDataEdit::Dance("Tango".to_string()));
 
-        assert_eq!(provider.playlist_songs[0].dance, "Tango");
+        assert_eq!(provider.playlist[0].song.dance, "Tango");
         assert!(provider.statics.contains_key("Tango"));
     }
 
@@ -473,7 +497,10 @@ mod tests {
             dance: "Waltz".to_string(),
             ..Default::default()
         };
-        provider.playlist_songs.push(song);
+        provider.playlist.push(PlaylistItem {
+            song,
+            played: false,
+        });
 
         provider.ensure_statics_for_playlist();
         assert!(provider.statics.contains_key("Waltz"));
@@ -487,13 +514,16 @@ mod tests {
             dance: "OldDance".to_string(),
             ..Default::default()
         };
-        provider.playlist_songs.push(song);
+        provider.playlist.push(PlaylistItem {
+            song,
+            played: false,
+        });
 
         assert!(provider.rename_static("OldDance", "NewDance").is_ok());
 
         assert!(!provider.statics.contains_key("OldDance"));
         assert!(provider.statics.contains_key("NewDance"));
-        assert_eq!(provider.playlist_songs[0].dance, "NewDance");
+        assert_eq!(provider.playlist[0].song.dance, "NewDance");
     }
 
     #[test]
@@ -505,12 +535,15 @@ mod tests {
             dance: "SourceDance".to_string(),
             ..Default::default()
         };
-        provider.playlist_songs.push(song);
+        provider.playlist.push(PlaylistItem {
+            song,
+            played: false,
+        });
 
         assert!(provider.merge_statics("SourceDance", "TargetDance").is_ok());
 
         assert!(!provider.statics.contains_key("SourceDance"));
         assert!(provider.statics.contains_key("TargetDance"));
-        assert_eq!(provider.playlist_songs[0].dance, "TargetDance");
+        assert_eq!(provider.playlist[0].song.dance, "TargetDance");
     }
 }

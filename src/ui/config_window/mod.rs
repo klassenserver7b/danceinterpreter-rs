@@ -128,9 +128,9 @@ impl ConfigWindow {
                     let target_name = match source {
                         ItemSource::Playlist(i) => dance_interpreter
                             .data_provider
-                            .playlist_songs
+                            .playlist
                             .get(*i)
-                            .map(|s| s.title.clone())
+                            .map(|item| item.song.title.clone())
                             .unwrap_or_default(),
                         ItemSource::Static(name) => dance_interpreter
                             .data_provider
@@ -248,7 +248,7 @@ impl ConfigWindow {
     }
 
     fn build_playlist_view(&'_ self, dance_interpreter: &DanceInterpreter) -> Column<'_, Message> {
-        if dance_interpreter.data_provider.playlist_songs.is_empty() {
+        if dance_interpreter.data_provider.playlist.is_empty() {
             return self.build_empty_playlist_view(dance_interpreter);
         }
 
@@ -295,12 +295,8 @@ impl ConfigWindow {
 
         let mut playlist_column: Column<'_, _, _, _> = col!();
 
-        for (i, song) in dance_interpreter
-            .data_provider
-            .playlist_songs
-            .iter()
-            .enumerate()
-        {
+        for (i, item) in dance_interpreter.data_provider.playlist.iter().enumerate() {
+            let song = &item.song;
             let is_match = Self::data_matches_search_query(&self.search_query, song.into());
             let song_row = Self::build_song_row(dance_interpreter, song, i);
             let accent_color = dance_interpreter.data_provider.get_dance_color(&song.dance);
