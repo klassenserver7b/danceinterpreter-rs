@@ -9,6 +9,7 @@ use crate::dataloading::dataprovider::{DataProvider, ItemChange, ItemSource, Son
 use crate::dataloading::id3tagreader::read_song_info_from_filepath;
 use crate::dataloading::m3uloader::load_tag_data_from_m3u;
 use crate::dataloading::songinfo::SongInfo;
+use crate::dataloading::staticinfo::StaticInfo;
 use crate::traktor_api::{ServerMessage, StateUpdate, TraktorMessage, TraktorSyncAction};
 use crate::ui::config_window::sidebar::SidebarMessage;
 use crate::ui::config_window::{ConfigWindow, PLAYLIST_SCROLLABLE_ID};
@@ -357,13 +358,11 @@ impl DanceInterpreter {
             }
 
             Message::ReloadStatics => {
-                let statics = if let Ok(file_content) = std::fs::read_to_string("./statics.json")
-                    && let Ok(statics) = serde_json::from_str(&file_content)
-                {
-                    statics
-                } else {
-                    Vec::new()
-                };
+                let statics: Vec<StaticInfo> = std::fs::read_to_string(get_statics_path())
+                    .map(|file_content| serde_json::from_str(&file_content).ok())
+                    .unwrap_or_default()
+                    .unwrap_or_default();
+
                 self.data_provider.set_statics(statics);
                 self.save_statics();
 
@@ -762,10 +761,9 @@ impl DanceInterpreter {
     }
 
     fn save_statics(&self) {
-        let values: Vec<&dataloading::staticinfo::StaticInfo> =
-            self.data_provider.statics.values().collect();
+        let values: Vec<&StaticInfo> = self.data_provider.statics.values().collect();
         if let Ok(json) = serde_json::to_string_pretty(&values) {
-            let _ = std::fs::write("./statics.json", json);
+            let _ = std::fs::write(get_statics_path(), json);
         }
     }
 
@@ -923,5 +921,16 @@ impl DanceInterpreter {
         }
 
         Subscription::batch(subscriptions)
+    }
+}
+
+fn get_statics_path() -> std::path::PathBuf {
+    if let Some(mut path) = dirs::config_dir() {
+        path.push("danceinterpreter");
+        let _ = std::fs::create_dir_all(&path);
+        path.push("statics.json");
+        path
+    } else {
+        std::path::PathBuf::from("./statics.json")
     }
 }
