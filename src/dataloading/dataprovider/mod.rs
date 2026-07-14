@@ -3,7 +3,9 @@ use crate::dataloading::songinfo::SongInfo;
 use crate::dataloading::staticinfo::StaticInfo;
 use crate::traktor_api;
 use crate::traktor_api::TraktorDataProvider;
+use iced::Color;
 use std::cmp::PartialEq;
+use std::path::PathBuf;
 
 pub enum DeletedItem {
     Playlist {
@@ -43,6 +45,14 @@ pub enum SongDataEdit {
     Dance(String),
 }
 
+#[derive(Debug, Clone, PartialEq)]
+pub enum SubmitStaticResult {
+    Success,
+    Unchanged,
+    NotFound,
+    NeedsMerge { old_name: String, new_name: String },
+}
+
 use indexmap::IndexMap;
 
 #[derive(Debug, Clone, PartialEq)]
@@ -55,7 +65,7 @@ pub struct PlaylistItem {
 pub struct DataProvider {
     pub playlist: Vec<PlaylistItem>,
 
-    pub statics: IndexMap<String, StaticInfo>,
+    statics: IndexMap<String, StaticInfo>,
 
     pub deleted_items: Vec<DeletedItem>,
 
@@ -207,11 +217,13 @@ impl DataProvider {
             name = format!("New Static {}", counter);
         }
         self.statics.insert(name.clone(), StaticInfo::new(name));
+        self.save_statics();
     }
 
     pub fn toggle_static_favorite(&mut self, name: &str) {
         if let Some(song) = self.statics.get_mut(name) {
             song.is_favorite = !song.is_favorite;
+            self.save_statics();
         }
     }
 
@@ -238,6 +250,8 @@ impl DataProvider {
                 name: name.clone(),
                 static_info,
             });
+
+            self.save_statics();
         }
     }
 
@@ -255,6 +269,7 @@ impl DataProvider {
                 }
                 DeletedItem::Static { name, static_info } => {
                     self.statics.insert(name, static_info);
+                    self.save_statics();
                 }
             }
         }
@@ -288,8 +303,8 @@ impl DataProvider {
         }
     }
 
-    pub fn handle_song_data_edit(&mut self, i: usize, edit: SongDataEdit) {
-        if let Some(song) = self.playlist.get_mut(i).map(|item| &mut item.song) {
+    pub fn handle_song_data_edit(&mut self, idx: usize, edit: SongDataEdit) {
+        if let Some(song) = self.playlist.get_mut(idx).map(|item| &mut item.song) {
             match edit {
                 SongDataEdit::Title(title) => {
                     song.title = title;
@@ -301,6 +316,14 @@ impl DataProvider {
                     song.dance = v;
                 }
             }
+        }
+    }
+
+    pub fn handle_song_data_submit(&mut self, idx: usize) {
+        if let Some(item) = self.playlist.get(idx) {
+            let dance = item.song.dance.clone();
+            self.ensure_static(&dance);
+            self.save_statics();
         }
     }
 
@@ -378,13 +401,51 @@ impl DataProvider {
         for dance in dances {
             self.ensure_static(&dance);
         }
+        self.save_statics();
     }
 
-    pub fn get_dance_color(&self, dance: &str) -> Option<iced::Color> {
+    pub fn get_dance_color(&self, dance: &str) -> Option<Color> {
         self.statics.get(dance).and_then(|s| s.color)
     }
 
     pub fn rename_static(&mut self, old_name: &str, new_name: &str) -> Result<(), &'static str> {
+        if let Some(static_info) = self.statics.get_mut(old_name) {
+            static_info.name = new_name.to_string();
+            Ok(())
+        } else {
+            Err("Static not found")
+        }
+    }
+
+    pub fn process_static_name_submit(&mut self, key: &str) -> SubmitStaticResult {
+        let static_info = match self.statics.get(key) {
+            Some(info) => info,
+            None => return SubmitStaticResult::NotFound,
+        };
+
+        let typed_name = static_info.name.clone();
+
+        if key == typed_name {
+            return SubmitStaticResult::Unchanged;
+        }
+
+        if self.statics.contains_key(&typed_name) {
+            return SubmitStaticResult::NeedsMerge {
+                old_name: key.to_string(),
+                new_name: typed_name,
+            };
+        }
+
+        // If it's a completely new name, do the rename/re-keying immediately
+        let _ = self.submit_static_name(key, &typed_name);
+        SubmitStaticResult::Success
+    }
+
+    pub fn submit_static_name(
+        &mut self,
+        old_name: &str,
+        new_name: &str,
+    ) -> Result<(), &'static str> {
         if self.statics.contains_key(new_name) {
             return Err("Static with new name already exists");
         }
@@ -396,6 +457,24 @@ impl DataProvider {
                 if item.song.dance == old_name {
                     item.song.dance = new_name.to_string();
                 }
+            }
+            self.save_statics();
+            Ok(())
+        } else {
+            Err("Static not found")
+        }
+    }
+
+    pub fn update_static_color(
+        &mut self,
+        name: &str,
+        color: Option<Color>,
+        save: bool,
+    ) -> Result<(), &'static str> {
+        if let Some(static_info) = self.statics.get_mut(name) {
+            static_info.color = color;
+            if save {
+                self.save_statics();
             }
             Ok(())
         } else {
@@ -414,6 +493,7 @@ impl DataProvider {
                     item.song.dance = new_name.to_string();
                 }
             }
+            self.save_statics();
             Ok(())
         } else {
             Err("Source static not found")
@@ -435,6 +515,38 @@ impl DataProvider {
         if let Some(item) = self.playlist.get_mut(i) {
             item.played = true;
         }
+    }
+
+    fn save_statics(&self) {
+        let values: Vec<&StaticInfo> = self.statics.values().collect();
+        if let Ok(json) = serde_json::to_string_pretty(&values) {
+            let _ = std::fs::write(Self::get_statics_path(), json);
+        }
+    }
+
+    fn get_statics_path() -> PathBuf {
+        if let Some(mut path) = dirs::config_dir() {
+            path.push("danceinterpreter");
+            let _ = std::fs::create_dir_all(&path);
+            path.push("statics.json");
+            path
+        } else {
+            PathBuf::from("./statics.json")
+        }
+    }
+
+    pub fn load_statics(&mut self) {
+        let statics: Vec<StaticInfo> = std::fs::read_to_string(Self::get_statics_path())
+            .map(|file_content| serde_json::from_str(&file_content).ok())
+            .unwrap_or_default()
+            .unwrap_or_default();
+
+        self.set_statics(statics);
+        self.save_statics();
+    }
+
+    pub fn statics(&self) -> &IndexMap<String, StaticInfo> {
+        &self.statics
     }
 }
 
@@ -480,6 +592,7 @@ mod tests {
         });
 
         provider.handle_song_data_edit(0, SongDataEdit::Dance("Tango".to_string()));
+        provider.handle_song_data_submit(0);
 
         assert_eq!(provider.playlist[0].song.dance, "Tango");
         assert!(provider.statics.contains_key("Tango"));
@@ -502,7 +615,7 @@ mod tests {
     }
 
     #[test]
-    fn test_rename_static() {
+    fn test_submit_static_name() {
         let mut provider = DataProvider::default();
         provider.ensure_static("OldDance");
         let song = SongInfo {
@@ -514,11 +627,64 @@ mod tests {
             played: false,
         });
 
-        assert!(provider.rename_static("OldDance", "NewDance").is_ok());
+        assert!(provider.submit_static_name("OldDance", "NewDance").is_ok());
 
         assert!(!provider.statics.contains_key("OldDance"));
         assert!(provider.statics.contains_key("NewDance"));
         assert_eq!(provider.playlist[0].song.dance, "NewDance");
+    }
+
+    #[test]
+    fn test_rename_static_display_name() {
+        let mut provider = DataProvider::default();
+        provider.ensure_static("OldDance");
+
+        assert!(provider.rename_static("OldDance", "NewDisplay").is_ok());
+
+        // The key should remain the same
+        assert!(provider.statics.contains_key("OldDance"));
+        // The display name should change
+        assert_eq!(provider.statics.get("OldDance").unwrap().name, "NewDisplay");
+    }
+
+    #[test]
+    fn test_update_static_color() {
+        let mut provider = DataProvider::default();
+        provider.ensure_static("ColorDance");
+
+        let color = Color::from_rgb(1.0, 0.0, 0.0);
+        assert!(
+            provider
+                .update_static_color("ColorDance", Some(color), false)
+                .is_ok()
+        );
+
+        assert_eq!(
+            provider.statics.get("ColorDance").unwrap().color,
+            Some(color)
+        );
+
+        // Revert to None
+        assert!(
+            provider
+                .update_static_color("ColorDance", None, false)
+                .is_ok()
+        );
+        assert_eq!(provider.statics.get("ColorDance").unwrap().color, None);
+    }
+
+    #[test]
+    fn test_toggle_static_favorite() {
+        let mut provider = DataProvider::default();
+        provider.ensure_static("FavDance");
+
+        assert!(!provider.statics.get("FavDance").unwrap().is_favorite);
+
+        provider.toggle_static_favorite("FavDance");
+        assert!(provider.statics.get("FavDance").unwrap().is_favorite);
+
+        provider.toggle_static_favorite("FavDance");
+        assert!(!provider.statics.get("FavDance").unwrap().is_favorite);
     }
 
     #[test]

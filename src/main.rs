@@ -5,11 +5,12 @@ mod traktor_api;
 mod ui;
 
 use crate::async_utils::run_subscription_with;
-use crate::dataloading::dataprovider::{DataProvider, ItemChange, ItemSource, SongDataEdit};
+use crate::dataloading::dataprovider::{
+    DataProvider, ItemChange, ItemSource, SongDataEdit, SubmitStaticResult,
+};
 use crate::dataloading::id3tagreader::read_song_info_from_filepath;
 use crate::dataloading::m3uloader::load_tag_data_from_m3u;
 use crate::dataloading::songinfo::SongInfo;
-use crate::dataloading::staticinfo::StaticInfo;
 use crate::traktor_api::{ServerMessage, StateUpdate, TraktorMessage, TraktorSyncAction};
 use crate::ui::config_window::sidebar::SidebarMessage;
 use crate::ui::config_window::{ConfigWindow, PLAYLIST_SCROLLABLE_ID};
@@ -358,53 +359,38 @@ impl DanceInterpreter {
             }
 
             Message::ReloadStatics => {
-                let statics: Vec<StaticInfo> = std::fs::read_to_string(get_statics_path())
-                    .map(|file_content| serde_json::from_str(&file_content).ok())
-                    .unwrap_or_default()
-                    .unwrap_or_default();
-
-                self.data_provider.set_statics(statics);
-                self.save_statics();
-
+                self.data_provider.load_statics();
                 ().into()
             }
 
             Message::ToggleStaticFavorite(name) => {
                 self.data_provider.toggle_static_favorite(&name);
-                self.save_statics();
                 ().into()
             }
 
             Message::UpdateStaticName(old_name, new_name) => {
-                if let Some(static_info) = self.data_provider.statics.get_mut(&old_name) {
-                    static_info.name = new_name;
-                }
+                let _ = self.data_provider.rename_static(&old_name, &new_name);
                 ().into()
             }
 
             Message::SubmitStaticName(old_name) => {
-                if let Some(static_info) = self.data_provider.statics.get(&old_name) {
-                    let new_name = static_info.name.clone();
-                    if old_name != new_name {
-                        if self.data_provider.statics.contains_key(&new_name) {
-                            return Task::perform(async move { new_name }, move |new_name| {
-                                Message::RequestStaticMerge(old_name.clone(), new_name)
-                            });
-                        } else {
-                            let _ = self.data_provider.rename_static(&old_name, &new_name);
-                        }
+                match self.data_provider.process_static_name_submit(&old_name) {
+                    SubmitStaticResult::NeedsMerge { old_name, new_name } => {
+                        Task::perform(async move { new_name }, move |new_name| {
+                            Message::RequestStaticMerge(old_name.clone(), new_name)
+                        })
                     }
+                    SubmitStaticResult::Success
+                    | SubmitStaticResult::Unchanged
+                    | SubmitStaticResult::NotFound => ().into(),
                 }
-                self.save_statics();
-                ().into()
             }
 
             Message::UpdateStaticColor(name, mut color) => {
                 color.a = 1.0;
-                if let Some(static_info) = self.data_provider.statics.get_mut(&name) {
-                    static_info.color = Some(color);
-                }
-                self.save_statics();
+                let _ = self
+                    .data_provider
+                    .update_static_color(&name, Some(color), false);
                 self.config_window.color_picker_open = None;
                 self.config_window.color_picker_old_color = None;
                 ().into()
@@ -412,20 +398,24 @@ impl DanceInterpreter {
 
             Message::PreviewStaticColor(name, mut color) => {
                 color.a = 1.0;
-                if let Some(static_info) = self.data_provider.statics.get_mut(&name) {
-                    static_info.color = Some(color);
-                }
+                let _ = self
+                    .data_provider
+                    .update_static_color(&name, Some(color), false);
                 ().into()
             }
 
             Message::ToggleStaticColorPicker(name) => {
                 if self.config_window.color_picker_open.as_ref() == Some(&name) {
-                    if let Some(static_info) = self.data_provider.statics.get_mut(&name) {
-                        static_info.color = self.config_window.color_picker_old_color.take();
+                    if let Some(old_color) = self.config_window.color_picker_old_color.take() {
+                        let _ =
+                            self.data_provider
+                                .update_static_color(&name, Some(old_color), false);
+                    } else {
+                        let _ = self.data_provider.update_static_color(&name, None, false);
                     }
                     self.config_window.color_picker_open = None;
                 } else {
-                    if let Some(static_info) = self.data_provider.statics.get(&name) {
+                    if let Some(static_info) = self.data_provider.statics().get(&name) {
                         self.config_window.color_picker_old_color = static_info.color;
                     }
                     self.config_window.color_picker_open = Some(name);
@@ -464,7 +454,6 @@ impl DanceInterpreter {
                 self.config_window.dummy_song_artist.clear();
                 self.config_window.dummy_song_dance.clear();
                 self.data_provider.ensure_statics_for_playlist();
-                self.save_statics();
                 ().into()
             }
 
@@ -476,7 +465,6 @@ impl DanceInterpreter {
                     if !in_playlist {
                         self.data_provider.append_song(song.clone());
                         self.data_provider.ensure_statics_for_playlist();
-                        self.save_statics();
                     }
                 }
                 ().into()
@@ -489,16 +477,14 @@ impl DanceInterpreter {
             }
             Message::ConfirmStaticMerge(old_name, new_name) => {
                 let _ = self.data_provider.merge_statics(&old_name, &new_name);
-                self.save_statics();
                 self.config_window.active_dialog = None;
                 ().into()
             }
             Message::CancelDialog => {
                 if let Some(ui::config_window::DialogState::MergeStatic { old_name, .. }) =
                     &self.config_window.active_dialog
-                    && let Some(static_info) = self.data_provider.statics.get_mut(old_name)
                 {
-                    static_info.name = old_name.clone();
+                    let _ = self.data_provider.rename_static(old_name, old_name);
                 }
                 self.config_window.active_dialog = None;
                 ().into()
@@ -506,7 +492,6 @@ impl DanceInterpreter {
 
             Message::AddBlankStatic => {
                 self.data_provider.add_static();
-                self.save_statics();
                 ().into()
             }
 
@@ -549,11 +534,7 @@ impl DanceInterpreter {
             }
 
             Message::SubmitPlaylistDance(i) => {
-                if let Some(item) = self.data_provider.playlist.get(i) {
-                    let dance = item.song.dance.clone();
-                    self.data_provider.ensure_static(&dance);
-                    self.save_statics();
-                }
+                self.data_provider.handle_song_data_submit(i);
                 ().into()
             }
 
@@ -574,7 +555,6 @@ impl DanceInterpreter {
 
             Message::UndoDelete => {
                 self.data_provider.undo_delete();
-                self.save_statics();
                 ().into()
             }
 
@@ -592,7 +572,6 @@ impl DanceInterpreter {
                     self.config_window.active_dialog.take()
                 {
                     self.data_provider.delete_item(item);
-                    self.save_statics();
                 }
                 ().into()
             }
@@ -760,13 +739,6 @@ impl DanceInterpreter {
         }
     }
 
-    fn save_statics(&self) {
-        let values: Vec<&StaticInfo> = self.data_provider.statics.values().collect();
-        if let Ok(json) = serde_json::to_string_pretty(&values) {
-            let _ = std::fs::write(get_statics_path(), json);
-        }
-    }
-
     fn scroll_to_first_search_match(&mut self) -> Task<Message> {
         if self.config_window.search_query.is_empty() {
             return ().into();
@@ -921,16 +893,5 @@ impl DanceInterpreter {
         }
 
         Subscription::batch(subscriptions)
-    }
-}
-
-fn get_statics_path() -> PathBuf {
-    if let Some(mut path) = dirs::config_dir() {
-        path.push("danceinterpreter");
-        let _ = std::fs::create_dir_all(&path);
-        path.push("statics.json");
-        path
-    } else {
-        PathBuf::from("./statics.json")
     }
 }

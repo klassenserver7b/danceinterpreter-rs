@@ -44,7 +44,7 @@ pub fn get_statics_buttons(dance_interpreter: &'_ DanceInterpreter) -> Vec<Eleme
             .on_press(Message::ItemChanged(ItemChange::Traktor));
     let mut statics: Vec<Element<_>> = dance_interpreter
         .data_provider
-        .statics
+        .statics()
         .iter()
         .filter(|(_, s)| s.is_favorite)
         .map(|(name, s)| {

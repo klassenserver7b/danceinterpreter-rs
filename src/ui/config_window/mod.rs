@@ -134,7 +134,7 @@ impl ConfigWindow {
                             .unwrap_or_default(),
                         ItemSource::Static(name) => dance_interpreter
                             .data_provider
-                            .statics
+                            .statics()
                             .get(name)
                             .map(|s| s.name.clone())
                             .unwrap_or_else(|| name.clone()),
@@ -442,7 +442,8 @@ impl ConfigWindow {
 
         let mut list_column = col!().spacing(5);
 
-        for (i, (name, static_info)) in dance_interpreter.data_provider.statics.iter().enumerate() {
+        for (i, (name, static_info)) in dance_interpreter.data_provider.statics().iter().enumerate()
+        {
             let is_match = Self::data_matches_search_query(&self.search_query, static_info.into());
             let static_row = Self::build_static_row(
                 static_info,
