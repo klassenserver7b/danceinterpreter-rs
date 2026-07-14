@@ -44,7 +44,7 @@ pub struct ConfigWindow {
     pub search_query: String,
     pub active_dialog: Option<DialogState>,
     pub color_picker_open: Option<String>,
-    pub color_picker_old_color: Option<iced::Color>,
+    pub color_picker_old_color: Option<Color>,
 
     pub dummy_song_title: String,
     pub dummy_song_artist: String,
@@ -172,8 +172,7 @@ impl ConfigWindow {
         title: String,
         target: String,
         confirm_text: String,
-        confirm_style: impl Fn(&Theme, iced::widget::button::Status) -> iced::widget::button::Style
-        + 'static,
+        confirm_style: impl Fn(&Theme, button::Status) -> button::Style + 'static,
         cancel_msg: Message,
         confirm_msg: Message,
     ) -> Element<'_, Message> {
@@ -640,7 +639,7 @@ impl ConfigWindow {
                     }),
                 song_row,
             ]
-            .align_y(iced::Alignment::Center)
+            .align_y(Alignment::Center)
             .spacing(6),
         )
         .style(move |t| {

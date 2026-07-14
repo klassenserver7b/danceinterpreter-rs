@@ -391,19 +391,7 @@ impl DanceInterpreter {
                                 Message::RequestStaticMerge(old_name.clone(), new_name)
                             });
                         } else {
-                            if let Some(mut static_info) =
-                                self.data_provider.statics.shift_remove(&old_name)
-                            {
-                                static_info.name = new_name.clone();
-                                self.data_provider
-                                    .statics
-                                    .insert(new_name.clone(), static_info);
-                                for song in &mut self.data_provider.playlist_songs {
-                                    if song.dance == old_name {
-                                        song.dance = new_name.clone();
-                                    }
-                                }
-                            }
+                            let _ = self.data_provider.rename_static(&old_name, &new_name);
                         }
                     }
                 }
@@ -498,22 +486,17 @@ impl DanceInterpreter {
 
             Message::RequestStaticMerge(old_name, new_name) => {
                 self.config_window.active_dialog =
-                    Some(crate::ui::config_window::DialogState::MergeStatic { old_name, new_name });
+                    Some(ui::config_window::DialogState::MergeStatic { old_name, new_name });
                 ().into()
             }
             Message::ConfirmStaticMerge(old_name, new_name) => {
-                self.data_provider.statics.shift_remove(&old_name);
-                for song in &mut self.data_provider.playlist_songs {
-                    if song.dance == old_name {
-                        song.dance = new_name.clone();
-                    }
-                }
+                let _ = self.data_provider.merge_statics(&old_name, &new_name);
                 self.save_statics();
                 self.config_window.active_dialog = None;
                 ().into()
             }
             Message::CancelDialog => {
-                if let Some(crate::ui::config_window::DialogState::MergeStatic { old_name, .. }) =
+                if let Some(ui::config_window::DialogState::MergeStatic { old_name, .. }) =
                     &self.config_window.active_dialog
                     && let Some(static_info) = self.data_provider.statics.get_mut(old_name)
                 {
@@ -594,11 +577,11 @@ impl DanceInterpreter {
                 }
 
                 self.config_window.active_dialog =
-                    Some(crate::ui::config_window::DialogState::Delete(item));
+                    Some(ui::config_window::DialogState::Delete(item));
                 ().into()
             }
             Message::ConfirmDelete => {
-                if let Some(crate::ui::config_window::DialogState::Delete(item)) =
+                if let Some(ui::config_window::DialogState::Delete(item)) =
                     self.config_window.active_dialog.take()
                 {
                     self.data_provider.delete_item(item);
@@ -771,7 +754,7 @@ impl DanceInterpreter {
     }
 
     fn save_statics(&self) {
-        let values: Vec<&crate::dataloading::staticinfo::StaticInfo> =
+        let values: Vec<&dataloading::staticinfo::StaticInfo> =
             self.data_provider.statics.values().collect();
         if let Ok(json) = serde_json::to_string_pretty(&values) {
             let _ = std::fs::write("./statics.json", json);

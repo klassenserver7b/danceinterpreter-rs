@@ -48,7 +48,7 @@ use indexmap::IndexMap;
 #[derive(Default)]
 pub struct DataProvider {
     pub playlist_songs: Vec<SongInfo>,
-    pub playlist_played: Vec<bool>,
+    playlist_played: Vec<bool>,
 
     pub statics: IndexMap<String, StaticInfo>,
 
@@ -85,23 +85,6 @@ impl DataProvider {
 
     pub fn set_statics(&mut self, vec: Vec<StaticInfo>) {
         self.statics = vec.into_iter().map(|s| (s.name.clone(), s)).collect();
-    }
-
-    fn set_current_as_played(&mut self) {
-        let i = match self.current {
-            ItemSource::Playlist(i) => i,
-            ItemSource::Traktor => {
-                let Some(index) = self.get_current_traktor_index() else {
-                    return;
-                };
-                index
-            }
-            _ => return,
-        };
-
-        if let Some(v) = self.playlist_played.get_mut(i) {
-            *v = true;
-        }
     }
 
     pub fn get_current_displayable_data(&self) -> Option<DisplayableData> {
@@ -382,5 +365,152 @@ impl DataProvider {
 
     pub fn get_dance_color(&self, dance: &str) -> Option<iced::Color> {
         self.statics.get(dance).and_then(|s| s.color)
+    }
+
+    pub fn rename_static(&mut self, old_name: &str, new_name: &str) -> Result<(), &'static str> {
+        if self.statics.contains_key(new_name) {
+            return Err("Static with new name already exists");
+        }
+
+        if let Some(mut static_info) = self.statics.shift_remove(old_name) {
+            static_info.name = new_name.to_string();
+            self.statics.insert(new_name.to_string(), static_info);
+            for song in &mut self.playlist_songs {
+                if song.dance == old_name {
+                    song.dance = new_name.to_string();
+                }
+            }
+            Ok(())
+        } else {
+            Err("Static not found")
+        }
+    }
+
+    pub fn merge_statics(&mut self, old_name: &str, new_name: &str) -> Result<(), &'static str> {
+        if !self.statics.contains_key(new_name) {
+            return Err("Target static does not exist");
+        }
+
+        if self.statics.shift_remove(old_name).is_some() {
+            for song in &mut self.playlist_songs {
+                if song.dance == old_name {
+                    song.dance = new_name.to_string();
+                }
+            }
+            Ok(())
+        } else {
+            Err("Source static not found")
+        }
+    }
+
+    fn set_current_as_played(&mut self) {
+        let i = match self.current {
+            ItemSource::Playlist(i) => i,
+            ItemSource::Traktor => {
+                let Some(index) = self.get_current_traktor_index() else {
+                    return;
+                };
+                index
+            }
+            _ => return,
+        };
+
+        if let Some(v) = self.playlist_played.get_mut(i) {
+            *v = true;
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::dataloading::songinfo::SongInfo;
+
+    #[test]
+    fn test_ensure_static_empty() {
+        let mut provider = DataProvider::default();
+        provider.ensure_static("");
+        assert!(provider.statics.is_empty());
+    }
+
+    #[test]
+    fn test_ensure_static_new() {
+        let mut provider = DataProvider::default();
+        provider.ensure_static("Waltz");
+        assert!(provider.statics.contains_key("Waltz"));
+    }
+
+    #[test]
+    fn test_ensure_static_existing() {
+        let mut provider = DataProvider::default();
+        provider.ensure_static("Waltz");
+        provider.statics.get_mut("Waltz").unwrap().is_favorite = true;
+
+        provider.ensure_static("Waltz"); // Should not overwrite
+        assert!(provider.statics.get("Waltz").unwrap().is_favorite);
+    }
+
+    #[test]
+    fn test_playlist_dance_updates_triggering_static_creation() {
+        let mut provider = DataProvider::default();
+        let song = SongInfo {
+            dance: "Waltz".to_string(),
+            ..Default::default()
+        };
+        provider.playlist_songs.push(song);
+        provider.playlist_played.push(false);
+
+        provider.handle_song_data_edit(0, SongDataEdit::Dance("Tango".to_string()));
+
+        assert_eq!(provider.playlist_songs[0].dance, "Tango");
+        assert!(provider.statics.contains_key("Tango"));
+    }
+
+    #[test]
+    fn test_ensure_statics_for_playlist() {
+        let mut provider = DataProvider::default();
+        let song = SongInfo {
+            dance: "Waltz".to_string(),
+            ..Default::default()
+        };
+        provider.playlist_songs.push(song);
+
+        provider.ensure_statics_for_playlist();
+        assert!(provider.statics.contains_key("Waltz"));
+    }
+
+    #[test]
+    fn test_rename_static() {
+        let mut provider = DataProvider::default();
+        provider.ensure_static("OldDance");
+        let song = SongInfo {
+            dance: "OldDance".to_string(),
+            ..Default::default()
+        };
+        provider.playlist_songs.push(song);
+
+        assert!(provider.rename_static("OldDance", "NewDance").is_ok());
+
+        assert!(!provider.statics.contains_key("OldDance"));
+        assert!(provider.statics.contains_key("NewDance"));
+        assert_eq!(provider.playlist_songs[0].dance, "NewDance");
+    }
+
+    #[test]
+    fn test_merge_statics() {
+        let mut provider = DataProvider::default();
+        provider.ensure_static("SourceDance");
+        provider.ensure_static("TargetDance");
+        let song = SongInfo {
+            dance: "SourceDance".to_string(),
+            ..Default::default()
+        };
+        provider.playlist_songs.push(song);
+
+        assert!(provider.merge_statics("SourceDance", "TargetDance").is_ok());
+
+        assert!(!provider.statics.contains_key("SourceDance"));
+        assert!(provider.statics.contains_key("TargetDance"));
+        assert_eq!(provider.playlist_songs[0].dance, "TargetDance");
     }
 }
