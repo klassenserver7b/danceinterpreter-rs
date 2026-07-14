@@ -198,10 +198,9 @@ impl DataProvider {
     }
 
     pub fn ensure_static(&mut self, dance: &str) {
-        let trimmed = dance.trim();
-        if !trimmed.is_empty() && !self.statics.contains_key(trimmed) {
+        if !dance.is_empty() && !self.statics.contains_key(dance) {
             self.statics
-                .insert(trimmed.to_string(), StaticInfo::new(trimmed.to_string()));
+                .insert(dance.to_string(), StaticInfo::new(dance.to_string()));
         }
     }
 
@@ -371,20 +370,13 @@ impl DataProvider {
     }
 
     pub fn ensure_statics_for_playlist(&mut self) {
-        for song in &self.playlist_songs {
-            if song.dance.is_empty() {
-                continue;
-            }
-            if !self.statics.contains_key(&song.dance) {
-                self.statics.insert(
-                    song.dance.clone(),
-                    StaticInfo {
-                        name: song.dance.clone(),
-                        is_favorite: false,
-                        color: None,
-                    },
-                );
-            }
+        let dances: Vec<String> = self
+            .playlist_songs
+            .iter()
+            .map(|song| song.dance.clone())
+            .collect();
+        for dance in dances {
+            self.ensure_static(&dance);
         }
     }
 

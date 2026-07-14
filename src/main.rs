@@ -458,6 +458,13 @@ impl DanceInterpreter {
                 ().into()
             }
             Message::SubmitDummySong => {
+                if self.config_window.dummy_song_title.is_empty()
+                    && self.config_window.dummy_song_artist.is_empty()
+                    && self.config_window.dummy_song_dance.is_empty()
+                {
+                    return ().into();
+                }
+
                 let song = SongInfo {
                     title: self.config_window.dummy_song_title.clone(),
                     artist: self.config_window.dummy_song_artist.clone(),
@@ -875,9 +882,7 @@ impl DanceInterpreter {
                     Key::Named(Named::ArrowLeft) => {
                         Some(Message::ItemChanged(ItemChange::Previous))
                     }
-                    Key::Named(Named::End) => Some(Message::ItemChanged(
-                        ItemChange::StaticAbsolute("".to_string()),
-                    )),
+                    Key::Named(Named::End) => Some(Message::ItemChanged(ItemChange::Blank)),
                     Key::Named(Named::F11) => Some(Message::ToggleFullscreen),
                     Key::Named(Named::F5) => Some(Message::ReloadStatics),
                     Key::Named(Named::PageUp) => Some(Message::ScrollBy(-10.0)),

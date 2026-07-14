@@ -132,7 +132,12 @@ impl ConfigWindow {
                             .get(*i)
                             .map(|s| s.title.clone())
                             .unwrap_or_default(),
-                        ItemSource::Static(name) => name.clone(),
+                        ItemSource::Static(name) => dance_interpreter
+                            .data_provider
+                            .statics
+                            .get(name)
+                            .map(|s| s.name.clone())
+                            .unwrap_or_else(|| name.clone()),
                         _ => String::new(),
                     };
                     self.build_action_dialog(
