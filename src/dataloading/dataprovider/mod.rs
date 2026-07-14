@@ -63,16 +63,15 @@ pub struct PlaylistItem {
 
 #[derive(Default)]
 pub struct DataProvider {
-    pub playlist: Vec<PlaylistItem>,
-
-    statics: IndexMap<String, StaticInfo>,
-
-    pub deleted_items: Vec<DeletedItem>,
-
     pub traktor_provider: TraktorDataProvider,
 
-    pub current: ItemSource,
-    pub next: Option<ItemSource>,
+    playlist: Vec<PlaylistItem>,
+    statics: IndexMap<String, StaticInfo>,
+
+    deleted_items: Vec<DeletedItem>,
+
+    current: ItemSource,
+    next: Option<ItemSource>,
 
     should_scroll: bool,
 }
@@ -547,6 +546,10 @@ impl DataProvider {
 
     pub fn statics(&self) -> &IndexMap<String, StaticInfo> {
         &self.statics
+    }
+
+    pub fn playlist(&self) -> &Vec<PlaylistItem> {
+        &self.playlist
     }
 }
 

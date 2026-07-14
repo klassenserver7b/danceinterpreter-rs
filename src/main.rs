@@ -459,7 +459,7 @@ impl DanceInterpreter {
 
             Message::AddTraktorSong => {
                 if let Some(song) = self.data_provider.traktor_provider.get_song_info() {
-                    let in_playlist = self.data_provider.playlist.iter().any(|item| {
+                    let in_playlist = self.data_provider.playlist().iter().any(|item| {
                         item.song.title == song.title && item.song.artist == song.artist
                     });
                     if !in_playlist {
@@ -749,7 +749,7 @@ impl DanceInterpreter {
 
         let first_match = self
             .data_provider
-            .playlist
+            .playlist()
             .iter()
             .enumerate()
             .find(|(_, item)| {
@@ -764,7 +764,7 @@ impl DanceInterpreter {
 
         if let Some((index, _)) = first_match {
             let offset_y =
-                index as f32 / std::cmp::max(1, self.data_provider.playlist.len() - 1) as f32;
+                index as f32 / std::cmp::max(1, self.data_provider.playlist().len() - 1) as f32;
 
             Task::done(Message::SnapTo(RelativeOffset {
                 x: 0.0,
@@ -802,7 +802,7 @@ impl DanceInterpreter {
     fn try_scroll_to_song(&mut self) -> Task<Message> {
         if let Some(index) = self.data_provider.take_scroll_index() {
             let offset_y =
-                index as f32 / std::cmp::max(1, self.data_provider.playlist.len() - 1) as f32;
+                index as f32 / std::cmp::max(1, self.data_provider.playlist().len() - 1) as f32;
 
             Task::done(Message::SnapTo(RelativeOffset {
                 x: 0.0,
