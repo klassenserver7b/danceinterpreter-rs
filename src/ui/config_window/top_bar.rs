@@ -6,7 +6,9 @@ use crate::ui::widgets::buttons::{
 };
 use crate::ui::widgets::labeled_message_checkbox;
 use crate::ui::with_tooltip;
-use crate::{DanceInterpreter, Message};
+use crate::{
+    DanceInterpreter, DialogMessage, Message, SearchMessage, SongWindowMessage, StaticsMessage,
+};
 use iced::alignment::Vertical;
 use iced::border::Radius;
 use iced::widget::space::horizontal;
@@ -49,7 +51,7 @@ pub fn build<'a>(
                         (labeled_message_checkbox(
                             "Search",
                             config_window.search_visible,
-                            |_| Message::ToggleSearch
+                            |_| Message::Search(SearchMessage::Toggle)
                         )),
                         (row![
                             text("Theme").width(Length::Shrink),
@@ -63,9 +65,9 @@ pub fn build<'a>(
                         .align_y(Vertical::Center)
                         .spacing(5.0)
                         .width(Length::Fill)),
-                        (label_message_button_fill("Reload Statics", Message::ReloadStatics)),
+                        (label_message_button_fill("Reload Statics", Message::Statics(StaticsMessage::Reload))),
                         (label_message_button_fill(format!("Add blank {}", if config_window.is_statics_view {"static"} else {"song"}), Message::AddBlankEntry)),
-                        (label_message_button_fill("Undo Delete (Ctrl+Z)", Message::UndoDelete)),
+                        (label_message_button_fill("Undo Delete (Ctrl+Z)", Message::Dialog(DialogMessage::UndoDelete))),
                     )
                 )
                 .spacing(5.0)
@@ -76,14 +78,14 @@ pub fn build<'a>(
                     menu_items!(
                         (row![
                             text("Scale").width(Length::Fill),
-                            number_input(&dance_interpreter.song_window.scale, 0.5..=3.0 , Message::ChangeSongWindowScale)
+                            number_input(&dance_interpreter.song_window.scale, 0.5..=3.0 , |val| Message::SongWindow(SongWindowMessage::ChangeScale(val)))
                                 .step(0.1)
                                 .width(Length::Fill)
                         ].align_y(Vertical::Center)
                         .spacing(5.0)
                         .width(Length::Fill)),
-                        (labeled_message_checkbox("Show Thumbnails", dance_interpreter.song_window.enable_image, Message::EnableImage)),
-                        (labeled_message_checkbox("Show Next Dance", dance_interpreter.song_window.enable_next_dance, Message::EnableNextDance)),
+                        (labeled_message_checkbox("Show Thumbnails", dance_interpreter.song_window.enable_image, |v| Message::SongWindow(SongWindowMessage::EnableImage(v)))),
+                        (labeled_message_checkbox("Show Next Dance", dance_interpreter.song_window.enable_next_dance, |v| Message::SongWindow(SongWindowMessage::EnableNextDance(v)))),
                     )
                 )
                 .spacing(5.0)

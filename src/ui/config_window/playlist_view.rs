@@ -10,7 +10,7 @@ use crate::ui::widget::dynamic_text_input::DynamicTextInput;
 use crate::ui::widgets::buttons::material_symbol_message_button;
 use crate::ui::widgets::{material_symbol, material_symbol_sized};
 use crate::ui::with_tooltip;
-use crate::{DanceInterpreter, Message};
+use crate::{DanceInterpreter, DialogMessage, DummySongMessage, Message};
 use iced::alignment::Vertical;
 use iced::widget::{
     Column, Row, Scrollable, Space, button, column as col, container, row, scrollable, text,
@@ -90,16 +90,16 @@ pub fn build<'a>(
         text!("*").width(Length::Fixed(24.0)),
         iced::widget::text_input("Title...", &config_window.dummy_song_title)
             .width(Length::Fill)
-            .on_input(Message::UpdateDummySongTitle)
-            .on_submit(Message::SubmitDummySong),
+            .on_input(|v| Message::DummySong(DummySongMessage::UpdateTitle(v)))
+            .on_submit(Message::DummySong(DummySongMessage::Submit)),
         iced::widget::text_input("Artist...", &config_window.dummy_song_artist)
             .width(Length::Fill)
-            .on_input(Message::UpdateDummySongArtist)
-            .on_submit(Message::SubmitDummySong),
+            .on_input(|v| Message::DummySong(DummySongMessage::UpdateArtist(v)))
+            .on_submit(Message::DummySong(DummySongMessage::Submit)),
         iced::widget::text_input("Dance...", &config_window.dummy_song_dance)
             .width(Length::Fill)
-            .on_input(Message::UpdateDummySongDance)
-            .on_submit(Message::SubmitDummySong),
+            .on_input(|v| Message::DummySong(DummySongMessage::UpdateDance(v)))
+            .on_submit(Message::DummySong(DummySongMessage::Submit)),
         Space::new().width(Length::Fill).height(Length::Shrink),
         Space::new()
             .width(Length::Fixed(10.0))
@@ -265,7 +265,7 @@ pub fn build_song_row<'a>(
                 material_symbol_message_button(
                     "delete",
                     false,
-                    Message::RequestDelete(ItemSource::Playlist(idx))
+                    Message::Dialog(DialogMessage::RequestDelete(ItemSource::Playlist(idx)))
                 ),
                 "Delete song"
             ),

@@ -1,5 +1,5 @@
 use crate::dataloading::dataprovider::ItemSource;
-use crate::{DanceInterpreter, Message};
+use crate::{DanceInterpreter, DialogMessage, Message, StaticsMessage};
 use iced::alignment::Alignment;
 use iced::widget::{Space, button, column as col, container, mouse_area, opaque, row, stack, text};
 use iced::{Color, Element, Length, Theme};
@@ -96,8 +96,8 @@ pub fn build_dialog<'a>(
                 target_name,
                 "Delete".to_string(),
                 button::danger,
-                Message::CancelDelete,
-                Message::ConfirmDelete,
+                Message::Dialog(DialogMessage::CancelDelete),
+                Message::Dialog(DialogMessage::ConfirmDelete),
             )
         }
         DialogState::MergeStatic { old_name, new_name } => build_action_dialog(
@@ -108,8 +108,11 @@ pub fn build_dialog<'a>(
             ),
             "Merge".to_string(),
             button::primary,
-            Message::CancelDialog,
-            Message::ConfirmStaticMerge(old_name.clone(), new_name.clone()),
+            Message::Dialog(DialogMessage::Cancel),
+            Message::Statics(StaticsMessage::ConfirmMerge(
+                old_name.clone(),
+                new_name.clone(),
+            )),
         ),
     }
 }

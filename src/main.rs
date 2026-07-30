@@ -61,6 +61,51 @@ struct DanceInterpreter {
 }
 
 #[derive(Debug, Clone)]
+pub enum SearchMessage {
+    Toggle,
+    Changed(String),
+    Clear,
+}
+
+#[derive(Debug, Clone)]
+pub enum StaticsMessage {
+    Reload,
+    ToggleFavorite(String),
+    UpdateName(String, String),
+    SubmitName(String),
+    UpdateColor(String, iced::Color),
+    PreviewColor(String, iced::Color),
+    ToggleColorPicker(String),
+    AddBlank,
+    RequestMerge(String, String),
+    ConfirmMerge(String, String),
+}
+
+#[derive(Debug, Clone)]
+pub enum SongWindowMessage {
+    EnableImage(bool),
+    EnableNextDance(bool),
+    ChangeScale(f32),
+}
+
+#[derive(Debug, Clone)]
+pub enum DummySongMessage {
+    UpdateTitle(String),
+    UpdateArtist(String),
+    UpdateDance(String),
+    Submit,
+}
+
+#[derive(Debug, Clone)]
+pub enum DialogMessage {
+    Cancel,
+    RequestDelete(ItemSource),
+    ConfirmDelete,
+    CancelDelete,
+    UndoDelete,
+}
+
+#[derive(Debug, Clone)]
 pub enum Message {
     Noop,
 
@@ -76,15 +121,15 @@ pub enum Message {
 
     ToggleStaticsView,
     Sidebar(SidebarMessage),
-    EnableImage(bool),
-    EnableNextDance(bool),
-    ChangeSongWindowScale(f32),
+    Traktor(TraktorMessage),
+    Search(SearchMessage),
+    Statics(StaticsMessage),
+    SongWindow(SongWindowMessage),
+    DummySong(DummySongMessage),
+    Dialog(DialogMessage),
+
     EnableAutoscroll(bool),
     EnableFollowSystemTheme(bool),
-
-    ToggleSearch,
-    SearchChanged(String),
-    ClearSearch,
 
     ScrollBy(f32),
     SnapTo(RelativeOffset),
@@ -98,23 +143,6 @@ pub enum Message {
     SongDataEdit(usize, SongDataEdit),
     SubmitPlaylistDance(usize),
 
-    ReloadStatics,
-    ToggleStaticFavorite(String),
-    UpdateStaticName(String, String),
-    SubmitStaticName(String),
-    UpdateStaticColor(String, iced::Color),
-    PreviewStaticColor(String, iced::Color),
-    ToggleStaticColorPicker(String),
-    AddBlankStatic,
-    RequestStaticMerge(String, String),
-    ConfirmStaticMerge(String, String),
-    CancelDialog,
-
-    UpdateDummySongTitle(String),
-    UpdateDummySongArtist(String),
-    UpdateDummySongDance(String),
-    SubmitDummySong,
-
     AddTraktorSong,
 
     FileDropped(PathBuf),
@@ -122,12 +150,6 @@ pub enum Message {
     SetNextItem(ItemSource),
 
     Animate,
-    Traktor(TraktorMessage),
-
-    RequestDelete(ItemSource),
-    ConfirmDelete,
-    CancelDelete,
-    UndoDelete,
     ModifiersChanged(Modifiers),
 }
 
@@ -162,6 +184,7 @@ impl DanceInterpreter {
 
         tasks.push(cw_opened);
         tasks.push(sw_opened);
+
         tasks.push(system::theme().map(Message::ThemeChanged));
 
         tasks.push(
@@ -173,7 +196,7 @@ impl DanceInterpreter {
                 .map(|_| Message::Noop),
         );
 
-        tasks.push(Task::done(Message::ReloadStatics));
+        tasks.push(Task::done(Message::Statics(StaticsMessage::Reload)));
 
         (state, Task::batch(tasks))
     }
@@ -352,110 +375,182 @@ impl DanceInterpreter {
 
             Message::AddBlankEntry => {
                 if self.config_window.is_statics_view {
-                    Task::done(Message::AddBlankStatic)
+                    Task::done(Message::Statics(StaticsMessage::AddBlank))
                 } else {
                     Task::done(Message::AddBlankSong(RelativeOffset::END))
                 }
             }
 
-            Message::ReloadStatics => {
-                self.data_provider.load_statics();
-                ().into()
-            }
-
-            Message::ToggleStaticFavorite(name) => {
-                self.data_provider.toggle_static_favorite(&name);
-                ().into()
-            }
-
-            Message::UpdateStaticName(old_name, new_name) => {
-                let _ = self.data_provider.rename_static(&old_name, &new_name);
-                ().into()
-            }
-
-            Message::SubmitStaticName(old_name) => {
-                match self.data_provider.process_static_name_submit(&old_name) {
-                    SubmitStaticResult::NeedsMerge { old_name, new_name } => {
-                        Task::perform(async move { new_name }, move |new_name| {
-                            Message::RequestStaticMerge(old_name.clone(), new_name)
-                        })
-                    }
-                    SubmitStaticResult::Success
-                    | SubmitStaticResult::Unchanged
-                    | SubmitStaticResult::NotFound => ().into(),
+            Message::Statics(msg) => match msg {
+                StaticsMessage::Reload => {
+                    self.data_provider.load_statics();
+                    ().into()
                 }
-            }
-
-            Message::UpdateStaticColor(name, mut color) => {
-                color.a = 1.0;
-                let _ = self
-                    .data_provider
-                    .update_static_color(&name, Some(color), false);
-                self.config_window.color_picker_open = None;
-                self.config_window.color_picker_old_color = None;
-                ().into()
-            }
-
-            Message::PreviewStaticColor(name, mut color) => {
-                color.a = 1.0;
-                let _ = self
-                    .data_provider
-                    .update_static_color(&name, Some(color), false);
-                ().into()
-            }
-
-            Message::ToggleStaticColorPicker(name) => {
-                if self.config_window.color_picker_open.as_ref() == Some(&name) {
-                    if let Some(old_color) = self.config_window.color_picker_old_color.take() {
-                        let _ =
-                            self.data_provider
-                                .update_static_color(&name, Some(old_color), false);
-                    } else {
-                        let _ = self.data_provider.update_static_color(&name, None, false);
+                StaticsMessage::ToggleFavorite(name) => {
+                    self.data_provider.toggle_static_favorite(&name);
+                    ().into()
+                }
+                StaticsMessage::UpdateName(old_name, new_name) => {
+                    let _ = self.data_provider.rename_static(&old_name, &new_name);
+                    ().into()
+                }
+                StaticsMessage::SubmitName(old_name) => {
+                    match self.data_provider.process_static_name_submit(&old_name) {
+                        SubmitStaticResult::NeedsMerge { old_name, new_name } => {
+                            Task::perform(async move { new_name }, move |new_name| {
+                                Message::Statics(StaticsMessage::RequestMerge(
+                                    old_name.clone(),
+                                    new_name,
+                                ))
+                            })
+                        }
+                        SubmitStaticResult::Success
+                        | SubmitStaticResult::Unchanged
+                        | SubmitStaticResult::NotFound => ().into(),
                     }
+                }
+                StaticsMessage::UpdateColor(name, mut color) => {
+                    color.a = 1.0;
+                    let _ = self
+                        .data_provider
+                        .update_static_color(&name, Some(color), false);
                     self.config_window.color_picker_open = None;
-                } else {
-                    if let Some(static_info) = self.data_provider.statics().get(&name) {
-                        self.config_window.color_picker_old_color = static_info.color;
+                    self.config_window.color_picker_old_color = None;
+                    ().into()
+                }
+                StaticsMessage::PreviewColor(name, mut color) => {
+                    color.a = 1.0;
+                    let _ = self
+                        .data_provider
+                        .update_static_color(&name, Some(color), false);
+                    ().into()
+                }
+                StaticsMessage::ToggleColorPicker(name) => {
+                    if self.config_window.color_picker_open.as_ref() == Some(&name) {
+                        if let Some(old_color) = self.config_window.color_picker_old_color.take() {
+                            let _ = self.data_provider.update_static_color(
+                                &name,
+                                Some(old_color),
+                                false,
+                            );
+                        } else {
+                            let _ = self.data_provider.update_static_color(&name, None, false);
+                        }
+                        self.config_window.color_picker_open = None;
+                    } else {
+                        if let Some(static_info) = self.data_provider.statics().get(&name) {
+                            self.config_window.color_picker_old_color = static_info.color;
+                        }
+                        self.config_window.color_picker_open = Some(name);
                     }
-                    self.config_window.color_picker_open = Some(name);
+                    ().into()
                 }
-                ().into()
-            }
-
-            Message::UpdateDummySongTitle(title) => {
-                self.config_window.dummy_song_title = title;
-                ().into()
-            }
-            Message::UpdateDummySongArtist(artist) => {
-                self.config_window.dummy_song_artist = artist;
-                ().into()
-            }
-            Message::UpdateDummySongDance(dance) => {
-                self.config_window.dummy_song_dance = dance;
-                ().into()
-            }
-            Message::SubmitDummySong => {
-                if self.config_window.dummy_song_title.is_empty()
-                    && self.config_window.dummy_song_artist.is_empty()
-                    && self.config_window.dummy_song_dance.is_empty()
-                {
-                    return ().into();
+                StaticsMessage::AddBlank => {
+                    self.data_provider.add_static();
+                    ().into()
                 }
+                StaticsMessage::RequestMerge(old_name, new_name) => {
+                    self.config_window.active_dialog =
+                        Some(ui::config_window::DialogState::MergeStatic { old_name, new_name });
+                    ().into()
+                }
+                StaticsMessage::ConfirmMerge(old_name, new_name) => {
+                    let _ = self.data_provider.merge_statics(&old_name, &new_name);
+                    self.config_window.active_dialog = None;
+                    ().into()
+                }
+            },
 
-                let song = SongInfo {
-                    title: self.config_window.dummy_song_title.clone(),
-                    artist: self.config_window.dummy_song_artist.clone(),
-                    dance: self.config_window.dummy_song_dance.clone(),
-                    ..Default::default()
-                };
-                self.data_provider.append_song(song);
-                self.config_window.dummy_song_title.clear();
-                self.config_window.dummy_song_artist.clear();
-                self.config_window.dummy_song_dance.clear();
-                self.data_provider.ensure_statics_for_playlist();
-                ().into()
-            }
+            Message::DummySong(msg) => match msg {
+                DummySongMessage::UpdateTitle(title) => {
+                    self.config_window.dummy_song_title = title;
+                    ().into()
+                }
+                DummySongMessage::UpdateArtist(artist) => {
+                    self.config_window.dummy_song_artist = artist;
+                    ().into()
+                }
+                DummySongMessage::UpdateDance(dance) => {
+                    self.config_window.dummy_song_dance = dance;
+                    ().into()
+                }
+                DummySongMessage::Submit => {
+                    if self.config_window.dummy_song_title.is_empty()
+                        && self.config_window.dummy_song_artist.is_empty()
+                        && self.config_window.dummy_song_dance.is_empty()
+                    {
+                        return ().into();
+                    }
+
+                    let song = SongInfo {
+                        title: self.config_window.dummy_song_title.clone(),
+                        artist: self.config_window.dummy_song_artist.clone(),
+                        dance: self.config_window.dummy_song_dance.clone(),
+                        ..Default::default()
+                    };
+                    self.data_provider.append_song(song);
+                    self.config_window.dummy_song_title.clear();
+                    self.config_window.dummy_song_artist.clear();
+                    self.config_window.dummy_song_dance.clear();
+                    self.data_provider.ensure_statics_for_playlist();
+                    ().into()
+                }
+            },
+
+            Message::Search(msg) => match msg {
+                SearchMessage::Toggle => {
+                    self.config_window.search_visible = !self.config_window.search_visible;
+                    if !self.config_window.search_visible {
+                        self.config_window.search_query.clear();
+                    }
+                    ().into()
+                }
+                SearchMessage::Changed(query) => {
+                    self.config_window.search_query = query;
+                    self.scroll_to_first_search_match()
+                }
+                SearchMessage::Clear => {
+                    self.config_window.search_query.clear();
+                    ().into()
+                }
+            },
+
+            Message::Dialog(msg) => match msg {
+                DialogMessage::Cancel => {
+                    if let Some(ui::config_window::DialogState::MergeStatic { old_name, .. }) =
+                        &self.config_window.active_dialog
+                    {
+                        let _ = self.data_provider.rename_static(old_name, old_name);
+                    }
+                    self.config_window.active_dialog = None;
+                    ().into()
+                }
+                DialogMessage::RequestDelete(item) => {
+                    if self.modifiers.shift() {
+                        return Task::done(Message::DeleteItem(item));
+                    }
+
+                    self.config_window.active_dialog =
+                        Some(ui::config_window::DialogState::Delete(item));
+                    ().into()
+                }
+                DialogMessage::ConfirmDelete => {
+                    if let Some(ui::config_window::DialogState::Delete(item)) =
+                        self.config_window.active_dialog.take()
+                    {
+                        self.data_provider.delete_item(item);
+                    }
+                    ().into()
+                }
+                DialogMessage::CancelDelete => {
+                    self.config_window.active_dialog = None;
+                    ().into()
+                }
+                DialogMessage::UndoDelete => {
+                    self.data_provider.undo_delete();
+                    ().into()
+                }
+            },
 
             Message::AddTraktorSong => {
                 if let Some(song) = self.data_provider.traktor_provider.get_song_info() {
@@ -467,49 +562,6 @@ impl DanceInterpreter {
                         self.data_provider.ensure_statics_for_playlist();
                     }
                 }
-                ().into()
-            }
-
-            Message::RequestStaticMerge(old_name, new_name) => {
-                self.config_window.active_dialog =
-                    Some(ui::config_window::DialogState::MergeStatic { old_name, new_name });
-                ().into()
-            }
-            Message::ConfirmStaticMerge(old_name, new_name) => {
-                let _ = self.data_provider.merge_statics(&old_name, &new_name);
-                self.config_window.active_dialog = None;
-                ().into()
-            }
-            Message::CancelDialog => {
-                if let Some(ui::config_window::DialogState::MergeStatic { old_name, .. }) =
-                    &self.config_window.active_dialog
-                {
-                    let _ = self.data_provider.rename_static(old_name, old_name);
-                }
-                self.config_window.active_dialog = None;
-                ().into()
-            }
-
-            Message::AddBlankStatic => {
-                self.data_provider.add_static();
-                ().into()
-            }
-
-            Message::ToggleSearch => {
-                self.config_window.search_visible = !self.config_window.search_visible;
-                if !self.config_window.search_visible {
-                    self.config_window.search_query.clear();
-                }
-                ().into()
-            }
-
-            Message::SearchChanged(query) => {
-                self.config_window.search_query = query;
-                self.scroll_to_first_search_match()
-            }
-
-            Message::ClearSearch => {
-                self.config_window.search_query.clear();
                 ().into()
             }
 
@@ -553,58 +605,31 @@ impl DanceInterpreter {
                 ().into()
             }
 
-            Message::UndoDelete => {
-                self.data_provider.undo_delete();
-                ().into()
-            }
-
-            Message::RequestDelete(item) => {
-                if self.modifiers.shift() {
-                    return Task::done(Message::DeleteItem(item));
-                }
-
-                self.config_window.active_dialog =
-                    Some(ui::config_window::DialogState::Delete(item));
-                ().into()
-            }
-            Message::ConfirmDelete => {
-                if let Some(ui::config_window::DialogState::Delete(item)) =
-                    self.config_window.active_dialog.take()
-                {
-                    self.data_provider.delete_item(item);
-                }
-                ().into()
-            }
-            Message::CancelDelete => {
-                self.config_window.active_dialog = None;
-                ().into()
-            }
-
             Message::SetNextItem(i) => {
                 self.data_provider.set_next(i);
                 ().into()
             }
 
-            Message::EnableImage(state) => {
-                self.song_window.enable_image = state;
-                ().into()
-            }
-
-            Message::EnableNextDance(state) => {
-                self.song_window.enable_next_dance = state;
-                ().into()
-            }
-
-            Message::ChangeSongWindowScale(value) => {
-                if (0.5..=3.0).contains(&value) {
-                    self.song_window.scale = (value * 100.0).round() / 100.0;
-                } else {
-                    self.song_window.scale = (((self.song_window.scale + value) * 100.0).round()
-                        / 100.0)
-                        .clamp(0.5, 3.0);
+            Message::SongWindow(msg) => match msg {
+                SongWindowMessage::EnableImage(state) => {
+                    self.song_window.enable_image = state;
+                    ().into()
                 }
-                ().into()
-            }
+                SongWindowMessage::EnableNextDance(state) => {
+                    self.song_window.enable_next_dance = state;
+                    ().into()
+                }
+                SongWindowMessage::ChangeScale(value) => {
+                    if (0.5..=3.0).contains(&value) {
+                        self.song_window.scale = (value * 100.0).round() / 100.0;
+                    } else {
+                        self.song_window.scale =
+                            (((self.song_window.scale + value) * 100.0).round() / 100.0)
+                                .clamp(0.5, 3.0);
+                    }
+                    ().into()
+                }
+            },
 
             Message::EnableAutoscroll(state) => {
                 self.config_window.enable_autoscroll = state;
@@ -846,7 +871,7 @@ impl DanceInterpreter {
                     }
                     Key::Named(Named::End) => Some(Message::ItemChanged(ItemChange::Blank)),
                     Key::Named(Named::F11) => Some(Message::ToggleFullscreen),
-                    Key::Named(Named::F5) => Some(Message::ReloadStatics),
+                    Key::Named(Named::F5) => Some(Message::Statics(StaticsMessage::Reload)),
                     Key::Named(Named::PageUp) => Some(Message::ScrollBy(-10.0)),
                     Key::Named(Named::PageDown) => Some(Message::ScrollBy(10.0)),
                     _ => None,
@@ -858,14 +883,18 @@ impl DanceInterpreter {
                 };
                 match (key.as_ref(), modifiers) {
                     (Key::Character("n"), Modifiers::CTRL) => Some(Message::AddBlankEntry),
-                    (Key::Character("z"), Modifiers::CTRL) => Some(Message::UndoDelete),
+                    (Key::Character("z"), Modifiers::CTRL) => {
+                        Some(Message::Dialog(DialogMessage::UndoDelete))
+                    }
                     (Key::Character("+"), Modifiers::CTRL) => {
-                        Some(Message::ChangeSongWindowScale(0.1))
+                        Some(Message::SongWindow(SongWindowMessage::ChangeScale(0.1)))
                     }
                     (Key::Character("-"), Modifiers::CTRL) => {
-                        Some(Message::ChangeSongWindowScale(-0.1))
+                        Some(Message::SongWindow(SongWindowMessage::ChangeScale(-0.1)))
                     }
-                    (Key::Character("f"), Modifiers::CTRL) => Some(Message::ToggleSearch),
+                    (Key::Character("f"), Modifiers::CTRL) => {
+                        Some(Message::Search(SearchMessage::Toggle))
+                    }
                     (Key::Character("c"), Modifiers::ALT) => {
                         Some(Message::Sidebar(SidebarMessage::Toggle))
                     }

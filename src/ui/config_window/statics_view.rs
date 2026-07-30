@@ -10,7 +10,7 @@ use crate::ui::widgets::buttons::{
 };
 use crate::ui::widgets::material_symbol;
 use crate::ui::with_tooltip;
-use crate::{DanceInterpreter, Message};
+use crate::{DanceInterpreter, DialogMessage, Message, StaticsMessage};
 use iced::alignment::Vertical;
 use iced::widget::{
     Column, Row, Scrollable, Space, button, column as col, container, row, scrollable, text,
@@ -27,7 +27,7 @@ pub fn build<'a>(
             text!("Name").width(Length::Fill),
             Space::new().width(Length::Fill).height(Length::Shrink),
             button(row![material_symbol("add", false), text("Add Static")].spacing(5))
-                .on_press(Message::AddBlankStatic)
+                .on_press(Message::Statics(StaticsMessage::AddBlank))
                 .padding([5, 10])
                 .style(button::primary),
         ]
@@ -72,7 +72,7 @@ pub fn build_static_row<'a>(
 
     let color_swatch = crate::ui::widgets::color_swatch::color_swatch(
         swatch_color,
-        Message::ToggleStaticColorPicker(name.clone()),
+        Message::Statics(StaticsMessage::ToggleColorPicker(name.clone())),
     );
 
     let color_element: Element<'a, Message> = if color_picker_open {
@@ -80,10 +80,12 @@ pub fn build_static_row<'a>(
             true,
             swatch_color,
             color_swatch,
-            Message::ToggleStaticColorPicker(name.clone()),
-            move |c| Message::UpdateStaticColor(name_clone.clone(), c),
+            Message::Statics(StaticsMessage::ToggleColorPicker(name.clone())),
+            move |c| Message::Statics(StaticsMessage::UpdateColor(name_clone.clone(), c)),
         )
-        .on_color_change(move |c| Message::PreviewStaticColor(name_clone1.clone(), c))
+        .on_color_change(move |c| {
+            Message::Statics(StaticsMessage::PreviewColor(name_clone1.clone(), c))
+        })
         .into()
     } else {
         color_swatch
@@ -97,22 +99,24 @@ pub fn build_static_row<'a>(
             material_symbol_message_button_colored(
                 "star",
                 static_info.is_favorite,
-                Message::ToggleStaticFavorite(name.clone()),
+                Message::Statics(StaticsMessage::ToggleFavorite(name.clone())),
                 color,
             )
         } else {
             material_symbol_message_button(
                 "star",
                 static_info.is_favorite,
-                Message::ToggleStaticFavorite(name.clone()),
+                Message::Statics(StaticsMessage::ToggleFavorite(name.clone())),
             )
         },
         Space::new().width(5),
         color_element,
         DynamicTextInput::<'_, Message>::new("Static Name", &static_info.name)
             .width(Length::Fill)
-            .on_change(move |v| Message::UpdateStaticName(name_clone.clone(), v))
-            .on_submit(Message::SubmitStaticName(name_clone1.clone())),
+            .on_change(move |v| Message::Statics(StaticsMessage::UpdateName(name_clone.clone(), v)))
+            .on_submit(Message::Statics(StaticsMessage::SubmitName(
+                name_clone1.clone()
+            ))),
         row![
             Space::new().width(Length::Fill).height(Length::Shrink),
             with_tooltip(
@@ -127,7 +131,9 @@ pub fn build_static_row<'a>(
                 material_symbol_message_button(
                     "delete",
                     false,
-                    Message::RequestDelete(ItemSource::Static(name.clone()))
+                    Message::Dialog(DialogMessage::RequestDelete(ItemSource::Static(
+                        name.clone()
+                    )))
                 ),
                 "Delete static"
             ),
