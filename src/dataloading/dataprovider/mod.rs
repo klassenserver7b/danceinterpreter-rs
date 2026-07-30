@@ -64,6 +64,7 @@ pub struct PlaylistItem {
 #[derive(Default)]
 pub struct DataProvider {
     pub traktor_provider: TraktorDataProvider,
+    pub statics_path: Option<PathBuf>,
 
     playlist: Vec<PlaylistItem>,
     statics: IndexMap<String, StaticInfo>,
@@ -516,14 +517,35 @@ impl DataProvider {
         }
     }
 
+    #[allow(dead_code)]
+    pub fn set_statics_path(&mut self, path: PathBuf) {
+        self.statics_path = Some(path);
+    }
+
     fn save_statics(&self) {
         let values: Vec<&StaticInfo> = self.statics.values().collect();
         if let Ok(json) = serde_json::to_string_pretty(&values) {
-            let _ = std::fs::write(Self::get_statics_path(), json);
+            let _ = std::fs::write(self.get_statics_path(), json);
         }
     }
 
-    fn get_statics_path() -> PathBuf {
+    pub fn get_statics_path(&self) -> PathBuf {
+        if let Some(path) = &self.statics_path {
+            return path.clone();
+        }
+
+        Self::default_statics_path()
+    }
+
+    #[cfg(test)]
+    fn default_statics_path() -> PathBuf {
+        let mut path = std::env::temp_dir();
+        path.push("danceinterpreter_test_statics.json");
+        path
+    }
+
+    #[cfg(not(test))]
+    fn default_statics_path() -> PathBuf {
         if let Some(mut path) = dirs::config_dir() {
             path.push("danceinterpreter");
             let _ = std::fs::create_dir_all(&path);
@@ -535,7 +557,7 @@ impl DataProvider {
     }
 
     pub fn load_statics(&mut self) {
-        let statics: Vec<StaticInfo> = std::fs::read_to_string(Self::get_statics_path())
+        let statics: Vec<StaticInfo> = std::fs::read_to_string(self.get_statics_path())
             .map(|file_content| serde_json::from_str(&file_content).ok())
             .unwrap_or_default()
             .unwrap_or_default();
@@ -558,23 +580,30 @@ mod tests {
     use super::*;
     use crate::dataloading::songinfo::SongInfo;
 
+    fn test_provider() -> (DataProvider, tempfile::TempDir) {
+        let dir = tempfile::tempdir().expect("failed to create temp dir");
+        let mut provider = DataProvider::default();
+        provider.set_statics_path(dir.path().join("statics.json"));
+        (provider, dir)
+    }
+
     #[test]
     fn test_ensure_static_empty() {
-        let mut provider = DataProvider::default();
+        let (mut provider, _dir) = test_provider();
         provider.ensure_static("");
         assert!(provider.statics.is_empty());
     }
 
     #[test]
     fn test_ensure_static_new() {
-        let mut provider = DataProvider::default();
+        let (mut provider, _dir) = test_provider();
         provider.ensure_static("Waltz");
         assert!(provider.statics.contains_key("Waltz"));
     }
 
     #[test]
     fn test_ensure_static_existing() {
-        let mut provider = DataProvider::default();
+        let (mut provider, _dir) = test_provider();
         provider.ensure_static("Waltz");
         provider.statics.get_mut("Waltz").unwrap().is_favorite = true;
 
@@ -584,7 +613,7 @@ mod tests {
 
     #[test]
     fn test_playlist_dance_updates_triggering_static_creation() {
-        let mut provider = DataProvider::default();
+        let (mut provider, _dir) = test_provider();
         let song = SongInfo {
             dance: "Waltz".to_string(),
             ..Default::default()
@@ -603,7 +632,7 @@ mod tests {
 
     #[test]
     fn test_ensure_statics_for_playlist() {
-        let mut provider = DataProvider::default();
+        let (mut provider, _dir) = test_provider();
         let song = SongInfo {
             dance: "Waltz".to_string(),
             ..Default::default()
@@ -619,7 +648,7 @@ mod tests {
 
     #[test]
     fn test_submit_static_name() {
-        let mut provider = DataProvider::default();
+        let (mut provider, _dir) = test_provider();
         provider.ensure_static("OldDance");
         let song = SongInfo {
             dance: "OldDance".to_string(),
@@ -639,7 +668,7 @@ mod tests {
 
     #[test]
     fn test_rename_static_display_name() {
-        let mut provider = DataProvider::default();
+        let (mut provider, _dir) = test_provider();
         provider.ensure_static("OldDance");
 
         assert!(provider.rename_static("OldDance", "NewDisplay").is_ok());
@@ -652,7 +681,7 @@ mod tests {
 
     #[test]
     fn test_update_static_color() {
-        let mut provider = DataProvider::default();
+        let (mut provider, _dir) = test_provider();
         provider.ensure_static("ColorDance");
 
         let color = Color::from_rgb(1.0, 0.0, 0.0);
@@ -678,7 +707,7 @@ mod tests {
 
     #[test]
     fn test_toggle_static_favorite() {
-        let mut provider = DataProvider::default();
+        let (mut provider, _dir) = test_provider();
         provider.ensure_static("FavDance");
 
         assert!(!provider.statics.get("FavDance").unwrap().is_favorite);
@@ -692,7 +721,7 @@ mod tests {
 
     #[test]
     fn test_merge_statics() {
-        let mut provider = DataProvider::default();
+        let (mut provider, _dir) = test_provider();
         provider.ensure_static("SourceDance");
         provider.ensure_static("TargetDance");
         let song = SongInfo {
