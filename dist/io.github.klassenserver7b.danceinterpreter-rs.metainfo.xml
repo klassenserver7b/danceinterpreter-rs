@@ -18,12 +18,20 @@
 
     <screenshots>
         <screenshot type="default">
-            <image type="source">https://github.com/user-attachments/assets/896e5cf3-832b-4579-aba5-398d5075aeee</image>
-            <caption>Main Window</caption>
+            <image type="source">https://github.com/klassenserver7b/danceinterpreter-rs/blob/flatpak-packaging/dist/ConfigWindow-Playlist.png?raw=true</image>
+            <caption>Config Window Playlist</caption>
         </screenshot>
         <screenshot>
-            <image type="source">https://github.com/user-attachments/assets/f7d7c43e-31cb-4c9e-a593-1a664d9190b4</image>
-            <caption>Dance Window</caption>
+            <image type="source">https://github.com/klassenserver7b/danceinterpreter-rs/blob/flatpak-packaging/dist/ConfigWindow-Statics.png?raw=true</image>
+            <caption>Config Window Statics</caption>
+        </screenshot>
+        <screenshot>
+            <image type="source">https://github.com/klassenserver7b/danceinterpreter-rs/blob/flatpak-packaging/dist/ConfigWindow-Onboarding.png?raw=true</image>
+            <caption>Config Window Onboarding</caption>
+        </screenshot>
+        <screenshot>
+            <image type="source">https://github.com/klassenserver7b/danceinterpreter-rs/blob/flatpak-packaging/dist/SongWindow.png?raw=true</image>
+            <caption>Song Window</caption>
         </screenshot>
     </screenshots>
 
@@ -33,7 +41,7 @@
 
     <branding>
         <color type="primary" scheme_preference="light">#6ab6e6</color>
-        <color type="primary" scheme_preference="dark">#0064a4</color>
+        <color type="primary" scheme_preference="dark">#004173</color>
     </branding>
 
     <!--
@@ -43,7 +51,15 @@
     <content_rating type="oars-1.1"/>
 
     <releases>
-	<release version="0.8.3" date="2026-06-21">
+        <release version="0.8.4" date="2026-07-31">
+            <url type="details">https://github.com/klassenserver7b/danceinterpreter-rs/releases/tag/v0.8.4</url>
+            <description>
+                <p>Color-code statics: You can now set a color per static that also highlights matching songs</p>
+                <p>Dummy Entry: The Playlist now always shows an empty entry → easier expansion</p>
+                <p>Add Traktor song to playlist: You can now add the song that Traktor is playing to your playlist</p>
+            </description>
+        </release>
+        <release version="0.8.3" date="2026-06-21">
             <url type="details">https://github.com/klassenserver7b/danceinterpreter-rs/releases/tag/v0.8.3</url>
             <description>
                 <p>Populate statics view: Now shows all statics and allows to add / edit / remove / star them. Only stared ones are shown in the bottom_bar</p>
