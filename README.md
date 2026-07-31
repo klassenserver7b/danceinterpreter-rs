@@ -18,11 +18,13 @@ The [Roadmap](https://github.com/users/klassenserver7b/projects/1) can be found 
 # Installation
 
 The danceinterpreter is currently only availible for Linux(x64, aarch64) and Windows(x64).
+
 _macOS support is technically possible but as long as it is not requested I don't want to waste actions minuites on
 those builds._
 _Any other OS/Arch could be possible if rust and my used libraries support it_
-The [**Flathub
-**](https://github.com/klassenserver7b/danceinterpreter-rs/tree/flatpak-packaging?tab=readme-ov-file#flathub---linux-only---preferred)
+
+The **[Flathub
+](https://github.com/klassenserver7b/danceinterpreter-rs/tree/flatpak-packaging?tab=readme-ov-file#flathub---linux-only---preferred)**
 release (**Linux x64**) is the **ONLY** one which is actively tested.
 
 ## Flathub - Linux only - preferred
