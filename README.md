@@ -18,7 +18,7 @@ The [Roadmap](https://github.com/users/klassenserver7b/projects/1) can be found 
 # Installation
 
 The danceinterpreter is currently only availible for Linux(x64, aarch64) and Windows(x64).
-_MacOS support is technically possible but as long as it is not requested I don't want to waste actions minuites on
+_macOS support is technically possible but as long as it is not requested I don't want to waste actions minuites on
 those builds._
 _Any other OS/Arch could be possible if rust and my used libraries support it_
 The [**Flathub
@@ -70,7 +70,7 @@ Run `cargo uninstall danceinterpreter-rs`
 
 # Support
 
-Always feel free to open an issue according to the issue templates at this github page.
+Always feel free to open an issue according to the issue templates at this GitHub page.
 
 # Contributing
 - see [CONTRIBUTING.md](CONTRIBUTING.md)

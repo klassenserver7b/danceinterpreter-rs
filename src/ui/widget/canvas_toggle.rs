@@ -88,7 +88,7 @@ impl<'a> canvas::Program<Message> for CanvasToggle<'a> {
         state: &mut Self::State,
         event: &Event,
         bounds: Rectangle,
-        cursor: mouse::Cursor,
+        cursor: Cursor,
     ) -> Option<Action<Message>> {
         if let Some(started) = *state {
             if started.elapsed().as_secs_f32() < ANIM_SECS {
@@ -122,7 +122,7 @@ impl<'a> canvas::Program<Message> for CanvasToggle<'a> {
         renderer: &Renderer,
         theme: &Theme,
         bounds: Rectangle,
-        cursor: mouse::Cursor,
+        cursor: Cursor,
     ) -> Vec<Geometry<Renderer>> {
         let Some(on_draw) = &self.on_draw else {
             return Vec::new();
@@ -154,7 +154,7 @@ impl<'a> canvas::Program<Message> for CanvasToggle<'a> {
             let r = max_r * progress;
             let alpha = (1.0 - progress) * 0.45;
 
-            // Use the secondary colour so the ripple feels intentional
+            // Use the secondary color so the ripple feels intentional
             let mut ripple_color = theme.extended_palette().secondary.base.color;
             ripple_color.a = alpha;
 
@@ -175,7 +175,7 @@ impl<'a> canvas::Program<Message> for CanvasToggle<'a> {
         &self,
         _state: &Self::State,
         bounds: Rectangle,
-        cursor: mouse::Cursor,
+        cursor: Cursor,
     ) -> mouse::Interaction {
         if cursor.is_over(bounds) {
             mouse::Interaction::Pointer
