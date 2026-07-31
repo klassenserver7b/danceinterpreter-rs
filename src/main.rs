@@ -561,8 +561,10 @@ impl DanceInterpreter {
                         self.data_provider.append_song(song.clone());
                         self.data_provider.ensure_statics_for_playlist();
                     }
+                    Task::done(Message::SnapTo(RelativeOffset::END))
+                } else {
+                    ().into()
                 }
-                ().into()
             }
 
             Message::FileDropped(path) => {
