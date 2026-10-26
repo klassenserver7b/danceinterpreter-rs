@@ -1,11 +1,14 @@
 use crate::Message;
-use crate::ui::widget::dynamic_text_input::DynamicTextInput;
+use crate::ui::theme;
 use iced::advanced::text::Shaping;
-use iced::widget::{Column, Text, checkbox, column as col, radio, text, toggler};
+use iced::widget::{Text, checkbox, radio, text, toggler};
 use iced::{Color, Font, Length, Pixels, Renderer, Theme};
 
 pub mod buttons;
 pub mod color_swatch;
+
+/// Small labeled checkbox styled with the design tokens.
+#[allow(dead_code)] // design-system toolkit
 pub fn labeled_message_checkbox(
     label: &'_ str,
     checked: bool,
@@ -15,9 +18,10 @@ pub fn labeled_message_checkbox(
         .label(label)
         .on_toggle(message)
         .width(Length::Fill)
-    //.style(checkbox::secondary)
+        .style(theme::checkbox_style)
 }
 
+/// Small labeled toggler (switch) styled with the design tokens.
 pub fn labeled_message_toggler(
     label: &'_ str,
     checked: bool,
@@ -27,6 +31,7 @@ pub fn labeled_message_toggler(
         .label(label)
         .on_toggle(message)
         .width(Length::Fill)
+        .style(theme::toggler_style)
 }
 
 #[allow(dead_code)]
@@ -37,40 +42,6 @@ pub fn labeled_message_radio<T: Copy + Eq>(
     message: fn(T) -> Message,
 ) -> radio::Radio<'_, Message> {
     radio(label, value, Some(selection), message).width(Length::Fill)
-    //.style(checkbox::secondary)
-}
-
-#[allow(dead_code)]
-pub fn labeled_message_checkbox_opt(
-    label: &'_ str,
-    checked: bool,
-    message: Option<fn(bool) -> Message>,
-) -> checkbox::Checkbox<'_, Message> {
-    if let Some(message) = message {
-        labeled_message_checkbox(label, checked, message)
-    } else {
-        checkbox(checked).label(label).width(Length::Fill)
-        //.style(checkbox::secondary)
-    }
-}
-
-#[allow(dead_code)]
-pub fn labeled_dynamic_text_input<'a>(
-    label: &'a str,
-    placeholder: &'a str,
-    value: &'a str,
-    message: fn(String) -> Message,
-    submit_message: Option<Message>,
-) -> Column<'a, Message> {
-    let mut input = DynamicTextInput::<Message>::new(placeholder, value)
-        .width(Length::Fill)
-        .on_change(message);
-
-    if let Some(submit_message) = submit_message {
-        input = input.on_submit(submit_message);
-    }
-
-    col!(text(label).width(Length::Fill), input,).width(Length::Fill)
 }
 
 pub fn material_symbol_colored(
@@ -89,15 +60,68 @@ pub fn material_symbol_sized(
     material_symbol(id, filled).size(size)
 }
 
+#[allow(dead_code)] // design-system toolkit
+pub fn material_symbol_sized_colored(
+    id: &'_ str,
+    filled: bool,
+    size: impl Into<Pixels>,
+    color: impl Into<Color>,
+) -> Text<'_, Theme, Renderer> {
+    material_symbol(id, filled).size(size).color(color)
+}
+
 pub fn material_symbol(id: &'_ str, filled: bool) -> Text<'_, Theme, Renderer> {
     let font_name = if filled {
-        "Material Icons"
+        theme::FONT_ICON_FILLED
     } else {
-        "Material Symbols Outlined"
+        theme::FONT_ICON
     };
 
     Text::new(id)
         .font(Font::with_name(font_name))
         .shaping(Shaping::Advanced)
         .width(Length::Shrink)
+}
+
+/// Keyboard hint pill, e.g. `Space`, `Ctrl+F`.
+pub fn kbd<'a>(
+    label: impl text::IntoFragment<'a>,
+) -> iced::widget::Container<'a, Message, Theme, Renderer> {
+    iced::widget::container(
+        text(label).size(theme::sz::MICRO).style(|t: &Theme| {
+            iced::widget::text::Style {
+                color: Some(theme::Tokens::of(t).kbd_text),
+            }
+        }),
+    )
+    .padding([1, 5])
+    .style(theme::kbd)
+}
+
+/// Body text at the small caption size.
+#[allow(dead_code)] // design-system toolkit
+pub fn text_small<'a>(label: impl text::IntoFragment<'a>) -> Text<'a, Theme, Renderer> {
+    text(label).size(theme::sz::SMALL)
+}
+
+/// Body text at the micro size (tags, eyebrows, hints).
+pub fn text_micro<'a>(label: impl text::IntoFragment<'a>) -> Text<'a, Theme, Renderer> {
+    text(label).size(theme::sz::MICRO)
+}
+
+/// Body text at the base size.
+#[allow(dead_code)] // design-system toolkit
+pub fn text_base<'a>(label: impl text::IntoFragment<'a>) -> Text<'a, Theme, Renderer> {
+    text(label).size(theme::sz::BASE)
+}
+
+/// Manrope heading text.
+pub fn heading<'a>(
+    label: impl text::IntoFragment<'a>,
+    size: impl Into<Pixels>,
+    weight: iced::font::Weight,
+) -> Text<'a, Theme, Renderer> {
+    text(label)
+        .size(size)
+        .font(theme::head_font(weight))
 }

@@ -1,147 +1,265 @@
-use crate::dataloading::dataprovider::ItemChange;
-use crate::dataloading::dataprovider::ItemSource;
+//! Statics panel: dance labels and announcements with favorite star, color
+//! swatch + picker, inline name editing, merge-on-submit and show-now.
+
+use crate::dataloading::dataprovider::{ItemChange, ItemSource};
 use crate::dataloading::staticinfo::StaticInfo;
 use crate::ui::config_window::ConfigWindow;
-use crate::ui::config_window::item_row::build_item_row_container_styled;
-use crate::ui::config_window::search_bar::data_matches_search_query;
-use crate::ui::widget::dynamic_text_input::DynamicTextInput;
-use crate::ui::widgets::buttons::{
-    material_symbol_message_button, material_symbol_message_button_colored,
+use crate::ui::theme::RowLook;
+use crate::ui::config_window::search::data_matches_search_query;
+use crate::ui::theme::{self, sz};
+use crate::ui::widgets::{
+    buttons, heading, material_symbol, material_symbol_colored, material_symbol_sized,
 };
-use crate::ui::widgets::material_symbol;
 use crate::ui::with_tooltip;
 use crate::{DanceInterpreter, DialogMessage, Message, StaticsMessage};
-use iced::alignment::Vertical;
 use iced::widget::{
-    Column, Row, Scrollable, Space, button, column as col, container, row, scrollable, text,
+    Column, Space, button, column as col, container, row, scrollable, text, text_input,
 };
-use iced::{Alignment, Color, Element, Length};
+use iced::{Alignment, Color, Element, Length, Theme};
 
 pub fn build<'a>(
     config_window: &'a ConfigWindow,
     dance_interpreter: &'a DanceInterpreter,
-) -> Column<'a, Message> {
-    let trow = container(
-        row![
-            text("Fav").width(Length::Fixed(42.0)),
-            text!("Name").width(Length::Fill),
-            Space::new().width(Length::Fill).height(Length::Shrink),
-            button(row![material_symbol("add", false), text("Add Static")].spacing(5))
-                .on_press(Message::Statics(StaticsMessage::AddBlank))
-                .padding([5, 10])
-                .style(button::primary),
-        ]
-        .align_y(Vertical::Bottom)
-        .spacing(5),
-    )
-    .padding([4, 6])
-    .width(Length::Fill);
-
-    let mut list_column = col!().spacing(5);
+) -> Element<'a, Message> {
+    let mut rows: Column<'_, Message> = col![];
 
     for (i, (name, static_info)) in dance_interpreter.data_provider.statics().iter().enumerate() {
         let is_match = data_matches_search_query(&config_window.search_query, static_info.into());
-        let static_row = build_static_row(
+        rows = rows.push(build_static_row(
+            config_window,
+            dance_interpreter,
             static_info,
             name.clone(),
-            config_window.theme.extended_palette().primary.weak.color,
-            config_window.color_picker_open.as_ref() == Some(name),
-        );
-        let accent_color = static_info.color;
-        let row_container = build_item_row_container_styled(static_row, is_match, i, accent_color);
-        list_column = list_column.push(row_container);
+            i,
+            is_match,
+        ));
     }
 
-    let statics_scrollable: Scrollable<'_, Message> = scrollable(list_column)
+    let list: Element<'_, Message> = if dance_interpreter.data_provider.statics().is_empty() {
+        col![
+            Space::new().height(Length::Fill),
+            heading("No statics yet.", 18.0, iced::font::Weight::Semibold).style(|t| {
+                iced::widget::text::Style {
+                    color: Some(theme::Tokens::of(t).text),
+                }
+            }),
+            text("Statics appear automatically from playlist dances. Add one below.")
+                .size(sz::SMALL)
+                .style(|t: &Theme| iced::widget::text::Style {
+                    color: Some(theme::Tokens::of(t).muted),
+                }),
+            buttons::primary_small(
+                "Add static",
+                Message::OpenDialog(crate::ui::config_window::DialogState::AddStatic),
+            ),
+            Space::new().height(Length::Fill),
+        ]
+        .spacing(10)
+        .align_x(Alignment::Center)
         .width(Length::Fill)
         .height(Length::Fill)
-        .spacing(5);
+        .into()
+    } else {
+        scrollable(rows)
+            .width(Length::Fill)
+            .height(Length::Fill)
+            .style(theme::scrollable_style)
+            .into()
+    };
 
-    col!(trow, statics_scrollable).spacing(5)
+    let toolbar = container(
+        row![
+            row![
+                material_symbol_sized("grid_view", false, 15.0).style(|t: &Theme| {
+                    iced::widget::text::Style {
+                        color: Some(theme::Tokens::of(t).muted),
+                    }
+                }),
+                heading("Dances & announcements", sz::PANEL_TITLE, iced::font::Weight::Semibold)
+                    .style(|t| iced::widget::text::Style {
+                        color: Some(theme::Tokens::of(t).text),
+                    }),
+            ]
+            .spacing(9)
+            .align_y(Alignment::Center),
+            container(
+                buttons::primary_small(
+                    "Add static",
+                    Message::OpenDialog(crate::ui::config_window::DialogState::AddStatic),
+                )
+            )
+            .width(Length::Fill)
+            .align_x(Alignment::End),
+        ]
+        .width(Length::Fill)
+        .align_y(Alignment::Center),
+    )
+    .padding([14, 17])
+    .width(Length::Fill);
+
+    let panel = col![toolbar, list].width(Length::Fill).height(Length::Fill);
+
+    container(panel)
+        .width(Length::Fill)
+        .height(Length::Fill)
+        .style(theme::card)
+        .clip(true)
+        .into()
 }
 
-pub fn build_static_row<'a>(
-    static_info: &StaticInfo,
-    name: String,
-    color: impl Into<Color>,
-    color_picker_open: bool,
-) -> Row<'a, Message> {
-    let swatch_color = static_info.color.unwrap_or(Color::TRANSPARENT);
-    let mut name_clone = name.clone();
-    let mut name_clone1 = name.clone();
+const COL_DRAG: f32 = 16.0;
+const COL_FAV: f32 = 26.0;
+const COL_COLOR: f32 = 26.0;
+const COL_CAPTION: f32 = 70.0;
+const ROW_HEIGHT: f32 = 62.0;
 
-    let color_swatch = crate::ui::widgets::color_swatch::color_swatch(
+#[allow(clippy::too_many_arguments)]
+fn build_static_row<'a>(
+    config_window: &'a ConfigWindow,
+    dance_interpreter: &'a DanceInterpreter,
+    static_info: &'a StaticInfo,
+    name: String,
+    idx: usize,
+    is_match: bool,
+) -> Element<'a, Message> {
+    let is_current = *dance_interpreter.data_provider.get_current_source()
+        == ItemSource::Static(name.clone());
+
+    // Favorite star.
+    let star: Element<'a, Message> = if static_info.is_favorite {
+        button(
+            material_symbol_colored("star", true, theme::Tokens::of(&config_window.theme).star),
+        )
+        .padding(4)
+        .style(theme::btn_ghost)
+        .on_press(Message::Statics(StaticsMessage::ToggleFavorite(name.clone())))
+        .into()
+    } else {
+        button(material_symbol("star", false))
+            .padding(4)
+            .style(theme::btn_ghost)
+            .on_press(Message::Statics(StaticsMessage::ToggleFavorite(name.clone())))
+            .into()
+    };
+
+    // Color swatch / color picker.
+    let swatch_color = static_info
+        .color
+        .unwrap_or_else(|| theme::Tokens::dark().muted);
+    let color_picker_open = config_window.color_picker_open.as_ref() == Some(&name);
+    let swatch = crate::ui::widgets::color_swatch::color_swatch(
         swatch_color,
         Message::Statics(StaticsMessage::ToggleColorPicker(name.clone())),
     );
 
     let color_element: Element<'a, Message> = if color_picker_open {
+        let close_name = name.clone();
+        let submit_name = name.clone();
+        let preview_name = name.clone();
         iced_aw::ColorPicker::new(
             true,
             swatch_color,
-            color_swatch,
-            Message::Statics(StaticsMessage::ToggleColorPicker(name.clone())),
-            move |c| Message::Statics(StaticsMessage::UpdateColor(name_clone.clone(), c)),
+            swatch,
+            Message::Statics(StaticsMessage::ToggleColorPicker(close_name)),
+            move |c| Message::Statics(StaticsMessage::UpdateColor(submit_name.clone(), c)),
         )
         .on_color_change(move |c| {
-            Message::Statics(StaticsMessage::PreviewColor(name_clone1.clone(), c))
+            Message::Statics(StaticsMessage::PreviewColor(preview_name.clone(), c))
         })
         .into()
     } else {
-        color_swatch
+        swatch
     };
 
-    name_clone = name.clone();
-    name_clone1 = name.clone();
+    // Name (inline editable; submitting an existing name opens the merge dialog).
+    let edit_name = name.clone();
+    let name_input = text_input("Static name", &static_info.name)
+        .on_input(move |v| Message::Statics(StaticsMessage::UpdateName(edit_name.clone(), v)))
+        .on_submit(Message::Statics(StaticsMessage::SubmitName(name.clone())))
+        .style(theme::input_plain)
+        .padding(0);
 
-    row![
-        if static_info.is_favorite {
-            material_symbol_message_button_colored(
-                "star",
-                static_info.is_favorite,
-                Message::Statics(StaticsMessage::ToggleFavorite(name.clone())),
-                color,
-            )
-        } else {
-            material_symbol_message_button(
-                "star",
-                static_info.is_favorite,
-                Message::Statics(StaticsMessage::ToggleFavorite(name.clone())),
-            )
-        },
-        Space::new().width(5),
-        color_element,
-        DynamicTextInput::<'_, Message>::new("Static Name", &static_info.name)
-            .width(Length::Fill)
-            .on_change(move |v| Message::Statics(StaticsMessage::UpdateName(name_clone.clone(), v)))
-            .on_submit(Message::Statics(StaticsMessage::SubmitName(
-                name_clone1.clone()
-            ))),
+    let show_now = button(
         row![
-            Space::new().width(Length::Fill).height(Length::Shrink),
-            with_tooltip(
-                material_symbol_message_button(
-                    "smart_display",
-                    false,
-                    Message::ItemChanged(ItemChange::StaticAbsolute(name.clone()))
-                ),
-                "Show now"
-            ),
-            with_tooltip(
-                material_symbol_message_button(
-                    "delete",
-                    false,
-                    Message::Dialog(DialogMessage::RequestDelete(ItemSource::Static(
-                        name.clone()
-                    )))
-                ),
-                "Delete static"
-            ),
+            material_symbol_sized("play_arrow", false, 13.0),
+            text("Show now").size(sz::TINY),
         ]
-        .spacing(5)
-        .align_y(Alignment::Center)
-        .width(Length::Fill),
+        .spacing(6)
+        .align_y(Alignment::Center),
+    )
+    .padding([5, 10])
+    .style(theme::btn_secondary)
+    .on_press(Message::ItemChanged(ItemChange::StaticAbsolute(name.clone())));
+
+    let delete = with_tooltip(
+        buttons::ghost_icon(
+            "delete",
+            false,
+            14.0,
+            Message::Dialog(DialogMessage::RequestDelete(ItemSource::Static(name.clone()))),
+        ),
+        "Delete static",
+    );
+
+    let content = row![
+        drag_handle(),
+        container(star).width(Length::Fixed(COL_FAV)),
+        container(color_element).width(Length::Fixed(COL_COLOR)),
+        container(name_input).width(Length::Fill).clip(true),
+        container(
+            text("Text label")
+                .size(sz::TINY)
+                .style(|t: &Theme| iced::widget::text::Style {
+                    color: Some(theme::Tokens::of(t).faint),
+                })
+        )
+        .width(Length::Fixed(COL_CAPTION))
+        .align_x(Alignment::End),
+        show_now,
+        delete,
     ]
-    .align_y(Alignment::Center)
     .spacing(10)
+    .align_y(Alignment::Center)
+    .padding(crate::ui::theme::pad4(0.0, 19.0, 0.0, 11.0))
+    .width(Length::Fill);
+
+    let bar_width = if is_current { 3.0 } else { 0.0 };
+    let bar = container(Space::new())
+        .width(Length::Fixed(bar_width))
+        .height(Length::Fill)
+        .style(move |t: &Theme| {
+            container::Style::default().background(if is_current {
+                static_info
+                    .color
+                    .unwrap_or_else(|| theme::Tokens::of(t).accent_bar)
+            } else {
+                Color::TRANSPARENT
+            })
+        });
+
+    let look = RowLook {
+        zebra: idx % 2 == 1,
+        current: is_current,
+        matched: is_match && !is_current,
+        first: false,
+    };
+
+    container(row![bar, content])
+        .height(Length::Fixed(ROW_HEIGHT))
+        .width(Length::Fill)
+        .style(move |t: &Theme| theme::row(t, look))
+        .into()
+}
+
+fn drag_handle() -> Element<'static, Message> {
+    container(
+        material_symbol_sized("drag_indicator", false, 15.0).style(|t: &Theme| {
+            iced::widget::text::Style {
+                color: Some(theme::Tokens::of(t).border),
+            }
+        }),
+    )
+    .width(Length::Fixed(COL_DRAG))
+    .align_x(Alignment::Center)
+    .into()
 }

@@ -13,22 +13,25 @@ use crate::dataloading::m3uloader::load_tag_data_from_m3u;
 use crate::dataloading::songinfo::SongInfo;
 use crate::traktor_api::{ServerMessage, StateUpdate, TraktorMessage, TraktorSyncAction};
 use crate::ui::config_window::sidebar::SidebarMessage;
-use crate::ui::config_window::{ConfigWindow, PLAYLIST_SCROLLABLE_ID};
+use crate::ui::config_window::{ConfigWindow, DialogState, Toast, View, PLAYLIST_SCROLLABLE_ID};
 use crate::ui::song_window::SongWindow;
+use crate::ui::theme;
 use fuzzy_matcher::FuzzyMatcher;
 use fuzzy_matcher::skim::SkimMatcherV2 as Matcher;
+use iced::font::Weight;
 use iced::keyboard::key::Named;
 use iced::keyboard::{Key, Modifiers};
-use iced::widget::operation::{scroll_by, snap_to};
+use iced::widget::operation::{focus, scroll_by, snap_to};
 use iced::widget::scrollable::{AbsoluteOffset, RelativeOffset};
 use iced::widget::space::horizontal;
 use iced::window::icon::from_file_data;
-use iced::{Element, Size, Subscription, Task, Theme, exit, keyboard, system, theme, window};
+use iced::theme::Mode;
+use iced::{Element, Size, Subscription, Task, Theme, exit, keyboard, system, time, window};
 use iced_aw::ICED_AW_FONT_BYTES;
 use rfd::FileDialog;
 use std::env::var;
 use std::path::PathBuf;
-use std::time::Instant;
+use std::time::{Duration, Instant};
 
 fn main() -> iced::Result {
     iced::daemon(
@@ -38,6 +41,7 @@ fn main() -> iced::Result {
     )
     .title(DanceInterpreter::title)
     .theme(DanceInterpreter::theme)
+    .default_font(theme::body_font(Weight::Normal))
     .font(ICED_AW_FONT_BYTES)
     .subscription(DanceInterpreter::subscription)
     .run()
@@ -77,6 +81,7 @@ pub enum StaticsMessage {
     PreviewColor(String, iced::Color),
     ToggleColorPicker(String),
     AddBlank,
+    AddNamed(String),
     RequestMerge(String, String),
     ConfirmMerge(String, String),
 }
@@ -89,7 +94,7 @@ pub enum SongWindowMessage {
 }
 
 #[derive(Debug, Clone)]
-pub enum DummySongMessage {
+pub enum QuickAddMessage {
     UpdateTitle(String),
     UpdateArtist(String),
     UpdateDance(String),
@@ -99,10 +104,12 @@ pub enum DummySongMessage {
 #[derive(Debug, Clone)]
 pub enum DialogMessage {
     Cancel,
+    Close,
     RequestDelete(ItemSource),
     ConfirmDelete,
     CancelDelete,
     UndoDelete,
+    ChangeAddStaticName(String),
 }
 
 #[derive(Debug, Clone)]
@@ -113,20 +120,28 @@ pub enum Message {
     WindowResized((window::Id, Size)),
     WindowClosed(window::Id),
 
-    ThemeChanged(theme::Mode),
+    ThemeChanged(Mode),
     SetConfigTheme(Theme),
 
     ToggleFullscreen,
     SetFullscreen(bool),
 
-    ToggleStaticsView,
+    SetView(View),
     Sidebar(SidebarMessage),
     Traktor(TraktorMessage),
     Search(SearchMessage),
     Statics(StaticsMessage),
     SongWindow(SongWindowMessage),
-    DummySong(DummySongMessage),
+    QuickAdd(QuickAddMessage),
     Dialog(DialogMessage),
+    OpenDialog(DialogState),
+    CloseDialog,
+
+    Toast(String),
+    DismissToast,
+    Tick,
+    FocusSongWindow,
+    EscapePressed,
 
     EnableAutoscroll(bool),
     EnableFollowSystemTheme(bool),
@@ -196,6 +211,40 @@ impl DanceInterpreter {
                 .map(|_| Message::Noop),
         );
 
+        // Bundled design fonts: DM Sans (body) + Manrope (headings).
+        tasks.push(
+            iced::font::load(include_bytes!(res_file!("fonts/DMSans-Regular.ttf")))
+                .map(|_| Message::Noop),
+        );
+        tasks.push(
+            iced::font::load(include_bytes!(res_file!("fonts/DMSans-Medium.ttf")))
+                .map(|_| Message::Noop),
+        );
+        tasks.push(
+            iced::font::load(include_bytes!(res_file!("fonts/DMSans-SemiBold.ttf")))
+                .map(|_| Message::Noop),
+        );
+        tasks.push(
+            iced::font::load(include_bytes!(res_file!("fonts/DMSans-Bold.ttf")))
+                .map(|_| Message::Noop),
+        );
+        tasks.push(
+            iced::font::load(include_bytes!(res_file!("fonts/Manrope-Medium.ttf")))
+                .map(|_| Message::Noop),
+        );
+        tasks.push(
+            iced::font::load(include_bytes!(res_file!("fonts/Manrope-SemiBold.ttf")))
+                .map(|_| Message::Noop),
+        );
+        tasks.push(
+            iced::font::load(include_bytes!(res_file!("fonts/Manrope-Bold.ttf")))
+                .map(|_| Message::Noop),
+        );
+        tasks.push(
+            iced::font::load(include_bytes!(res_file!("fonts/Manrope-ExtraBold.ttf")))
+                .map(|_| Message::Noop),
+        );
+
         tasks.push(Task::done(Message::Statics(StaticsMessage::Reload)));
 
         (state, Task::batch(tasks))
@@ -219,9 +268,9 @@ impl DanceInterpreter {
 
     pub fn title(&self, window_id: window::Id) -> String {
         if self.config_window.id == window_id {
-            "Config Window".to_string()
+            "Danceinterpreter".to_string()
         } else if self.song_window.id == window_id {
-            "Song Window".to_string()
+            "Danceinterpreter · Audience".to_string()
         } else {
             String::new()
         }
@@ -281,17 +330,17 @@ impl DanceInterpreter {
             Message::ThemeChanged(mode) => {
                 if self.config_window.follow_system_theme {
                     self.config_window.theme = match mode {
-                        theme::Mode::Light => Theme::Light,
-                        theme::Mode::Dark | theme::Mode::None => Theme::Dark,
+                        Mode::Light => Theme::Light,
+                        Mode::Dark | Mode::None => Theme::Dark,
                     };
                 }
 
                 let icon = from_file_data(
                     match mode {
-                        theme::Mode::Light | theme::Mode::None => {
+                        Mode::Light | Mode::None => {
                             include_bytes!(res_file!("icon_light.png"))
                         }
-                        theme::Mode::Dark => include_bytes!(res_file!("icon_dark.png")),
+                        Mode::Dark => include_bytes!(res_file!("icon_dark.png")),
                     },
                     Some(image::ImageFormat::Png),
                 );
@@ -331,6 +380,41 @@ impl DanceInterpreter {
                 )
             }
 
+            Message::FocusSongWindow => window::gain_focus(self.song_window.id),
+
+            Message::EscapePressed => {
+                if self.config_window.search_visible {
+                    Task::done(Message::Search(SearchMessage::Toggle))
+                } else if self.config_window.active_dialog.is_some() {
+                    self.close_active_dialog()
+                } else {
+                    ().into()
+                }
+            }
+
+            Message::Toast(text) => {
+                self.config_window.toast = Some(Toast::new(text));
+                ().into()
+            }
+            Message::DismissToast => {
+                self.config_window.toast = None;
+                ().into()
+            }
+            Message::Tick => {
+                if let Some(toast) = &self.config_window.toast {
+                    if toast.expired(Instant::now()) {
+                        self.config_window.toast = None;
+                    }
+                }
+                ().into()
+            }
+
+            Message::OpenDialog(state) => {
+                self.config_window.active_dialog = Some(state);
+                ().into()
+            }
+            Message::CloseDialog => self.close_active_dialog(),
+
             Message::OpenPlaylist => {
                 #[cfg(target_os = "linux")]
                 if var("container").is_ok() {
@@ -364,17 +448,20 @@ impl DanceInterpreter {
                 };
                 println!("Selected file: {:?}", file);
 
-                let Ok(playlist) = load_tag_data_from_m3u(&file) else {
-                    return ().into();
-                };
-
-                self.data_provider.set_vec(playlist);
-
-                ().into()
+                match load_tag_data_from_m3u(&file) {
+                    Ok(playlist) => {
+                        self.data_provider.set_vec(playlist);
+                        self.config_window.playlist_file = Some(file.clone());
+                        Task::done(Message::Toast("Playlist loaded".to_string()))
+                    }
+                    Err(_) => Task::done(Message::Toast(
+                        "Could not read playlist file".to_string(),
+                    )),
+                }
             }
 
             Message::AddBlankEntry => {
-                if self.config_window.is_statics_view {
+                if self.config_window.view == View::Statics {
                     Task::done(Message::Statics(StaticsMessage::AddBlank))
                 } else {
                     Task::done(Message::AddBlankSong(RelativeOffset::END))
@@ -384,7 +471,7 @@ impl DanceInterpreter {
             Message::Statics(msg) => match msg {
                 StaticsMessage::Reload => {
                     self.data_provider.load_statics();
-                    ().into()
+                    Task::done(Message::Toast("Statics reloaded".to_string()))
                 }
                 StaticsMessage::ToggleFavorite(name) => {
                     self.data_provider.toggle_static_favorite(&name);
@@ -404,9 +491,10 @@ impl DanceInterpreter {
                                 ))
                             })
                         }
-                        SubmitStaticResult::Success
-                        | SubmitStaticResult::Unchanged
-                        | SubmitStaticResult::NotFound => ().into(),
+                        SubmitStaticResult::Success => {
+                            Task::done(Message::Toast("Static renamed".to_string()))
+                        }
+                        SubmitStaticResult::Unchanged | SubmitStaticResult::NotFound => ().into(),
                     }
                 }
                 StaticsMessage::UpdateColor(name, mut color) => {
@@ -449,51 +537,63 @@ impl DanceInterpreter {
                     self.data_provider.add_static();
                     ().into()
                 }
+                StaticsMessage::AddNamed(name) => {
+                    self.data_provider.add_named_static(&name);
+                    self.config_window.add_static_name.clear();
+                    self.config_window.active_dialog = None;
+                    Task::done(Message::Toast(format!(
+                        "Static \u{201C}{}\u{201D} added",
+                        name.trim()
+                    )))
+                }
                 StaticsMessage::RequestMerge(old_name, new_name) => {
                     self.config_window.active_dialog =
-                        Some(ui::config_window::DialogState::MergeStatic { old_name, new_name });
+                        Some(DialogState::MergeStatic { old_name, new_name });
                     ().into()
                 }
                 StaticsMessage::ConfirmMerge(old_name, new_name) => {
                     let _ = self.data_provider.merge_statics(&old_name, &new_name);
                     self.config_window.active_dialog = None;
-                    ().into()
+                    Task::done(Message::Toast(format!(
+                        "Merged into \u{201C}{}\u{201D}",
+                        new_name
+                    )))
                 }
             },
 
-            Message::DummySong(msg) => match msg {
-                DummySongMessage::UpdateTitle(title) => {
-                    self.config_window.dummy_song_title = title;
+            Message::QuickAdd(msg) => match msg {
+                QuickAddMessage::UpdateTitle(title) => {
+                    self.config_window.quick_title = title;
                     ().into()
                 }
-                DummySongMessage::UpdateArtist(artist) => {
-                    self.config_window.dummy_song_artist = artist;
+                QuickAddMessage::UpdateArtist(artist) => {
+                    self.config_window.quick_artist = artist;
                     ().into()
                 }
-                DummySongMessage::UpdateDance(dance) => {
-                    self.config_window.dummy_song_dance = dance;
+                QuickAddMessage::UpdateDance(dance) => {
+                    self.config_window.quick_dance = dance;
                     ().into()
                 }
-                DummySongMessage::Submit => {
-                    if self.config_window.dummy_song_title.is_empty()
-                        && self.config_window.dummy_song_artist.is_empty()
-                        && self.config_window.dummy_song_dance.is_empty()
+                QuickAddMessage::Submit => {
+                    if self.config_window.quick_title.is_empty()
+                        && self.config_window.quick_artist.is_empty()
+                        && self.config_window.quick_dance.is_empty()
                     {
                         return ().into();
                     }
 
                     let song = SongInfo {
-                        title: self.config_window.dummy_song_title.clone(),
-                        artist: self.config_window.dummy_song_artist.clone(),
-                        dance: self.config_window.dummy_song_dance.clone(),
+                        title: self.config_window.quick_title.clone(),
+                        artist: self.config_window.quick_artist.clone(),
+                        dance: self.config_window.quick_dance.clone(),
                         ..Default::default()
                     };
                     self.data_provider.append_song(song);
-                    self.config_window.dummy_song_title.clear();
-                    self.config_window.dummy_song_artist.clear();
-                    self.config_window.dummy_song_dance.clear();
+                    self.config_window.quick_title.clear();
+                    self.config_window.quick_artist.clear();
+                    self.config_window.quick_dance.clear();
                     self.data_provider.ensure_statics_for_playlist();
-                    ().into()
+                    Task::done(Message::Toast("Song added to playlist".to_string()))
                 }
             },
 
@@ -502,8 +602,10 @@ impl DanceInterpreter {
                     self.config_window.search_visible = !self.config_window.search_visible;
                     if !self.config_window.search_visible {
                         self.config_window.search_query.clear();
+                        ().into()
+                    } else {
+                        focus(self.config_window.search_input_id.clone())
                     }
-                    ().into()
                 }
                 SearchMessage::Changed(query) => {
                     self.config_window.search_query = query;
@@ -516,31 +618,38 @@ impl DanceInterpreter {
             },
 
             Message::Dialog(msg) => match msg {
-                DialogMessage::Cancel => {
-                    if let Some(ui::config_window::DialogState::MergeStatic { old_name, .. }) =
-                        &self.config_window.active_dialog
-                    {
-                        let _ = self.data_provider.rename_static(old_name, old_name);
-                    }
-                    self.config_window.active_dialog = None;
-                    ().into()
-                }
+                DialogMessage::Cancel | DialogMessage::Close => self.close_active_dialog(),
                 DialogMessage::RequestDelete(item) => {
                     if self.modifiers.shift() {
                         return Task::done(Message::DeleteItem(item));
                     }
 
-                    self.config_window.active_dialog =
-                        Some(ui::config_window::DialogState::Delete(item));
+                    self.config_window.active_dialog = Some(DialogState::Delete(item));
                     ().into()
                 }
                 DialogMessage::ConfirmDelete => {
-                    if let Some(ui::config_window::DialogState::Delete(item)) =
+                    if let Some(DialogState::Delete(item)) =
                         self.config_window.active_dialog.take()
                     {
+                        let name = match &item {
+                            ItemSource::Playlist(i) => self
+                                .data_provider
+                                .playlist()
+                                .get(*i)
+                                .map(|entry| entry.song.title.clone())
+                                .unwrap_or_else(|| "Song".to_string()),
+                            ItemSource::Static(name) => name.clone(),
+                            _ => "Item".to_string(),
+                        };
+
                         self.data_provider.delete_item(item);
+                        Task::done(Message::Toast(format!(
+                            "Deleted \u{201C}{}\u{201D} \u{00B7} Ctrl+Z to undo",
+                            name
+                        )))
+                    } else {
+                        ().into()
                     }
-                    ().into()
                 }
                 DialogMessage::CancelDelete => {
                     self.config_window.active_dialog = None;
@@ -548,6 +657,10 @@ impl DanceInterpreter {
                 }
                 DialogMessage::UndoDelete => {
                     self.data_provider.undo_delete();
+                    Task::done(Message::Toast("Delete undone".to_string()))
+                }
+                DialogMessage::ChangeAddStaticName(name) => {
+                    self.config_window.add_static_name = name;
                     ().into()
                 }
             },
@@ -560,21 +673,41 @@ impl DanceInterpreter {
                     if !in_playlist {
                         self.data_provider.append_song(song.clone());
                         self.data_provider.ensure_statics_for_playlist();
+                        Task::batch([
+                            Task::done(Message::SnapTo(RelativeOffset::END)),
+                            Task::done(Message::Toast("Traktor track added".to_string())),
+                        ])
+                    } else {
+                        Task::done(Message::Toast(
+                            "Track is already in the playlist".to_string(),
+                        ))
                     }
-                    Task::done(Message::SnapTo(RelativeOffset::END))
                 } else {
-                    ().into()
+                    Task::done(Message::Toast(
+                        "No track loaded in Traktor".to_string(),
+                    ))
                 }
             }
 
             Message::FileDropped(path) => {
-                if let Ok(playlist) = load_tag_data_from_m3u(&path) {
-                    self.data_provider.set_vec(playlist);
-                } else if let Ok(song_info) = read_song_info_from_filepath(&path) {
-                    self.data_provider.append_song(song_info);
+                match load_tag_data_from_m3u(&path) {
+                    Ok(playlist) => {
+                        self.data_provider.set_vec(playlist);
+                        self.config_window.playlist_file = Some(path.clone());
+                        Task::done(Message::Toast("Playlist loaded".to_string()))
+                    }
+                    Err(_) => match read_song_info_from_filepath(&path) {
+                        Ok(song_info) => {
+                            self.data_provider.append_song(song_info);
+                            self.data_provider.ensure_statics_for_playlist();
+                            Task::done(Message::Toast("Song added to playlist".to_string()))
+                        }
+                        Err(_) => Task::done(Message::Toast(
+                            "Unsupported file \u{2014} drop an m3u playlist or an audio file"
+                                .to_string(),
+                        )),
+                    },
                 }
-
-                ().into()
             }
 
             Message::ItemChanged(song_change) => {
@@ -658,8 +791,8 @@ impl DanceInterpreter {
 
             Message::SnapTo(offset) => snap_to(PLAYLIST_SCROLLABLE_ID.clone(), offset),
 
-            Message::ToggleStaticsView => {
-                self.config_window.is_statics_view = !self.config_window.is_statics_view;
+            Message::SetView(view) => {
+                self.config_window.view = view;
                 ().into()
             }
 
@@ -749,8 +882,20 @@ impl DanceInterpreter {
 
             Message::Animate => Task::none(),
 
-            _ => ().into(),
+            Message::Noop => ().into(),
         }
+    }
+
+    /// Closes the active dialog, restoring pending state for the merge dialog.
+    fn close_active_dialog(&mut self) -> Task<Message> {
+        if let Some(DialogState::MergeStatic { old_name, .. }) = &self.config_window.active_dialog
+        {
+            // Undo the in-progress rename (the entry's display name was edited
+            // inline while typing; reset it back to its map key).
+            let _ = self.data_provider.rename_static(old_name, old_name);
+        }
+        self.config_window.active_dialog = None;
+        ().into()
     }
 
     fn traktor_provider_force_update(&mut self) -> Task<Message> {
@@ -884,11 +1029,14 @@ impl DanceInterpreter {
                     _ => None,
                 }
             }),
-            keyboard::listen().filter_map(move |event| {
+            keyboard::listen().filter_map(|event| {
                 let keyboard::Event::KeyPressed { key, modifiers, .. } = event else {
                     return None;
                 };
+
                 match (key.as_ref(), modifiers) {
+                    (Key::Named(Named::Escape), _) => Some(Message::EscapePressed),
+                    (Key::Character("?"), _) => Some(Message::OpenDialog(DialogState::Help)),
                     (Key::Character("n"), Modifiers::CTRL) => Some(Message::AddBlankEntry),
                     (Key::Character("z"), Modifiers::CTRL) => {
                         Some(Message::Dialog(DialogMessage::UndoDelete))
@@ -916,6 +1064,11 @@ impl DanceInterpreter {
                 .is_animating(Instant::now())
             {
                 window::frames().map(|_| Message::Animate)
+            } else {
+                Subscription::none()
+            },
+            if self.config_window.toast.is_some() {
+                time::every(Duration::from_millis(500)).map(|_| Message::Tick)
             } else {
                 Subscription::none()
             },
