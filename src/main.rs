@@ -1300,42 +1300,27 @@ struct PersistedSettings {
 /// Name of the settings directory inside a config directory.
 const SETTINGS_DIR: &str = "danceinterpreter";
 
-/// Directory that holds `settings.json`, chosen with flatpak sandboxes in
-/// mind, in priority order:
-///
-/// 1. `~/.config/danceinterpreter` when it already holds settings — this
-///    shares them between a native install and a flatpak sandbox (which
-///    only exposes the real home when it has filesystem access anyway, as
-///    it needs to read the user's audio files),
-/// 2. inside flatpak: the per-app config directory
-///    `~/.var/app/<app-id>/config/danceinterpreter` — bind-mounted into the
-///    sandbox and persistent regardless of granted permissions,
-/// 3. otherwise: the XDG config directory (`dirs::config_dir`).
+/// Directory that holds `settings.json`. The XDG config directory (via
+/// `dirs::config_dir`, which also covers the platform equivalents on
+/// Windows and macOS) always has priority: it respects `XDG_CONFIG_HOME`,
+/// which flatpak redirects to the app's own persistent per-app directory,
+/// so the same lookup works native and sandboxed. Only when that directory
+/// cannot be determined or created do we fall back to a fixed `~/.config`
+/// path.
 fn settings_dir() -> Option<PathBuf> {
-    let home_config = dirs::home_dir().map(|home| home.join(".config").join(SETTINGS_DIR));
+    let xdg = dirs::config_dir().map(|dir| dir.join(SETTINGS_DIR));
 
-    if home_config
-        .as_ref()
-        .is_some_and(|dir| dir.join("settings.json").exists())
+    if let Some(dir) = &xdg
+        && (dir.is_dir() || std::fs::create_dir_all(dir).is_ok())
     {
-        return home_config;
+        return Some(dir.clone());
     }
 
-    if let Ok(app_id) = std::env::var("FLATPAK_ID")
-        && let Some(home) = dirs::home_dir()
-    {
-        return Some(
-            home.join(".var")
-                .join("app")
-                .join(app_id)
-                .join("config")
-                .join(SETTINGS_DIR),
-        );
+    if let Some(dir) = &xdg {
+        println!("Cannot use {dir:?} for settings, falling back to ~/.config");
     }
 
-    dirs::config_dir()
-        .map(|dir| dir.join(SETTINGS_DIR))
-        .or(home_config)
+    dirs::home_dir().map(|home| home.join(".config").join(SETTINGS_DIR))
 }
 
 /// Persists the chosen theme (stored as its Debug variant name) so it
