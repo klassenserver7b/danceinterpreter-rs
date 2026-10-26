@@ -220,6 +220,24 @@ impl DataProvider {
         self.save_statics();
     }
 
+    /// Adds a static with the given name (uniquified when it already exists).
+    pub fn add_named_static(&mut self, name: &str) {
+        let name = name.trim();
+        if name.is_empty() {
+            return;
+        }
+
+        let mut final_name = name.to_string();
+        let mut counter = 1;
+        while self.statics.contains_key(&final_name) {
+            counter += 1;
+            final_name = format!("{} {}", name, counter);
+        }
+        self.statics
+            .insert(final_name.clone(), StaticInfo::new(final_name));
+        self.save_statics();
+    }
+
     pub fn toggle_static_favorite(&mut self, name: &str) {
         if let Some(song) = self.statics.get_mut(name) {
             song.is_favorite = !song.is_favorite;
@@ -577,6 +595,16 @@ impl DataProvider {
 
     pub fn playlist(&self) -> &Vec<PlaylistItem> {
         &self.playlist
+    }
+
+    /// The currently displayed item source.
+    pub fn get_current_source(&self) -> &ItemSource {
+        &self.current
+    }
+
+    /// The explicitly queued next item, if any.
+    pub fn get_queued_next(&self) -> Option<&ItemSource> {
+        self.next.as_ref()
     }
 }
 
