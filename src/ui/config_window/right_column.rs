@@ -7,7 +7,7 @@ use crate::ui::config_window::sidebar::SidebarMessage;
 use crate::ui::config_window::{ConfigWindow, source_tag};
 use crate::ui::theme::{self, sz};
 use crate::ui::widgets::{
-    buttons, heading, material_symbol, material_symbol_sized,
+    buttons, heading, kbd, material_symbol, material_symbol_sized,
 };
 use crate::{DanceInterpreter, Message};
 use iced::widget::{button, column as col, container, row, scrollable, text, toggler};
@@ -348,11 +348,34 @@ fn build_tip() -> Element<'static, Message> {
             ]
             .spacing(8)
             .align_y(Alignment::Center),
-            text("Press Space to move to the next song. We take care of the display.")
-                .size(sz::TINY)
-                .style(|t: &Theme| iced::widget::text::Style {
-                    color: Some(theme::Tokens::of(t).muted),
-                }),
+            // Subtitle + action hang under the heading text, matching the
+            // prototype's 24px indent (icon 15 + gap 8).
+            container(
+                col![
+                    row![
+                        text("Press")
+                            .size(sz::TINY)
+                            .style(|t: &Theme| iced::widget::text::Style {
+                                color: Some(theme::Tokens::of(t).muted),
+                            }),
+                        kbd("Space"),
+                        text("to move to the next song.")
+                            .size(sz::TINY)
+                            .style(|t: &Theme| iced::widget::text::Style {
+                                color: Some(theme::Tokens::of(t).muted),
+                            }),
+                    ]
+                    .spacing(4)
+                    .align_y(Alignment::Center),
+                    text("We\u{2019}ll take care of the display.")
+                        .size(sz::TINY)
+                        .style(|t: &Theme| iced::widget::text::Style {
+                            color: Some(theme::Tokens::of(t).muted),
+                        }),
+                ]
+                .spacing(3)
+            )
+            .padding(crate::ui::theme::pad4(0.0, 0.0, 0.0, 23.0)),
             container(
                 button(
                     row![
@@ -365,7 +388,8 @@ fn build_tip() -> Element<'static, Message> {
                 .padding([4, 6])
                 .style(theme::btn_ghost)
                 .on_press(Message::OpenDialog(crate::ui::config_window::DialogState::Help))
-            ),
+            )
+            .padding(crate::ui::theme::pad4(4.0, 0.0, 0.0, 23.0)),
         ]
         .spacing(6),
     )
