@@ -68,12 +68,12 @@ pub mod sz {
     pub const PANEL_TITLE: f32 = 13.0;
     /// Row primary text.
     pub const ROW: f32 = 12.0;
-    /// Row secondary text, captions.
-    pub const SMALL: f32 = 10.5;
+    /// Row secondary text, captions, subtitles.
+    pub const SMALL: f32 = 12.0;
     /// Tags, eyebrows, kbd hints, footers.
-    pub const TINY: f32 = 9.5;
+    pub const TINY: f32 = 10.5;
     /// Micro labels (source tags, version).
-    pub const MICRO: f32 = 9.0;
+    pub const MICRO: f32 = 9.5;
 }
 
 fn rgb(r: u8, g: u8, b: u8) -> Color {

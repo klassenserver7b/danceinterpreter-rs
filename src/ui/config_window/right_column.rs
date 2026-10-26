@@ -33,8 +33,22 @@ pub fn build<'a>(
         .width(Length::Fixed(width))
         .height(Length::Fill)
         .clip(true)
-        .padding(crate::ui::theme::pad4(0.0, 24.0, 22.0, 0.0))
-        .style(theme::page_bg);
+        .padding(crate::ui::theme::pad4(14.0, 14.0, 16.0, 14.0))
+        .style(move |t: &Theme| {
+            // While the rail is collapsed (animated width ~0) paint nothing,
+            // so no border hairline survives at the window edge.
+            if width < 1.0 {
+                return container::Style::default();
+            }
+            let tk = theme::Tokens::of(t);
+            container::Style::default()
+                .background(tk.panel)
+                .border(iced::Border {
+                    color: tk.border,
+                    width: 1.0,
+                    radius: 10.0.into(),
+                })
+        });
 
     rail.into()
 }
@@ -338,47 +352,28 @@ fn build_tip() -> Element<'static, Message> {
                     .style(|t: &Theme| iced::widget::text::Style {
                         color: Some(theme::Tokens::of(t).accent_soft),
                     }),
-                text("Keep your eyes on the floor.")
-                    .size(sz::SMALL + 0.5)
-                    .font(theme::body_font(iced::font::Weight::Medium))
-                    .style(|t: &Theme| iced::widget::text::Style {
-                        color: Some(theme::Tokens::of(t).text_soft),
-                    }),
-            ]
-            .spacing(8)
-            .align_y(Alignment::Center),
-            // Subtitle + action hang under the heading text, matching the
-            // prototype's 24px indent (icon 15 + gap 8).
-            container(
-                col![
-                    row![
-                        text("Press")
-                            .size(sz::TINY)
-                            .style(|t: &Theme| iced::widget::text::Style {
-                                color: Some(theme::Tokens::of(t).muted),
-                            }),
-                        kbd("Space"),
-                        text("to move to the next song.")
-                            .size(sz::TINY)
-                            .style(|t: &Theme| iced::widget::text::Style {
-                                color: Some(theme::Tokens::of(t).muted),
-                            }),
-                    ]
-                    .spacing(4)
-                    .align_y(Alignment::Center),
-                    text("We\u{2019}ll take care of the display.")
-                        .size(sz::TINY)
+                row![
+                    text("Press")
+                        .size(sz::SMALL)
+                        .style(|t: &Theme| iced::widget::text::Style {
+                            color: Some(theme::Tokens::of(t).muted),
+                        }),
+                    kbd("Space"),
+                    text("to move to the next song.")
+                        .size(sz::SMALL)
                         .style(|t: &Theme| iced::widget::text::Style {
                             color: Some(theme::Tokens::of(t).muted),
                         }),
                 ]
-                .spacing(3)
-            )
-            .padding(crate::ui::theme::pad4(0.0, 0.0, 0.0, 23.0)),
+                .spacing(4)
+                .align_y(Alignment::Center),
+            ]
+            .spacing(8)
+            .align_y(Alignment::Center),
             container(
                 button(
                     row![
-                        text("View keyboard shortcuts").size(sz::TINY),
+                        text("View keyboard shortcuts").size(sz::SMALL),
                         material_symbol_sized("open_in_new", false, 11.0),
                     ]
                     .spacing(4)
@@ -388,9 +383,9 @@ fn build_tip() -> Element<'static, Message> {
                 .style(theme::btn_ghost)
                 .on_press(Message::OpenDialog(crate::ui::config_window::DialogState::Help))
             )
-            .padding(crate::ui::theme::pad4(4.0, 0.0, 0.0, 23.0)),
+            .padding(crate::ui::theme::pad4(2.0, 0.0, 0.0, 23.0)),
         ]
-        .spacing(6),
+        .spacing(2),
     )
     .padding([8, 5])
     .width(Length::Fill)

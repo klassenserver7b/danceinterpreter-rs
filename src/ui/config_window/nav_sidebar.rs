@@ -156,7 +156,7 @@ fn session_card<'a>(config_window: &'a ConfigWindow) -> Element<'a, Message> {
             icon_box,
             col![
                 text(title)
-                    .size(11.0)
+                    .size(sz::SMALL)
                     .font(theme::body_font(iced::font::Weight::Semibold))
                     .style(|t: &Theme| iced::widget::text::Style {
                         color: Some(theme::Tokens::of(t).text),

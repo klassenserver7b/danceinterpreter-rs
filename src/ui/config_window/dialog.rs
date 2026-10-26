@@ -293,12 +293,7 @@ fn build_help() -> (String, Column<'static, Message, Theme>, Element<'static, Me
         ("This help", "?"),
     ];
 
-    let mut body = col![text("A little less clicking. A little more dancing.")
-        .size(sz::SMALL + 1.0)
-        .style(|t: &Theme| iced::widget::text::Style {
-            color: Some(theme::Tokens::of(t).muted),
-        })]
-    .spacing(4);
+    let mut body = col![].spacing(4);
 
     for (action, keys) in shortcuts {
         body = body.push(container(

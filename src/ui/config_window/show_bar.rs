@@ -8,7 +8,7 @@ use crate::ui::widgets::{kbd, material_symbol, material_symbol_sized};
 use crate::ui::with_tooltip;
 use crate::{DanceInterpreter, Message};
 use iced::widget::scrollable::{Direction, Scrollbar};
-use iced::widget::{button, column as col, container, row, scrollable, text};
+use iced::widget::{button, container, row, scrollable, text};
 use iced::{Alignment, Element, Length, Theme};
 
 pub fn build<'a>(
@@ -23,20 +23,12 @@ pub fn build<'a>(
             .style(|t: &Theme| iced::widget::text::Style {
                 color: Some(theme::Tokens::of(t).accent_soft),
             }),
-        col![
-            text("Quick show")
-                .size(sz::SMALL + 0.5)
-                .font(theme::body_font(iced::font::Weight::Medium))
-                .style(|t: &Theme| iced::widget::text::Style {
-                    color: Some(theme::Tokens::of(t).text),
-                }),
-            text("One click. On screen.")
-                .size(sz::MICRO)
-                .style(|t: &Theme| iced::widget::text::Style {
-                    color: Some(theme::Tokens::of(t).muted),
-                }),
-        ]
-        .spacing(3),
+        text("Quick show")
+            .size(sz::SMALL + 0.5)
+            .font(theme::body_font(iced::font::Weight::Medium))
+            .style(|t: &Theme| iced::widget::text::Style {
+                color: Some(theme::Tokens::of(t).text),
+            }),
     ]
     .spacing(10)
     .align_y(Alignment::Center);
