@@ -205,7 +205,14 @@ fn build_settings<'a>(
         |val| Message::SongWindow(crate::SongWindowMessage::ChangeScale(val)),
     )
     .step(0.1)
-    .width(Length::Fixed(120.0));
+    .width(Length::Fixed(120.0))
+    .style(|t: &Theme, _status| {
+        let tk = theme::Tokens::of(t);
+        iced_aw::style::number_input::Style {
+            button_background: Some(iced::Background::Color(tk.btn2_bg)),
+            icon_color: tk.btn2_text,
+        }
+    });
 
     let switch = |checked: bool, msg: fn(bool) -> Message| {
         toggler(checked)

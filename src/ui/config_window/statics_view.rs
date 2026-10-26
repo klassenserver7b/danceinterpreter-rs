@@ -258,12 +258,18 @@ fn build_static_row<'a>(
         first: false,
     };
 
-    container(row![bar, content])
-        .height(Length::Fixed(ROW_HEIGHT))
-        .width(Length::Fill)
-        .align_y(Alignment::Center)
-        .style(move |t: &Theme| theme::row(t, look))
-        .into()
+    // Same fixed-height pattern as the playlist rows: without it the accent
+    // bar collapses and the content sticks to the top of the stripe.
+    container(
+        row![bar, content]
+            .width(Length::Fill)
+            .height(Length::Fixed(ROW_HEIGHT))
+            .align_y(Alignment::Center),
+    )
+    .height(Length::Fixed(ROW_HEIGHT))
+    .width(Length::Fill)
+    .style(move |t: &Theme| theme::row(t, look))
+    .into()
 }
 
 fn drag_handle() -> Element<'static, Message> {

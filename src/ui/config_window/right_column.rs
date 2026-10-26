@@ -175,11 +175,7 @@ fn build_dj_card<'a>(
         .style(|t: &Theme| {
             let tk = theme::Tokens::of(t);
             container::Style::default()
-                .background(if tk.is_light {
-                    Color::from_rgb8(0xE3, 0xEC, 0xDA)
-                } else {
-                    Color::from_rgb8(0x30, 0x37, 0x2F)
-                })
+                .background(tk.accent_nav_bg)
                 .border(iced::Border {
                     color: Color::TRANSPARENT,
                     width: 0.0,

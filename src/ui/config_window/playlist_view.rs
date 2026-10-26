@@ -213,9 +213,12 @@ fn build_table_head() -> Element<'static, Message> {
         .into()
     };
 
-    // The 3px spacer mirrors the row accent bar so the columns align.
+    // The 3px spacer mirrors the row accent bar; its Fill height also
+    // inflates the line so align_y centers the head cells in the band.
     let head = row![
-        Space::new().width(Length::Fixed(3.0)),
+        Space::new()
+            .width(Length::Fixed(3.0))
+            .height(Length::Fill),
         Space::new().width(Length::Fixed(COL_DRAG)),
         head_cell("#", Length::Fixed(COL_NUMBER)),
         head_cell("SONG / ARTIST", Length::Fill),
@@ -420,12 +423,21 @@ fn build_song_row<'a>(
         first: false,
     };
 
-    container(row![bar, content])
-        .height(Length::Fixed(ROW_HEIGHT))
-        .width(Length::Fill)
-        .align_y(Alignment::Center)
-        .style(move |t: &Theme| theme::row(t, look))
-        .into()
+    // The inner row needs an explicit fixed height: iced's layout marks
+    // children of Shrink-height rows as "compressed", which collapses the
+    // accent bar's Fill height to 0 and leaves the content stuck to the top.
+    // With a fixed height the bar expands to the full stripe, inflating the
+    // line height that align_y then centers the content block in.
+    container(
+        row![bar, content]
+            .width(Length::Fill)
+            .height(Length::Fixed(ROW_HEIGHT))
+            .align_y(Alignment::Center),
+    )
+    .height(Length::Fixed(ROW_HEIGHT))
+    .width(Length::Fill)
+    .style(move |t: &Theme| theme::row(t, look))
+    .into()
 }
 
 fn drag_handle() -> Element<'static, Message> {

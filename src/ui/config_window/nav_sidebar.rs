@@ -129,25 +129,27 @@ fn session_card<'a>(config_window: &'a ConfigWindow) -> Element<'a, Message> {
         ),
     };
 
-    let icon_box = container(material_symbol("graphic_eq", false).size(15.0))
-        .width(Length::Fixed(30.0))
-        .height(Length::Fixed(32.0))
-        .align_x(Alignment::Center)
-        .align_y(Alignment::Center)
-        .style(|t: &Theme| {
-            let tk = theme::Tokens::of(t);
-            container::Style::default()
-                .background(if tk.is_light {
-                    Color::from_rgb8(0xE3, 0xEC, 0xDA)
-                } else {
-                    Color::from_rgb8(0x2D, 0x35, 0x2C)
-                })
-                .border(iced::Border {
-                    color: Color::TRANSPARENT,
-                    width: 0.0,
-                    radius: 5.0.into(),
-                })
-        });
+    let icon_box = container(
+        material_symbol("graphic_eq", false)
+            .size(15.0)
+            .style(|t: &Theme| iced::widget::text::Style {
+                color: Some(theme::Tokens::of(t).accent_nav_text),
+            }),
+    )
+    .width(Length::Fixed(30.0))
+    .height(Length::Fixed(32.0))
+    .align_x(Alignment::Center)
+    .align_y(Alignment::Center)
+    .style(|t: &Theme| {
+        let tk = theme::Tokens::of(t);
+        container::Style::default()
+            .background(tk.accent_nav_bg)
+            .border(iced::Border {
+                color: Color::TRANSPARENT,
+                width: 0.0,
+                radius: 5.0.into(),
+            })
+    });
 
     container(
         row![
@@ -208,11 +210,7 @@ fn count_badge(count: usize) -> Element<'static, Message> {
     .style(|t: &Theme| {
         let tk = theme::Tokens::of(t);
         container::Style::default()
-            .background(if tk.is_light {
-                Color::from_rgb8(0xE9, 0xED, 0xE6)
-            } else {
-                Color::from_rgb8(0x20, 0x26, 0x22)
-            })
+            .background(tk.kbd_bg)
             .border(iced::Border {
                 color: Color::TRANSPARENT,
                 width: 0.0,

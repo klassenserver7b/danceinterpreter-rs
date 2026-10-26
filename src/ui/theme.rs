@@ -80,12 +80,28 @@ fn rgb(r: u8, g: u8, b: u8) -> Color {
     Color::from_rgb8(r, g, b)
 }
 
+/// Linear interpolation between two colors (iced has no `Color::lerp`).
+fn mix(a: Color, b: Color, t: f32) -> Color {
+    let k = t.clamp(0.0, 1.0);
+    Color::from_rgba(
+        a.r + (b.r - a.r) * k,
+        a.g + (b.g - a.g) * k,
+        a.b + (b.b - a.b) * k,
+        a.a,
+    )
+}
+
+/// A copy of `color` with a different alpha (for hover / zebra overlays).
+fn with_alpha(color: Color, a: f32) -> Color {
+    Color { a, ..color }
+}
+
 /// All colors used by the redesign, resolved for the active theme.
 ///
-/// `Theme::Dark` / `Theme::Light` map to the custom sage palettes; any other
-/// built-in iced palette (Dracula, Nord, Solarized, …) falls back to the
-/// custom palette whose background luminance best matches, so the palette
-/// picker keeps working.
+/// `Theme::Dark` / `Theme::Light` map to the hand-tuned sage palettes; every
+/// other theme picked in the settings dialog derives its full token set from
+/// the iced palette ([`Tokens::from_palette`]), so the picker re-colors the
+/// whole UI instead of only iced's built-in widgets.
 #[derive(Debug, Clone)]
 pub struct Tokens {
     pub is_light: bool,
@@ -188,14 +204,7 @@ impl Tokens {
         match theme {
             Theme::Dark => Self::dark(),
             Theme::Light => Self::light(),
-            other => {
-                let bg = other.palette().background;
-                if luminance(bg) < 0.5 {
-                    Self::dark()
-                } else {
-                    Self::light()
-                }
-            }
+            other => Self::from_palette(other.palette()),
         }
     }
 
@@ -356,6 +365,116 @@ impl Tokens {
             now_grad_a: rgb(0xE9, 0xF0, 0xE0),
             now_grad_b: rgb(0xEE, 0xF2, 0xE9),
             now_grad_c: rgb(0xF4, 0xF6, 0xF1),
+        }
+    }
+
+    /// Derives every token from an iced [`Palette`] so that any theme picked
+    /// in the settings dialog re-colors the whole UI.
+    ///
+    /// The derivation reuses the roles of the sage design: panels are the
+    /// background lifted toward white (light themes) or the text color (dark
+    /// themes), borders are faint background→text blends, secondary text
+    /// steps from text toward the background, and the accent family tints
+    /// surfaces, borders and text with `primary`. `success` / `warning` /
+    /// `danger` feed the status colors directly.
+    pub fn from_palette(palette: iced::theme::Palette) -> Self {
+        let bg = palette.background;
+        let text = palette.text;
+        let accent = palette.primary;
+        let is_light = luminance(bg) >= 0.5;
+
+        // Panels: lift the background toward white (light) or text (dark).
+        let surface = if is_light { Color::WHITE } else { text };
+        let up = |k: f32| mix(bg, surface, k);
+        // Borders: faint background→text blends.
+        let line = |k: f32| mix(bg, text, k);
+        // Text stepped down toward the background.
+        let dim = |k: f32| mix(text, bg, k);
+        // Accent darkened for borders / strong states (both directions darken).
+        let anchor = if is_light { text } else { bg };
+        let accent_deep = |k: f32| mix(accent, anchor, k);
+        // Text tinted toward the accent.
+        let tint = |k: f32| mix(text, accent, k);
+
+        let panel = if is_light { Color::WHITE } else { up(0.05) };
+        let accent_border = accent_deep(0.12);
+
+        Self {
+            is_light,
+            bg,
+            panel,
+            panel_deep: mix(bg, text, 0.03),
+            panel_head: mix(bg, text, 0.04),
+            border: line(0.12),
+            border_soft: line(0.08),
+
+            text,
+            text_soft: dim(0.2),
+            muted: dim(0.45),
+            muted_head: dim(0.5),
+            faint: dim(0.6),
+
+            accent,
+            accent_border,
+            accent_text: mix(accent, Color::BLACK, 0.85),
+            accent_soft: if is_light { accent_deep(0.3) } else { accent },
+            accent_bar: if is_light { accent_deep(0.3) } else { accent },
+            accent_nav_bg: mix(bg, accent, 0.12),
+            accent_nav_text: tint(if is_light { 0.15 } else { 0.45 }),
+            dance_headline: tint(if is_light { 0.2 } else { 0.5 }),
+            focus: accent_deep(0.15),
+
+            switch_on: if is_light { accent_border } else { accent },
+            switch_on_knob: mix(accent, Color::BLACK, 0.8),
+            switch_off: line(0.15),
+            switch_knob: mix(dim(0.42), accent, 0.4),
+
+            btn2_bg: mix(bg, accent, 0.08),
+            btn2_border: line(0.16),
+            btn2_text: dim(if is_light { 0.2 } else { 0.3 }),
+            btn3_bg: if is_light { line(0.06) } else { up(0.03) },
+            btn3_text: dim(0.4),
+            active_bg: mix(bg, accent, 0.32),
+            active_border: accent_deep(0.25),
+            active_text: tint(if is_light { 0.08 } else { 0.3 }),
+            outline_bg: panel,
+            outline_border: line(0.14),
+            outline_text: dim(0.16),
+            ghost_hover: with_alpha(text, if is_light { 0.05 } else { 0.03 }),
+            danger: palette.danger,
+
+            row_hover: with_alpha(text, if is_light { 0.03 } else { 0.02 }),
+            row_zebra: with_alpha(text, if is_light { 0.0 } else { 0.004 }),
+            row_current_bg: mix(bg, accent, 0.2),
+            row_current_border: mix(accent, bg, if is_light { 0.2 } else { 0.7 }),
+            match_bg: mix(bg, accent, 0.11),
+            match_border: accent_deep(0.3),
+
+            tag_border: line(0.22),
+            tag_text: dim(0.4),
+
+            dot_green: palette.success,
+            dot_off: dim(0.55),
+            led_connected: mix(palette.success, anchor, 0.15),
+            led_partial: palette.warning,
+            led_off: line(0.25),
+            star: palette.warning,
+
+            toast_bg: mix(bg, accent, 0.18),
+            toast_border: accent_deep(0.4),
+            toast_text: tint(if is_light { 0.1 } else { 0.45 }),
+
+            modal_border: mix(accent, bg, if is_light { 0.2 } else { 0.7 }),
+            backdrop: with_alpha(mix(Color::BLACK, accent, 0.05), if is_light { 0.45 } else { 0.72 }),
+
+            kbd_border: line(0.15),
+            kbd_bg: mix(bg, accent, 0.12),
+            kbd_text: dim(0.28),
+
+            now_border: mix(bg, accent, if is_light { 0.65 } else { 0.25 }),
+            now_grad_a: mix(bg, accent, 0.15),
+            now_grad_b: mix(bg, accent, 0.1),
+            now_grad_c: mix(bg, accent, 0.05),
         }
     }
 }
