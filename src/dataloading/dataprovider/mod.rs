@@ -364,6 +364,11 @@ impl DataProvider {
         }
     }
 
+    pub fn clear_pending_scroll(&mut self) {
+        self.should_scroll = false;
+        self.traktor_provider.take_should_scroll();
+    }
+
     pub fn get_play_state(&self, playlist_index: usize) -> (bool, bool, bool, bool) {
         let mut is_current = false;
         let mut is_next = false;

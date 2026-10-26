@@ -684,7 +684,12 @@ impl DanceInterpreter {
                     self.data_provider.process_traktor_message(*msg);
                     self.run_traktor_sync_action();
 
-                    self.try_scroll_to_song()
+                    if self.config_window.enable_autoscroll {
+                        self.try_scroll_to_song()
+                    } else {
+                        self.data_provider.clear_pending_scroll();
+                        ().into()
+                    }
                 }
 
                 TraktorMessage::EnableServer(enabled) => {
