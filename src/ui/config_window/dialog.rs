@@ -269,6 +269,8 @@ fn build_help() -> (String, Column<'static, Message, Theme>, Element<'static, Me
         ("Scroll playlist", "PgUp / PgDn"),
         ("Audience text scale", "Ctrl + / \u{2212}"),
         ("DJ integration panel", "Alt+C"),
+        ("Navigation sidebar", "Ctrl+B"),
+        ("Info column", "Ctrl+J"),
         ("This help", "?"),
     ];
 

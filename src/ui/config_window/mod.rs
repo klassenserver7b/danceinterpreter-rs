@@ -22,7 +22,7 @@ use crate::ui::config_window::sidebar::Sidebar;
 use crate::ui::theme;
 use crate::{DanceInterpreter, Message, Window};
 use iced::widget::{column as col, container, row, stack};
-use iced::{Color, Element, Length, Size, Theme, window};
+use iced::{Animation, Color, Element, Length, Size, Theme, animation, window};
 use std::path::PathBuf;
 use std::time::{Duration, Instant};
 
@@ -65,6 +65,10 @@ pub struct ConfigWindow {
     pub theme: Theme,
     pub follow_system_theme: bool,
 
+    /// Collapsible columns: left navigation sidebar and right info rail.
+    pub nav_anim: Animation<bool>,
+    pub rail_anim: Animation<bool>,
+
     pub search_visible: bool,
     pub search_query: String,
     pub search_input_id: iced::widget::Id,
@@ -93,6 +97,13 @@ impl Window for ConfigWindow {
             view: View::Playlist,
             theme: Theme::Dark,
             follow_system_theme: true,
+
+            nav_anim: Animation::new(true)
+                .duration(Duration::from_millis(140))
+                .easing(animation::Easing::EaseInOut),
+            rail_anim: Animation::new(true)
+                .duration(Duration::from_millis(140))
+                .easing(animation::Easing::EaseInOut),
 
             search_visible: false,
             search_query: String::new(),
@@ -126,6 +137,8 @@ impl Window for ConfigWindow {
 
 impl ConfigWindow {
     pub fn view<'a>(&'a self, dance_interpreter: &'a DanceInterpreter) -> Element<'a, Message> {
+        let now = Instant::now();
+
         // Primary content column: page heading, hero card and the active panel.
         let primary = container(
             col![
@@ -149,15 +162,28 @@ impl ConfigWindow {
             .width(self.sidebar.state.interpolate(
                 0.0,
                 (self.size.width / 5.0).min(400.0),
-                Instant::now(),
+                now,
             ));
 
-        let content = row![primary, dj_panel, right_column::build(self, dance_interpreter)]
+        // Collapsible columns: navigation sidebar (left) and info rail (right).
+        let nav = nav_sidebar::build(
+            self,
+            dance_interpreter,
+            self.nav_anim.interpolate(0.0, nav_sidebar::SIDEBAR_WIDTH, now),
+        );
+
+        let rail = right_column::build(
+            self,
+            dance_interpreter,
+            self.rail_anim.interpolate(0.0, right_column::RAIL_WIDTH, now),
+        );
+
+        let content = row![primary, dj_panel, rail]
             .width(Length::Fill)
             .height(Length::Fill);
 
         let main = row![
-            nav_sidebar::build(self, dance_interpreter),
+            nav,
             col![
                 top_bar::bar_with_divider(top_bar::build(self, dance_interpreter)),
                 content,
@@ -182,6 +208,24 @@ impl ConfigWindow {
         }
 
         overlays.into()
+    }
+
+    /// Whether the left navigation sidebar is (being) shown.
+    pub fn nav_open(&self) -> bool {
+        self.nav_anim.value()
+    }
+
+    /// Whether the right info rail is (being) shown.
+    pub fn rail_open(&self) -> bool {
+        self.rail_anim.value()
+    }
+
+    pub fn toggle_nav_sidebar(&mut self) {
+        self.nav_anim.go_mut(!self.nav_open(), Instant::now());
+    }
+
+    pub fn toggle_info_rail(&mut self) {
+        self.rail_anim.go_mut(!self.rail_open(), Instant::now());
     }
 }
 

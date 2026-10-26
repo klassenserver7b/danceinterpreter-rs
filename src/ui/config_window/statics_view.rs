@@ -233,12 +233,13 @@ fn build_static_row<'a>(
     ]
     .spacing(10)
     .align_y(Alignment::Center)
-    .padding(crate::ui::theme::pad4(0.0, 19.0, 0.0, 11.0))
+    .padding(crate::ui::theme::pad4(0.0, 19.0, 0.0, 14.0))
     .width(Length::Fill);
 
-    let bar_width = if is_current { 3.0 } else { 0.0 };
+    // Constant 3px accent bar (colored only for the current static) so every
+    // row's columns line up regardless of selection.
     let bar = container(Space::new())
-        .width(Length::Fixed(bar_width))
+        .width(Length::Fixed(3.0))
         .height(Length::Fill)
         .style(move |t: &Theme| {
             container::Style::default().background(if is_current {

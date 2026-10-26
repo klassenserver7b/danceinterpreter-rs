@@ -1,8 +1,9 @@
-//! Top bar: breadcrumb and the "open song window" action.
+//! Top bar: sidebar toggles, breadcrumb and the "open song window" action.
 
 use crate::ui::config_window::{ConfigWindow, View};
 use crate::ui::theme::{self, sz};
-use crate::ui::widgets::material_symbol_sized;
+use crate::ui::widgets::{buttons, material_symbol_sized};
+use crate::ui::with_tooltip;
 use crate::{DanceInterpreter, Message};
 use iced::widget::{Column, button, column as col, container, row, text};
 use iced::{Alignment, Element, Length, Theme};
@@ -15,6 +16,16 @@ pub fn build<'a>(
         View::Playlist => "Playlist",
         View::Statics => "Statics",
     };
+
+    let nav_toggle = with_tooltip(
+        buttons::ghost_icon(
+            if config_window.nav_open() { "menu_open" } else { "menu" },
+            false,
+            16.0,
+            Message::ToggleNavSidebar,
+        ),
+        "Toggle navigation sidebar (Ctrl+B)",
+    );
 
     let breadcrumb = row![
         text("Workspace")
@@ -50,12 +61,19 @@ pub fn build<'a>(
     .style(theme::btn_ghost)
     .on_press(Message::FocusSongWindow);
 
+    let rail_toggle = with_tooltip(
+        buttons::ghost_icon("view_sidebar", false, 16.0, Message::ToggleInfoRail),
+        "Toggle info column (Ctrl+J)",
+    );
+
     container(
         row![
-            breadcrumb,
-            container(open_song_window)
-                .width(Length::Fill)
-                .align_x(Alignment::End),
+            container(row![nav_toggle, breadcrumb].spacing(10).align_y(Alignment::Center)),
+            container(row![rail_toggle, open_song_window]
+                .spacing(10)
+                .align_y(Alignment::Center))
+            .width(Length::Fill)
+            .align_x(Alignment::End),
         ]
         .width(Length::Fill)
         .align_y(Alignment::Center),

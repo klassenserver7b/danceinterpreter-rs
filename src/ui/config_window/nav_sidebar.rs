@@ -8,11 +8,13 @@ use crate::{DanceInterpreter, Message};
 use iced::widget::{column as col, container, row, text};
 use iced::{Alignment, Color, Element, Length, Theme};
 
-const SIDEBAR_WIDTH: f32 = 218.0;
+/// Full width of the navigation sidebar when expanded.
+pub const SIDEBAR_WIDTH: f32 = 218.0;
 
 pub fn build<'a>(
     config_window: &'a ConfigWindow,
     dance_interpreter: &'a DanceInterpreter,
+    width: f32,
 ) -> Element<'a, Message> {
     let playlist_count = dance_interpreter.data_provider.playlist().len();
     let statics_count = dance_interpreter.data_provider.statics().len();
@@ -71,8 +73,9 @@ pub fn build<'a>(
     .spacing(3);
 
     container(col![nav, container(bottom).padding(crate::ui::theme::pad4(20.0, 0.0, 14.0, 0.0)).height(Length::Fill)].height(Length::Fill))
-        .width(Length::Fixed(SIDEBAR_WIDTH))
+        .width(Length::Fixed(width))
         .height(Length::Fill)
+        .clip(true)
         .padding(crate::ui::theme::pad4(29.0, 17.0, 0.0, 17.0))
         .style(theme::sidebar_bg)
         .into()

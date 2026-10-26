@@ -142,6 +142,8 @@ pub enum Message {
     Tick,
     FocusSongWindow,
     EscapePressed,
+    ToggleNavSidebar,
+    ToggleInfoRail,
 
     EnableAutoscroll(bool),
     EnableFollowSystemTheme(bool),
@@ -381,6 +383,15 @@ impl DanceInterpreter {
             }
 
             Message::FocusSongWindow => window::gain_focus(self.song_window.id),
+
+            Message::ToggleNavSidebar => {
+                self.config_window.toggle_nav_sidebar();
+                ().into()
+            }
+            Message::ToggleInfoRail => {
+                self.config_window.toggle_info_rail();
+                ().into()
+            }
 
             Message::EscapePressed => {
                 if self.config_window.search_visible {
@@ -1050,6 +1061,8 @@ impl DanceInterpreter {
                     (Key::Character("f"), Modifiers::CTRL) => {
                         Some(Message::Search(SearchMessage::Toggle))
                     }
+                    (Key::Character("b"), Modifiers::CTRL) => Some(Message::ToggleNavSidebar),
+                    (Key::Character("j"), Modifiers::CTRL) => Some(Message::ToggleInfoRail),
                     (Key::Character("c"), Modifiers::ALT) => {
                         Some(Message::Sidebar(SidebarMessage::Toggle))
                     }
@@ -1062,6 +1075,8 @@ impl DanceInterpreter {
                 .sidebar
                 .state
                 .is_animating(Instant::now())
+                || self.config_window.nav_anim.is_animating(Instant::now())
+                || self.config_window.rail_anim.is_animating(Instant::now())
             {
                 window::frames().map(|_| Message::Animate)
             } else {

@@ -213,7 +213,9 @@ fn build_table_head() -> Element<'static, Message> {
         .into()
     };
 
+    // The 3px spacer mirrors the row accent bar so the columns align.
     let head = row![
+        Space::new().width(Length::Fixed(3.0)),
         Space::new().width(Length::Fixed(COL_DRAG)),
         head_cell("#", Length::Fixed(COL_NUMBER)),
         head_cell("SONG / ARTIST", Length::Fill),
@@ -394,12 +396,14 @@ fn build_song_row<'a>(
     ]
     .spacing(7)
     .align_y(Alignment::Center)
-    .padding(crate::ui::theme::pad4(0.0, 14.0, 0.0, 11.0))
+    .padding([0, 14])
     .width(Length::Fill);
 
-    let bar_width = if is_current { 3.0 } else { 0.0 };
+    // The accent bar is rendered on every row at a constant 3px width (only
+    // colored for the current song) so all columns of all rows — and the
+    // table head, which reserves the same 3px spacer — line up exactly.
     let bar = container(Space::new())
-        .width(Length::Fixed(bar_width))
+        .width(Length::Fixed(3.0))
         .height(Length::Fill)
         .style(move |t: &Theme| {
             container::Style::default().background(if is_current {
@@ -450,7 +454,7 @@ fn build_dance_cell<'a>(
                 color.unwrap_or_else(|| theme::Tokens::of(t).muted)
             }),
             text_input("Unassigned", dance)
-                .size(sz::TINY)
+                .size(sz::SMALL)
                 .on_input(move |v| Message::SongDataEdit(idx, SongDataEdit::Dance(v)))
                 .on_submit(Message::SubmitPlaylistDance(idx))
                 .style(move |t: &Theme, status: iced::widget::text_input::Status| {
@@ -464,9 +468,11 @@ fn build_dance_cell<'a>(
                 .padding(0),
         ]
         .spacing(6)
-        .align_y(Alignment::Center),
+        .align_y(Alignment::Center)
+        .width(Length::Fill),
     )
-    .padding([3, 7])
+    .padding([4, 8])
+    .width(Length::Fill)
     .clip(true)
     .style(move |t: &Theme| theme::chip(color.unwrap_or_else(|| theme::Tokens::of(t).muted))(t));
 

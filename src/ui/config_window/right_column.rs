@@ -13,11 +13,13 @@ use crate::{DanceInterpreter, Message};
 use iced::widget::{button, column as col, container, row, scrollable, text, toggler};
 use iced::{Alignment, Color, Element, Length, Theme};
 
-const RAIL_WIDTH: f32 = 292.0;
+/// Full width of the right info rail when expanded.
+pub const RAIL_WIDTH: f32 = 292.0;
 
 pub fn build<'a>(
     config_window: &'a ConfigWindow,
     dance_interpreter: &'a DanceInterpreter,
+    width: f32,
 ) -> Element<'a, Message> {
     let content = col![
         build_up_next(dance_interpreter),
@@ -28,8 +30,9 @@ pub fn build<'a>(
     .width(Length::Fill);
 
     let rail = container(scrollable(content).style(theme::scrollable_style))
-        .width(Length::Fixed(RAIL_WIDTH))
+        .width(Length::Fixed(width))
         .height(Length::Fill)
+        .clip(true)
         .padding(crate::ui::theme::pad4(0.0, 24.0, 22.0, 0.0))
         .style(theme::page_bg);
 
