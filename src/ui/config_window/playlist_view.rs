@@ -607,7 +607,8 @@ fn build_empty_playlist_view(dance_interpreter: &DanceInterpreter) -> Element<'s
         row![open_card, traktor_card].spacing(16),
     ]
     .spacing(10)
-    .align_x(Alignment::Center);
+    .align_x(Alignment::Center)
+    .width(Length::Fill);
 
     container(
         col![Space::new().height(Length::Fill), content, Space::new().height(Length::Fill)]

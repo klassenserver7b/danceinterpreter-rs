@@ -94,6 +94,7 @@ pub fn build<'a>(
         let btn = button(
             row![dot, text(&static_info.name).size(sz::TINY)]
                 .spacing(7)
+                .height(Length::Fill)
                 .align_y(Alignment::Center),
         )
         .padding([0, 11])
@@ -115,11 +116,15 @@ pub fn build<'a>(
 
     let manage = with_tooltip(
         button(
-            material_symbol_sized("add", false, 16.0).style(|t: &Theme| {
-                iced::widget::text::Style {
-                    color: Some(theme::Tokens::of(t).muted),
-                }
-            })
+            container(
+                material_symbol_sized("add", false, 16.0).style(|t: &Theme| {
+                    iced::widget::text::Style {
+                        color: Some(theme::Tokens::of(t).muted),
+                    }
+                })
+            )
+            .height(Length::Fill)
+            .align_y(Alignment::Center),
         )
         .padding([0, 10])
         .height(Length::Fixed(33.0))
@@ -153,7 +158,7 @@ fn quick_button<'a>(
     active: bool,
     message: Message,
 ) -> Element<'a, Message> {
-    let mut content = row![].spacing(7).align_y(Alignment::Center);
+    let mut content = row![].spacing(7).height(Length::Fill).align_y(Alignment::Center);
 
     if let Some(icon) = icon {
         content = content.push(

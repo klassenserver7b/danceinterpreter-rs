@@ -154,8 +154,7 @@ impl<'a> canvas::Program<Message> for CanvasToggle<'a> {
             let r = max_r * progress;
             let alpha = (1.0 - progress) * 0.45;
 
-            // Use the secondary color so the ripple feels intentional
-            let mut ripple_color = theme.extended_palette().secondary.base.color;
+            let mut ripple_color = crate::ui::theme::Tokens::of(theme).accent_soft;
             ripple_color.a = alpha;
 
             let ripple = Path::new(|b| b.circle(Point::new(cx, cy), r));

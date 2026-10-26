@@ -15,17 +15,12 @@ pub fn draw(theme: &Theme, frame: &mut Frame, _bounds: Rectangle, _cursor: Curso
     let stroke_w = dim * 0.07;
     let arrow_size = dim * 0.13;
 
-    // secondary color when enabled; muted background-strong when disabled
+    // Colors (design-system tokens)
+    let tk = crate::ui::theme::Tokens::of(theme);
     let (icon_color, bg_color) = if enabled {
-        (
-            theme.extended_palette().secondary.base.color,
-            theme.extended_palette().background.weaker.color,
-        )
+        (tk.accent_soft, tk.panel_deep)
     } else {
-        (
-            theme.extended_palette().background.strongest.color,
-            theme.extended_palette().background.weaker.color,
-        )
+        (tk.muted, tk.panel_deep)
     };
 
     // Background circle

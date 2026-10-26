@@ -163,7 +163,7 @@ impl Sidebar {
         container(
             col![
                 header,
-                server_controls,
+                container(server_controls).width(Length::Fill).align_x(Alignment::Center),
                 Self::build_client_status(dance_interpreter),
                 address,
                 labeled_message_toggler(
@@ -227,6 +227,10 @@ impl Sidebar {
         .on_option_hovered(|s| Message::Traktor(TraktorMessage::ChangeAddress(s)))
         .on_input(|s| Message::Traktor(TraktorMessage::ChangeAddress(s)))
         .on_close(Message::Traktor(TraktorMessage::SubmitAddress))
+        .size(sz::SMALL + 1.0)
+        .padding([7, 9])
+        .input_style(theme::input_boxed)
+        .menu_style(theme::pick_list_menu_style)
     }
 
     /// A small LED + label showing whether a Traktor client is
@@ -304,9 +308,10 @@ impl Sidebar {
 
 fn control_caption(label: &'static str) -> Element<'static, Message> {
     text(label)
-        .size(sz::TINY)
+        .size(sz::MICRO)
+        .font(theme::body_font(iced::font::Weight::Semibold))
         .style(|t: &Theme| iced::widget::text::Style {
-            color: Some(theme::Tokens::of(t).muted),
+            color: Some(theme::Tokens::of(t).muted_head),
         })
         .into()
 }

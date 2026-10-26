@@ -201,13 +201,26 @@ fn build_static_row<'a>(
         "Delete static",
     );
 
+    // How many playlist songs use this dance.
+    let usage = dance_interpreter
+        .data_provider
+        .playlist()
+        .iter()
+        .filter(|item| item.song.dance == *name)
+        .count();
+    let usage_label = match usage {
+        0 => "Unused".to_string(),
+        1 => "1 song".to_string(),
+        n => format!("{n} songs"),
+    };
+
     let content = row![
         drag_handle(),
         container(star).width(Length::Fixed(COL_FAV)),
         container(color_element).width(Length::Fixed(COL_COLOR)),
         container(name_input).width(Length::Fill).clip(true),
         container(
-            text("Text label")
+            text(usage_label)
                 .size(sz::TINY)
                 .style(|t: &Theme| iced::widget::text::Style {
                     color: Some(theme::Tokens::of(t).faint),

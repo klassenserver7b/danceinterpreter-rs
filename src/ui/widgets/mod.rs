@@ -31,6 +31,7 @@ pub fn labeled_message_toggler(
         .label(label)
         .on_toggle(message)
         .width(Length::Fill)
+        .text_size(theme::sz::SMALL)
         .style(theme::toggler_style)
 }
 

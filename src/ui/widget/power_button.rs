@@ -16,17 +16,12 @@ pub fn draw(theme: &Theme, frame: &mut Frame, _bounds: Rectangle, _cursor: Curso
     let arc_r = dim * 0.30; // power arc radius
     let stroke_w = dim * 0.07;
 
-    // Colors
+    // Colors (design-system tokens)
+    let tk = crate::ui::theme::Tokens::of(theme);
     let (icon_color, bg_color) = if enabled {
-        (
-            theme.extended_palette().primary.base.color,
-            theme.extended_palette().background.weaker.color,
-        )
+        (tk.accent_soft, tk.panel_deep)
     } else {
-        (
-            theme.extended_palette().secondary.base.color,
-            theme.extended_palette().background.weaker.color,
-        )
+        (tk.muted, tk.panel_deep)
     };
 
     let bg_path = Path::new(|b| b.circle(center, bg_r));

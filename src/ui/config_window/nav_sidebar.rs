@@ -269,7 +269,10 @@ fn nav_item_impl<'a>(
         })
         .into();
 
-    let mut content = row![icon_el, label_el].spacing(12);
+    let mut content = row![icon_el, label_el]
+        .spacing(12)
+        .height(Length::Fill)
+        .align_y(Alignment::Center);
     content = match (trailing, kbd) {
         (Some(t), _) => content.push(t),
         (None, Some(k)) => content.push(k),
@@ -296,7 +299,8 @@ fn session_note() -> Element<'static, Message> {
                         color: Some(theme::Tokens::of(t).text_soft),
                     }),
             ]
-            .spacing(7),
+            .spacing(7)
+            .align_y(Alignment::Center),
             text("Your next great evening starts here.")
                 .size(sz::MICRO)
                 .style(|t: &Theme| iced::widget::text::Style {
