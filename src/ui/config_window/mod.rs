@@ -154,14 +154,12 @@ impl ConfigWindow {
         .height(Length::Fill);
 
         // Slide-in DJ integration panel (animated width, pushes content).
-        let dj_panel = self
-            .sidebar
-            .build(dance_interpreter)
-            .width(
-                self.sidebar
-                    .state
-                    .interpolate(0.0, (self.size.width / 5.0).min(400.0), now),
-            );
+        let dj_panel = self.sidebar.build(
+            dance_interpreter,
+            self.sidebar
+                .state
+                .interpolate(0.0, (self.size.width / 5.0).min(400.0), now),
+        );
 
         // Collapsible columns: navigation sidebar (left) and info rail
         // (right). Their expanded width follows the window (like the DJ

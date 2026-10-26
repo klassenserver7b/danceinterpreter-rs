@@ -3,7 +3,7 @@
 
 use crate::ui::config_window::{ConfigWindow, DialogState, View};
 use crate::ui::theme::{self, sz};
-use crate::ui::widgets::{material_symbol, material_symbol_sized};
+use crate::ui::widgets::material_symbol;
 use crate::{DanceInterpreter, Message};
 use iced::widget::{column as col, container, row, text};
 use iced::{Alignment, Color, Element, Length, Theme};
@@ -38,19 +38,6 @@ pub fn build<'a>(
             Some(count_badge(statics_count)),
             config_window.view == View::Statics,
             Message::SetView(View::Statics),
-        ),
-        nav_item(
-            "desktop_windows",
-            "Song window",
-            Some(
-                material_symbol_sized("open_in_new", false, 13.0)
-                    .style(|t: &Theme| iced::widget::text::Style {
-                        color: Some(theme::Tokens::of(t).faint),
-                    })
-                    .into(),
-            ),
-            false,
-            Message::FocusSongWindow,
         ),
     ]
     .spacing(3);

@@ -1035,11 +1035,28 @@ impl DanceInterpreter {
                 }
             }),
             keyboard::listen().filter_map(|event| {
-                let keyboard::Event::KeyPressed { key, modifiers, .. } = event else {
+                let keyboard::Event::KeyPressed {
+                    key,
+                    modified_key,
+                    modifiers,
+                    ..
+                } = event
+                else {
                     return None;
                 };
 
-                match (key.as_ref(), modifiers) {
+                // iced reports `key` WITHOUT modifiers applied: "?" (Shift+"/"
+                // on US, Shift+"ß" on QWERTZ) arrives as the unshifted character
+                // plus the SHIFT modifier. Under SHIFT, match the modified key
+                // instead so shifted characters keep working; Ctrl/Alt
+                // shortcuts never change the character, so they are unaffected.
+                let pressed = if modifiers.shift() {
+                    modified_key.as_ref()
+                } else {
+                    key.as_ref()
+                };
+
+                match (pressed, modifiers) {
                     (Key::Named(Named::Escape), _) => Some(Message::EscapePressed),
                     (Key::Character("?"), _) => Some(Message::OpenDialog(DialogState::Help)),
                     (Key::Character("n"), Modifiers::CTRL) => Some(Message::AddBlankEntry),

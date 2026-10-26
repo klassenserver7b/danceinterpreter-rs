@@ -2,8 +2,8 @@
 //! `docs/src/audience.css`: a huge dance headline, the song block with cover
 //! art and an "UP NEXT" hint in the bottom-right corner.
 //!
-//! The window always stays dark for maximum contrast on the projector. When
-//! the display is blank (`ItemSource::Blank`), the window turns fully black.
+//! The backdrop is plain black for maximum contrast on the projector; a blank
+//! display (`ItemSource::Blank`) shows the same black.
 
 use crate::Window;
 use crate::{DanceInterpreter, Message};
@@ -13,7 +13,7 @@ use iced::font::Weight;
 use iced::widget::space::horizontal;
 use iced::widget::text::LineHeight;
 use iced::widget::{Text, column as col, container, image, row, stack};
-use iced::{ContentFit, Element, Gradient, Length, Theme, window};
+use iced::{ContentFit, Element, Length, Theme, window};
 
 /// Audience text colors from `docs/src/audience.css`.
 mod colors {
@@ -30,14 +30,9 @@ mod colors {
     pub const COVER_BORDER: iced::Color = color!(0x73, 0x74, 0x5B);
 }
 
-/// Background gradient: `radial-gradient(#1b2119, #0c100d 80%)` approximated
-/// as a top-to-bottom linear gradient (iced has no radial gradients).
+/// Plain black backdrop: maximum contrast for the projector.
 fn background_style(_theme: &Theme) -> container::Style {
-    container::Style::default().background(Gradient::Linear(
-        iced::gradient::Linear::new(std::f32::consts::PI)
-            .add_stop(0.0, iced::color!(0x1B, 0x21, 0x19))
-            .add_stop(1.0, iced::color!(0x0C, 0x10, 0x0D)),
-    ))
+    container::Style::default().background(iced::Color::BLACK)
 }
 
 pub struct SongWindow {

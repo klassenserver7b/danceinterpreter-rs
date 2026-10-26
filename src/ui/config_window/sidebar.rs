@@ -14,7 +14,7 @@ use crate::ui::widgets::{buttons, heading, labeled_message_toggler, material_sym
 use crate::ui::with_tooltip;
 use crate::{DanceInterpreter, Message};
 use iced::alignment::Vertical;
-use iced::widget::{Container, Space, canvas, column as col, container, pick_list, row, text};
+use iced::widget::{Space, canvas, column as col, container, pick_list, row, text};
 use iced::{Alignment, Animation, Element, Length, Theme, animation, border, color};
 use network_interface::Addr::V4;
 use network_interface::{NetworkInterface, NetworkInterfaceConfig};
@@ -47,7 +47,11 @@ impl Sidebar {
         }
     }
 
-    pub fn build<'a>(&'a self, dance_interpreter: &'a DanceInterpreter) -> Container<'a, Message> {
+    pub fn build<'a>(
+        &'a self,
+        dance_interpreter: &'a DanceInterpreter,
+        width: f32,
+    ) -> Element<'a, Message> {
         let sync_options = vec![
             TraktorSyncMode::Relative,
             TraktorSyncMode::AbsoluteByNumber,
@@ -191,9 +195,12 @@ impl Sidebar {
             .padding([18, 16])
             .width(Length::Fill),
         )
+        .width(Length::Fixed(width))
         .height(Length::Fill)
-        .style(dj_panel_style)
+        .clip(true)
+        .style(move |t: &Theme| dj_panel_style(t, width))
         .align_y(Vertical::Top)
+        .into()
     }
 
     pub fn update_network_interface_selection(&mut self, data_provider: &DataProvider) {
@@ -314,14 +321,19 @@ fn control_caption(label: &'static str) -> Element<'static, Message> {
         .into()
 }
 
-fn dj_panel_style(t: &iced::Theme) -> container::Style {
+/// Rounded panel like the info rail. While the panel is collapsed (animated
+/// width ~0) paint nothing, so no border hairline survives at the window edge.
+fn dj_panel_style(t: &iced::Theme, width: f32) -> container::Style {
+    if width < 1.0 {
+        return container::Style::default();
+    }
     let tk = theme::Tokens::of(t);
     container::Style::default()
         .background(tk.panel)
         .border(iced::Border {
             color: tk.border,
             width: 1.0,
-            radius: 0.0.into(),
+            radius: 10.0.into(),
         })
         .shadow(iced::Shadow {
             color: color!(0x000000, 0.25),
