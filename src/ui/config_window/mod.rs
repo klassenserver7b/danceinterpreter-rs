@@ -83,7 +83,6 @@ pub struct ConfigWindow {
     pub sidebar: Sidebar,
     pub view: View,
     pub theme: Theme,
-    pub follow_system_theme: bool,
 
     /// Collapsible columns: left navigation sidebar and right info rail.
     pub nav_anim: Animation<bool>,
@@ -98,6 +97,10 @@ pub struct ConfigWindow {
 
     /// The playlist row field currently open for inline editing, if any.
     pub editing: Option<(usize, EditField)>,
+
+    /// Buffer for the inline editor: keystrokes land here and are only
+    /// committed to the song on Enter or click-away (Escape rolls back).
+    pub edit_draft: String,
 
     pub quick_title: String,
     pub quick_artist: String,
@@ -119,7 +122,6 @@ impl Window for ConfigWindow {
             sidebar: Sidebar::new(),
             view: View::Playlist,
             theme: Theme::Dracula,
-            follow_system_theme: false,
 
             nav_anim: Animation::new(true)
                 .duration(Duration::from_millis(140))
@@ -136,6 +138,7 @@ impl Window for ConfigWindow {
             color_picker_old_color: None,
 
             editing: None,
+            edit_draft: String::new(),
 
             quick_title: String::new(),
             quick_artist: String::new(),
@@ -229,10 +232,10 @@ impl ConfigWindow {
         .height(Length::Fill);
 
         // While a playlist field is open for editing, a click that no widget
-        // claims ends editing (treated like pressing Enter), so re-editing
-        // always takes a double click. The wrapper is a polite observer: the
-        // editor, buttons and other inputs capture their clicks before they
-        // ever reach it — it only fires for dead areas.
+        // claims commits the draft (treated exactly like pressing Enter), so
+        // re-editing always takes a double click. The wrapper is a polite
+        // observer: the editor, buttons and other inputs capture their clicks
+        // before they ever reach it — it only fires for dead areas.
         let main: Element<'a, Message> = if self.editing.is_some() {
             mouse_area(main).on_press(Message::EndSongEdit).into()
         } else {

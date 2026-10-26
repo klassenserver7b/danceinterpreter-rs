@@ -308,13 +308,6 @@ fn build_settings<'a>(
     };
 
     let body = col![
-        setting_row(
-            "Follow system theme",
-            switch(
-                config_window.follow_system_theme,
-                Message::EnableFollowSystemTheme
-            ),
-        ),
         setting_row("Theme", theme_pick.into()),
         setting_row(
             "Autoscroll to current song",

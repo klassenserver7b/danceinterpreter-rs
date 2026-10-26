@@ -74,6 +74,20 @@ Run `cargo uninstall danceinterpreter-rs`
 
 Always feel free to open an issue according to the issue templates at this GitHub page.
 
+# Troubleshooting
+
+## Drag & drop does nothing on Wayland
+
+If dropping audio files onto the window does nothing (no reaction, no
+console output), you are running the app as a native Wayland window — the
+winit windowing library used here does not implement file drops on Wayland,
+so no events ever reach the app. Running through XWayland works. Two options:
+
+- Start with `env -u WAYLAND_DISPLAY cargo run` (or unset `WAYLAND_DISPLAY`
+  in your launcher) to force the X11 backend via XWayland.
+- Use the **Add audio files** button in the playlist toolbar; the file
+  dialog works in every environment.
+
 # Contributing
 - see [CONTRIBUTING.md](CONTRIBUTING.md)
 

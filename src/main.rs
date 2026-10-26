@@ -23,14 +23,14 @@ use fuzzy_matcher::skim::SkimMatcherV2 as Matcher;
 use iced::font::Weight;
 use iced::keyboard::key::Named;
 use iced::keyboard::{Key, Modifiers};
-use iced::theme::Mode;
 use iced::widget::operation::{focus, scroll_by, snap_to};
 use iced::widget::scrollable::{AbsoluteOffset, RelativeOffset};
 use iced::widget::space::horizontal;
 use iced::window::icon::from_file_data;
-use iced::{Element, Size, Subscription, Task, Theme, exit, keyboard, system, time, window};
+use iced::{Element, Size, Subscription, Task, Theme, exit, keyboard, time, window};
 use iced_aw::ICED_AW_FONT_BYTES;
 use rfd::FileDialog;
+use serde::{Deserialize, Serialize};
 use std::env::var;
 use std::path::PathBuf;
 use std::time::{Duration, Instant};
@@ -123,7 +123,6 @@ pub enum Message {
     WindowResized((window::Id, Size)),
     WindowClosed(window::Id),
 
-    ThemeChanged(Mode),
     SetConfigTheme(Theme),
 
     ToggleFullscreen,
@@ -149,7 +148,6 @@ pub enum Message {
     ToggleInfoRail,
 
     EnableAutoscroll(bool),
-    EnableFollowSystemTheme(bool),
 
     ScrollBy(f32),
     SnapTo(RelativeOffset),
@@ -160,10 +158,10 @@ pub enum Message {
     AddSong(SongInfo),
     DeleteItem(ItemSource),
     AddBlankSong(RelativeOffset),
-    SongDataEdit(usize, SongDataEdit),
-    SubmitPlaylistDance(usize),
     BeginSongEdit(usize, EditField),
     EndSongEdit,
+    EditDraftChanged(String),
+    CancelSongEdit,
 
     AddTraktorSong,
     AddAudioFiles,
@@ -197,7 +195,7 @@ impl DanceInterpreter {
             ..Default::default()
         });
 
-        let state = Self {
+        let mut state = Self {
             config_window,
             song_window,
 
@@ -208,7 +206,12 @@ impl DanceInterpreter {
         tasks.push(cw_opened);
         tasks.push(sw_opened);
 
-        tasks.push(system::theme().map(Message::ThemeChanged));
+        // Restore the theme chosen in a previous session (Dracula on first
+        // run), then pick the window icons matching it.
+        if let Some(theme) = load_saved_theme() {
+            state.config_window.theme = theme;
+        }
+        tasks.push(state.theme_icon_task());
 
         tasks.push(
             iced::font::load(include_bytes!(res_file!("material-symbols.ttf")))
@@ -285,11 +288,52 @@ impl DanceInterpreter {
         return Default::default();
     }
 
-    /// Exits inline song editing. Called whenever the playlist mutates, so a
-    /// deleted or appended row cannot shift the open editor onto another
-    /// song.
-    fn end_song_edit(&mut self) {
+    /// Commits the open inline editor's draft to the playlist (like pressing
+    /// Enter): writes the draft into the song and, for the dance field,
+    /// matches it against the known statics. No-op when nothing is edited.
+    fn commit_song_edit(&mut self) {
+        if let Some((idx, field)) = self.config_window.editing.take() {
+            let draft = std::mem::take(&mut self.config_window.edit_draft);
+            let edit = match field {
+                EditField::Title => SongDataEdit::Title(draft),
+                EditField::Artist => SongDataEdit::Artist(draft),
+                EditField::Dance => SongDataEdit::Dance(draft),
+            };
+            self.data_provider.handle_song_data_edit(idx, edit);
+
+            if field == EditField::Dance {
+                self.data_provider.handle_song_data_submit(idx);
+            }
+        }
+    }
+
+    /// Discards the open editor's draft without writing anything (Escape, or
+    /// the playlist mutating under the editor).
+    fn cancel_song_edit(&mut self) {
         self.config_window.editing = None;
+        self.config_window.edit_draft.clear();
+    }
+
+    /// Sets the window icons to the variant matching the current theme
+    /// (light icon for light themes, dark icon for dark ones).
+    fn theme_icon_task(&self) -> Task<Message> {
+        let icon = from_file_data(
+            if crate::ui::theme::Tokens::of(&self.config_window.theme).is_light {
+                include_bytes!(res_file!("icon_light.png"))
+            } else {
+                include_bytes!(res_file!("icon_dark.png"))
+            },
+            Some(image::ImageFormat::Png),
+        );
+
+        if let Ok(icon) = icon {
+            Task::batch([
+                window::set_icon(self.song_window.id, icon.clone()),
+                window::set_icon(self.config_window.id, icon),
+            ])
+        } else {
+            ().into()
+        }
     }
 
     pub fn title(&self, window_id: window::Id) -> String {
@@ -353,38 +397,10 @@ impl DanceInterpreter {
                 }
             }
 
-            Message::ThemeChanged(mode) => {
-                if self.config_window.follow_system_theme {
-                    self.config_window.theme = match mode {
-                        Mode::Light => Theme::Light,
-                        Mode::Dark | Mode::None => Theme::Dark,
-                    };
-                }
-
-                let icon = from_file_data(
-                    match mode {
-                        Mode::Light | Mode::None => {
-                            include_bytes!(res_file!("icon_light.png"))
-                        }
-                        Mode::Dark => include_bytes!(res_file!("icon_dark.png")),
-                    },
-                    Some(image::ImageFormat::Png),
-                );
-
-                if let Ok(icon) = icon {
-                    Task::batch([
-                        window::set_icon(self.song_window.id, icon.clone()),
-                        window::set_icon(self.config_window.id, icon),
-                    ])
-                } else {
-                    ().into()
-                }
-            }
-
             Message::SetConfigTheme(theme) => {
+                save_theme(&theme);
                 self.config_window.theme = theme;
-                self.config_window.follow_system_theme = false;
-                ().into()
+                self.theme_icon_task()
             }
 
             Message::ToggleFullscreen => {
@@ -419,7 +435,7 @@ impl DanceInterpreter {
 
             Message::EscapePressed => {
                 if self.config_window.editing.is_some() {
-                    Task::done(Message::EndSongEdit)
+                    Task::done(Message::CancelSongEdit)
                 } else if self.config_window.search_visible {
                     Task::done(Message::Search(SearchMessage::Toggle))
                 } else if self.config_window.active_dialog.is_some() {
@@ -629,7 +645,7 @@ impl DanceInterpreter {
                         ..Default::default()
                     };
                     self.data_provider.append_song(song);
-                    self.end_song_edit();
+                    self.cancel_song_edit();
                     self.config_window.quick_title.clear();
                     self.config_window.quick_artist.clear();
                     self.config_window.quick_dance.clear();
@@ -682,7 +698,7 @@ impl DanceInterpreter {
                             _ => "Item".to_string(),
                         };
 
-                        self.end_song_edit();
+                        self.cancel_song_edit();
                         self.data_provider.delete_item(item);
                         Task::done(Message::Toast(format!(
                             "Deleted \u{201C}{}\u{201D} \u{00B7} Ctrl+Z to undo",
@@ -697,7 +713,7 @@ impl DanceInterpreter {
                     ().into()
                 }
                 DialogMessage::UndoDelete => {
-                    self.end_song_edit();
+                    self.cancel_song_edit();
                     self.data_provider.undo_delete();
                     Task::done(Message::Toast("Delete undone".to_string()))
                 }
@@ -714,7 +730,7 @@ impl DanceInterpreter {
                     });
                     if !in_playlist {
                         let song = song.clone();
-                        self.end_song_edit();
+                        self.cancel_song_edit();
                         self.data_provider.append_song(song);
                         self.data_provider.ensure_statics_for_playlist();
                         Task::batch([
@@ -765,7 +781,7 @@ impl DanceInterpreter {
                 }
 
                 if added > 0 {
-                    self.end_song_edit();
+                    self.cancel_song_edit();
                     self.data_provider.ensure_statics_for_playlist();
                     Task::batch([
                         Task::done(Message::SnapTo(RelativeOffset::END)),
@@ -783,14 +799,14 @@ impl DanceInterpreter {
 
             Message::FileDropped(path) => match load_tag_data_from_m3u(&path) {
                 Ok(playlist) => {
-                    self.end_song_edit();
+                    self.cancel_song_edit();
                     self.data_provider.set_vec(playlist);
                     self.config_window.playlist_file = Some(path.clone());
                     Task::done(Message::Toast("Playlist loaded".to_string()))
                 }
                 Err(_) => match read_song_info_from_filepath(&path) {
                     Ok(song_info) => {
-                        self.end_song_edit();
+                        self.cancel_song_edit();
                         self.data_provider.append_song(song_info);
                         self.data_provider.ensure_statics_for_playlist();
                         Task::done(Message::Toast("Song added to playlist".to_string()))
@@ -815,41 +831,54 @@ impl DanceInterpreter {
                 self.try_scroll_to_song()
             }
 
-            Message::SongDataEdit(i, edit) => {
-                self.data_provider.handle_song_data_edit(i, edit);
-                ().into()
-            }
-
-            Message::SubmitPlaylistDance(i) => {
-                self.data_provider.handle_song_data_submit(i);
-                self.end_song_edit();
-                ().into()
-            }
-
             Message::BeginSongEdit(idx, field) => {
+                // Opening another field commits the pending draft first (like
+                // Enter), so what was typed is never lost on a field switch.
+                self.commit_song_edit();
+                self.config_window.edit_draft = self
+                    .data_provider
+                    .playlist()
+                    .get(idx)
+                    .map(|item| match field {
+                        EditField::Title => item.song.title.clone(),
+                        EditField::Artist => item.song.artist.clone(),
+                        EditField::Dance => item.song.dance.clone(),
+                    })
+                    .unwrap_or_default();
                 self.config_window.editing = Some((idx, field));
                 focus(edit_input_id(idx, field))
             }
 
             Message::EndSongEdit => {
-                self.end_song_edit();
+                // Enter or click-away: write the draft into the song.
+                self.commit_song_edit();
+                ().into()
+            }
+
+            Message::EditDraftChanged(draft) => {
+                self.config_window.edit_draft = draft;
+                ().into()
+            }
+
+            Message::CancelSongEdit => {
+                self.cancel_song_edit();
                 ().into()
             }
 
             Message::AddSong(song) => {
-                self.end_song_edit();
+                self.cancel_song_edit();
                 self.data_provider.append_song(song);
                 ().into()
             }
 
             Message::AddBlankSong(offset) => {
-                self.end_song_edit();
+                self.cancel_song_edit();
                 self.data_provider.append_song(SongInfo::default());
                 Task::done(Message::SnapTo(offset))
             }
 
             Message::DeleteItem(song) => {
-                self.end_song_edit();
+                self.cancel_song_edit();
                 self.data_provider.delete_item(song);
                 ().into()
             }
@@ -887,16 +916,6 @@ impl DanceInterpreter {
             Message::EnableAutoscroll(state) => {
                 self.config_window.enable_autoscroll = state;
                 ().into()
-            }
-
-            Message::EnableFollowSystemTheme(state) => {
-                self.config_window.follow_system_theme = state;
-
-                if state {
-                    system::theme().map(Message::ThemeChanged)
-                } else {
-                    ().into()
-                }
             }
 
             Message::ScrollBy(frac) => scroll_by(
@@ -1192,7 +1211,6 @@ impl DanceInterpreter {
                     _ => None,
                 }
             }),
-            system::theme_changes().map(Message::ThemeChanged),
             if self
                 .config_window
                 .sidebar
@@ -1221,4 +1239,80 @@ impl DanceInterpreter {
 
         Subscription::batch(subscriptions)
     }
+}
+
+/// Settings persisted across sessions in the user's config directory
+/// (`~/.config/danceinterpreter/settings.json` on Linux).
+#[derive(Debug, Default, Serialize, Deserialize)]
+struct PersistedSettings {
+    theme: Option<String>,
+}
+
+/// Persists the chosen theme (stored as its Debug variant name) so it
+/// survives a restart. Failures are logged but never fatal — the app keeps
+/// running with the in-memory theme.
+fn save_theme(theme: &Theme) {
+    let Some(dir) = dirs::config_dir().map(|dir| dir.join("danceinterpreter")) else {
+        return;
+    };
+
+    if let Err(err) = std::fs::create_dir_all(&dir) {
+        println!("Could not create settings directory {dir:?}: {err}");
+        return;
+    }
+
+    let json = match serde_json::to_string_pretty(&PersistedSettings {
+        theme: Some(format!("{theme:?}")),
+    }) {
+        Ok(json) => json,
+        Err(err) => {
+            println!("Could not serialize settings: {err}");
+            return;
+        }
+    };
+
+    if let Err(err) = std::fs::write(dir.join("settings.json"), json) {
+        println!("Could not save settings: {err}");
+    }
+}
+
+/// Loads the theme persisted by a previous session, if any.
+fn load_saved_theme() -> Option<Theme> {
+    let path = dirs::config_dir()?
+        .join("danceinterpreter")
+        .join("settings.json");
+    let json = std::fs::read_to_string(path).ok()?;
+    let settings: PersistedSettings = serde_json::from_str(&json).ok()?;
+    settings.theme.as_deref().and_then(theme_from_name)
+}
+
+/// Parses a persisted theme name back into a theme. Unknown names (e.g.
+/// written by a newer version) yield `None` and the default theme is kept.
+fn theme_from_name(name: &str) -> Option<Theme> {
+    let theme = match name {
+        "Light" => Theme::Light,
+        "Dark" => Theme::Dark,
+        "Dracula" => Theme::Dracula,
+        "Nord" => Theme::Nord,
+        "SolarizedLight" => Theme::SolarizedLight,
+        "SolarizedDark" => Theme::SolarizedDark,
+        "GruvboxLight" => Theme::GruvboxLight,
+        "GruvboxDark" => Theme::GruvboxDark,
+        "CatppuccinLatte" => Theme::CatppuccinLatte,
+        "CatppuccinFrappe" => Theme::CatppuccinFrappe,
+        "CatppuccinMacchiato" => Theme::CatppuccinMacchiato,
+        "CatppuccinMocha" => Theme::CatppuccinMocha,
+        "TokyoNight" => Theme::TokyoNight,
+        "TokyoNightStorm" => Theme::TokyoNightStorm,
+        "TokyoNightLight" => Theme::TokyoNightLight,
+        "KanagawaWave" => Theme::KanagawaWave,
+        "KanagawaDragon" => Theme::KanagawaDragon,
+        "KanagawaLotus" => Theme::KanagawaLotus,
+        "Moonfly" => Theme::Moonfly,
+        "Nightfly" => Theme::Nightfly,
+        "Oxocarbon" => Theme::Oxocarbon,
+        "Ferra" => Theme::Ferra,
+        _ => return None,
+    };
+    Some(theme)
 }

@@ -1,7 +1,7 @@
 //! Playlist panel: toolbar with search, table, inline-editable rows,
 //! quick-add row and summary footer. Includes the empty/first-run state.
 
-use crate::dataloading::dataprovider::{ItemChange, ItemSource, SongDataEdit};
+use crate::dataloading::dataprovider::{ItemChange, ItemSource};
 use crate::ui::config_window::search::data_matches_search_query;
 use crate::ui::config_window::sidebar::SidebarMessage;
 use crate::ui::config_window::{ConfigWindow, EditField, edit_input_id};
@@ -223,6 +223,7 @@ fn build_rows<'a>(
             i,
             is_match,
             config_window.editing,
+            &config_window.edit_draft,
         ));
     }
 
@@ -240,6 +241,7 @@ fn build_song_row<'a>(
     idx: usize,
     is_match: bool,
     editing: Option<(usize, EditField)>,
+    edit_draft: &'a str,
 ) -> Element<'a, Message> {
     let (is_current, is_next, is_traktor, is_played) =
         dance_interpreter.data_provider.get_play_state(idx);
@@ -278,10 +280,10 @@ fn build_song_row<'a>(
     let editing_field = editing.filter(|(i, _)| *i == idx).map(|(_, field)| field);
 
     let title_field: Element<'a, Message> = if editing_field == Some(EditField::Title) {
-        text_input("Title", &song.title)
+        text_input("Title", edit_draft)
             .id(edit_input_id(idx, EditField::Title))
             .size(sz::ROW)
-            .on_input(move |v| Message::SongDataEdit(idx, SongDataEdit::Title(v)))
+            .on_input(Message::EditDraftChanged)
             .on_submit(Message::EndSongEdit)
             .style(theme::input_plain)
             .padding(0)
@@ -299,10 +301,10 @@ fn build_song_row<'a>(
     };
 
     let artist_field: Element<'a, Message> = if editing_field == Some(EditField::Artist) {
-        text_input("Artist", &song.artist)
+        text_input("Artist", edit_draft)
             .id(edit_input_id(idx, EditField::Artist))
             .size(sz::SMALL + 1.0)
-            .on_input(move |v| Message::SongDataEdit(idx, SongDataEdit::Artist(v)))
+            .on_input(Message::EditDraftChanged)
             .on_submit(Message::EndSongEdit)
             .style(theme::input_plain_dim)
             .padding(0)
@@ -324,7 +326,13 @@ fn build_song_row<'a>(
         .clip(true)
         .width(Length::Fill);
 
-    let chip = build_dance_cell(&song.dance, idx, dance_color, editing_field.is_some());
+    let chip = build_dance_cell(
+        &song.dance,
+        edit_draft,
+        idx,
+        dance_color,
+        editing_field.is_some(),
+    );
 
     let status: Element<'a, Message> = if is_current {
         row![
@@ -465,20 +473,21 @@ fn build_song_row<'a>(
 // song fields, the name is plain text until double-clicked.
 fn build_dance_cell<'a>(
     dance: &'a str,
+    edit_draft: &'a str,
     idx: usize,
     color: Option<Color>,
     editing: bool,
 ) -> Element<'a, Message> {
     let dance_field: Element<'a, Message> = if editing {
-        text_input("Unassigned", dance)
+        text_input("Unassigned", edit_draft)
             .id(edit_input_id(idx, EditField::Dance))
             .size(sz::SMALL + 1.0)
-            .on_input(move |v| Message::SongDataEdit(idx, SongDataEdit::Dance(v)))
-            .on_submit(Message::SubmitPlaylistDance(idx))
+            .on_input(Message::EditDraftChanged)
+            .on_submit(Message::EndSongEdit)
             .style(move |t: &Theme, status: iced::widget::text_input::Status| {
                 let mut style = theme::input_plain(t, status);
                 style.value = match color {
-                    Some(color) if !dance.is_empty() => theme::readable(color, t),
+                    Some(color) if !edit_draft.is_empty() => theme::readable(color, t),
                     _ => theme::Tokens::of(t).muted,
                 };
                 style
