@@ -337,6 +337,17 @@ impl DataProvider {
         }
     }
 
+    /// Restores a song's editable fields from a pre-edit snapshot (Escape
+    /// rollback of an inline editing session). No-op when the index no
+    /// longer exists.
+    pub fn restore_song_edit(&mut self, idx: usize, title: &str, artist: &str, dance: &str) {
+        if let Some(song) = self.playlist.get_mut(idx).map(|item| &mut item.song) {
+            song.title = title.to_string();
+            song.artist = artist.to_string();
+            song.dance = dance.to_string();
+        }
+    }
+
     pub fn handle_song_data_submit(&mut self, idx: usize) {
         if let Some(item) = self.playlist.get(idx) {
             let dance = item.song.dance.clone();

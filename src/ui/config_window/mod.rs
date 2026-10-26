@@ -41,6 +41,16 @@ pub enum EditField {
     Dance,
 }
 
+/// A song's editable field values as they were before its inline editing
+/// session began. Escape restores them, rolling the whole session back —
+/// including drafts that were auto-committed when switching fields.
+#[derive(Debug, Clone)]
+pub struct EditSnapshot {
+    pub title: String,
+    pub artist: String,
+    pub dance: String,
+}
+
 /// Widget id of the inline edit input for a playlist row field, so the
 /// `focus` task can target the input that only exists while editing.
 pub fn edit_input_id(idx: usize, field: EditField) -> iced::widget::Id {
@@ -102,6 +112,11 @@ pub struct ConfigWindow {
     /// committed to the song on Enter or click-away (Escape rolls back).
     pub edit_draft: String,
 
+    /// The edited song's values before the current editing session began;
+    /// Escape restores them. Cleared when the session ends (Enter,
+    /// click-away or the playlist mutating under the editor).
+    pub edit_snapshot: Option<(usize, EditSnapshot)>,
+
     pub quick_title: String,
     pub quick_artist: String,
     pub quick_dance: String,
@@ -139,6 +154,7 @@ impl Window for ConfigWindow {
 
             editing: None,
             edit_draft: String::new(),
+            edit_snapshot: None,
 
             quick_title: String::new(),
             quick_artist: String::new(),

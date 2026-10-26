@@ -14,7 +14,8 @@ use crate::dataloading::songinfo::SongInfo;
 use crate::traktor_api::{ServerMessage, StateUpdate, TraktorMessage, TraktorSyncAction};
 use crate::ui::config_window::sidebar::SidebarMessage;
 use crate::ui::config_window::{
-    ConfigWindow, DialogState, EditField, PLAYLIST_SCROLLABLE_ID, Toast, View, edit_input_id,
+    ConfigWindow, DialogState, EditField, EditSnapshot, PLAYLIST_SCROLLABLE_ID, Toast, View,
+    edit_input_id,
 };
 use crate::ui::song_window::{Backdrop, SongWindow};
 use crate::ui::theme;
@@ -27,7 +28,7 @@ use iced::widget::operation::{focus, scroll_by, snap_to};
 use iced::widget::scrollable::{AbsoluteOffset, RelativeOffset};
 use iced::widget::space::horizontal;
 use iced::window::icon::from_file_data;
-use iced::{Element, Size, Subscription, Task, Theme, exit, keyboard, time, window};
+use iced::{Element, Size, Subscription, Task, Theme, event, exit, keyboard, time, window};
 use iced_aw::ICED_AW_FONT_BYTES;
 use rfd::FileDialog;
 use serde::{Deserialize, Serialize};
@@ -307,11 +308,14 @@ impl DanceInterpreter {
         }
     }
 
-    /// Discards the open editor's draft without writing anything (Escape, or
-    /// the playlist mutating under the editor).
+    /// Discards the open editor's draft without writing anything (the
+    /// playlist mutating under the editor). Also expires the Escape rollback
+    /// snapshot: with the playlist changing, the snapshotted index may end
+    /// up pointing at another song.
     fn cancel_song_edit(&mut self) {
         self.config_window.editing = None;
         self.config_window.edit_draft.clear();
+        self.config_window.edit_snapshot = None;
     }
 
     /// Sets the window icons to the variant matching the current theme
@@ -832,8 +836,23 @@ impl DanceInterpreter {
             }
 
             Message::BeginSongEdit(idx, field) => {
-                // Opening another field commits the pending draft first (like
-                // Enter), so what was typed is never lost on a field switch.
+                // A fresh session snapshots the song so Escape can roll the
+                // whole session back. Opening another field within a session
+                // commits the pending draft first (like Enter), so what was
+                // typed is never lost on a field switch.
+                if self.config_window.editing.is_none() {
+                    self.config_window.edit_snapshot =
+                        self.data_provider.playlist().get(idx).map(|item| {
+                            (
+                                idx,
+                                EditSnapshot {
+                                    title: item.song.title.clone(),
+                                    artist: item.song.artist.clone(),
+                                    dance: item.song.dance.clone(),
+                                },
+                            )
+                        });
+                }
                 self.commit_song_edit();
                 self.config_window.edit_draft = self
                     .data_provider
@@ -850,8 +869,10 @@ impl DanceInterpreter {
             }
 
             Message::EndSongEdit => {
-                // Enter or click-away: write the draft into the song.
+                // Enter or click-away: write the draft into the song and end
+                // the session, expiring the Escape rollback snapshot.
                 self.commit_song_edit();
+                self.config_window.edit_snapshot = None;
                 ().into()
             }
 
@@ -861,6 +882,19 @@ impl DanceInterpreter {
             }
 
             Message::CancelSongEdit => {
+                // Escape rolls the whole session back to the pre-edit values,
+                // including drafts auto-committed by field switches.
+                if let Some((idx, _)) = self.config_window.editing
+                    && let Some((snapshot_idx, snapshot)) = self.config_window.edit_snapshot.take()
+                    && snapshot_idx == idx
+                {
+                    self.data_provider.restore_song_edit(
+                        idx,
+                        &snapshot.title,
+                        &snapshot.artist,
+                        &snapshot.dance,
+                    );
+                }
                 self.cancel_song_edit();
                 ().into()
             }
@@ -1223,6 +1257,22 @@ impl DanceInterpreter {
             } else {
                 Subscription::none()
             },
+            // Escape pressed while a text input has keyboard focus never
+            // reaches `keyboard::listen()`: iced's text_input captures Escape
+            // to unfocus itself. This listener picks up exactly those
+            // captured presses so closing the inline editor with Escape keeps
+            // working; `EscapePressed` decides what to do based on the UI
+            // state.
+            event::listen_with(|event, status, _window| match (status, event) {
+                (
+                    event::Status::Captured,
+                    event::Event::Keyboard(keyboard::Event::KeyPressed {
+                        key: Key::Named(Named::Escape),
+                        ..
+                    }),
+                ) => Some(Message::EscapePressed),
+                _ => None,
+            }),
             if self.config_window.toast.is_some() {
                 time::every(Duration::from_millis(500)).map(|_| Message::Tick)
             } else {
@@ -1241,18 +1291,58 @@ impl DanceInterpreter {
     }
 }
 
-/// Settings persisted across sessions in the user's config directory
-/// (`~/.config/danceinterpreter/settings.json` on Linux).
+/// Settings persisted across sessions (so far only the theme).
 #[derive(Debug, Default, Serialize, Deserialize)]
 struct PersistedSettings {
     theme: Option<String>,
+}
+
+/// Name of the settings directory inside a config directory.
+const SETTINGS_DIR: &str = "danceinterpreter";
+
+/// Directory that holds `settings.json`, chosen with flatpak sandboxes in
+/// mind, in priority order:
+///
+/// 1. `~/.config/danceinterpreter` when it already holds settings — this
+///    shares them between a native install and a flatpak sandbox (which
+///    only exposes the real home when it has filesystem access anyway, as
+///    it needs to read the user's audio files),
+/// 2. inside flatpak: the per-app config directory
+///    `~/.var/app/<app-id>/config/danceinterpreter` — bind-mounted into the
+///    sandbox and persistent regardless of granted permissions,
+/// 3. otherwise: the XDG config directory (`dirs::config_dir`).
+fn settings_dir() -> Option<PathBuf> {
+    let home_config = dirs::home_dir().map(|home| home.join(".config").join(SETTINGS_DIR));
+
+    if home_config
+        .as_ref()
+        .is_some_and(|dir| dir.join("settings.json").exists())
+    {
+        return home_config;
+    }
+
+    if let Ok(app_id) = std::env::var("FLATPAK_ID")
+        && let Some(home) = dirs::home_dir()
+    {
+        return Some(
+            home.join(".var")
+                .join("app")
+                .join(app_id)
+                .join("config")
+                .join(SETTINGS_DIR),
+        );
+    }
+
+    dirs::config_dir()
+        .map(|dir| dir.join(SETTINGS_DIR))
+        .or(home_config)
 }
 
 /// Persists the chosen theme (stored as its Debug variant name) so it
 /// survives a restart. Failures are logged but never fatal — the app keeps
 /// running with the in-memory theme.
 fn save_theme(theme: &Theme) {
-    let Some(dir) = dirs::config_dir().map(|dir| dir.join("danceinterpreter")) else {
+    let Some(dir) = settings_dir() else {
         return;
     };
 
@@ -1278,9 +1368,7 @@ fn save_theme(theme: &Theme) {
 
 /// Loads the theme persisted by a previous session, if any.
 fn load_saved_theme() -> Option<Theme> {
-    let path = dirs::config_dir()?
-        .join("danceinterpreter")
-        .join("settings.json");
+    let path = settings_dir()?.join("settings.json");
     let json = std::fs::read_to_string(path).ok()?;
     let settings: PersistedSettings = serde_json::from_str(&json).ok()?;
     settings.theme.as_deref().and_then(theme_from_name)

@@ -79,9 +79,12 @@ Always feel free to open an issue according to the issue templates at this GitHu
 ## Drag & drop does nothing on Wayland
 
 If dropping audio files onto the window does nothing (no reaction, no
-console output), you are running the app as a native Wayland window — the
-winit windowing library used here does not implement file drops on Wayland,
-so no events ever reach the app. Running through XWayland works. Two options:
+console output), you are running the app as a native Wayland window. The
+winit windowing library used here does not implement file drops on Wayland
+at all — no winit release does (still open upstream in
+[winit#720](https://github.com/rust-windowing/winit/issues/720) and
+[winit#4773](https://github.com/rust-windowing/winit/issues/4773)), so no
+events ever reach the app. Running through XWayland works. Two options:
 
 - Start with `env -u WAYLAND_DISPLAY cargo run` (or unset `WAYLAND_DISPLAY`
   in your launcher) to force the X11 backend via XWayland.
