@@ -11,7 +11,6 @@ use crate::ui::widgets::{
 use crate::{DanceInterpreter, Message};
 use iced::alignment::Vertical;
 use iced::widget::{column as col, container, image, row, text};
-use iced::widget::space::Space;
 use iced::{Alignment, Color, ContentFit, Element, Length, Theme};
 
 pub fn build<'a>(
@@ -51,14 +50,14 @@ pub fn build<'a>(
                 .height(Length::Fill)
                 .content_fit(ContentFit::Cover),
         )
-        .width(Length::Fixed(64.0))
-        .height(Length::Fixed(64.0))
+        .width(Length::Fixed(56.0))
+        .height(Length::Fill)
         .clip(true)
         .style(theme::cover_placeholder)
         .into(),
         None => container(
             material_symbol("music_note", false)
-                .size(26.0)
+                .size(22.0)
                 .style(|t: &Theme| iced::widget::text::Style {
                     color: Some(Color {
                         a: 0.35,
@@ -66,8 +65,8 @@ pub fn build<'a>(
                     }),
                 }),
         )
-        .width(Length::Fixed(64.0))
-        .height(Length::Fixed(64.0))
+        .width(Length::Fixed(56.0))
+        .height(Length::Fill)
         .align_x(Alignment::Center)
         .align_y(Alignment::Center)
         .style(theme::cover_placeholder)
@@ -93,38 +92,69 @@ pub fn build<'a>(
     .spacing(7)
     .align_y(Alignment::Center);
 
-    let dance_headline = heading(dance_name, sz::H2, iced::font::Weight::Semibold).style(
-        |t: &Theme| iced::widget::text::Style {
-            color: Some(theme::Tokens::of(t).dance_headline),
-        },
+    // One line: dance · title · artist. The title takes the remaining width
+    // (clipped); dance and artist keep their intrinsic width.
+    let mut main_line = row![].spacing(7).align_y(Alignment::Center).width(Length::Fill);
+    main_line = main_line.push(
+        heading(dance_name, 15.0, iced::font::Weight::Semibold).style(|t: &Theme| {
+            iced::widget::text::Style {
+                color: Some(theme::Tokens::of(t).dance_headline),
+            }
+        }),
     );
+    if !title.is_empty() {
+        main_line = main_line.push(
+            text("\u{B7}")
+                .size(sz::SMALL)
+                .style(|t: &Theme| iced::widget::text::Style {
+                    color: Some(theme::Tokens::of(t).faint),
+                }),
+        );
+        main_line = main_line.push(
+            container(
+                text(title)
+                    .size(sz::BASE)
+                    .font(theme::body_font(iced::font::Weight::Medium))
+                    .style(|t: &Theme| iced::widget::text::Style {
+                        color: Some(theme::Tokens::of(t).text),
+                    }),
+            )
+            .width(Length::Fill)
+            .clip(true),
+        );
+        if !artist.is_empty() {
+            main_line = main_line.push(
+                text("\u{B7}")
+                    .size(sz::SMALL)
+                    .style(|t: &Theme| iced::widget::text::Style {
+                        color: Some(theme::Tokens::of(t).faint),
+                    }),
+            );
+            main_line = main_line.push(
+                text(artist)
+                    .size(sz::SMALL)
+                    .style(|t: &Theme| iced::widget::text::Style {
+                        color: Some(theme::Tokens::of(t).muted),
+                    }),
+            );
+        }
+    }
 
-    let info = col![
-        kicker,
-        dance_headline,
-        text(title)
-            .size(sz::BASE)
-            .font(theme::body_font(iced::font::Weight::Medium))
-            .style(|t: &Theme| iced::widget::text::Style {
-                color: Some(theme::Tokens::of(t).text),
-            }),
-        text(artist)
-            .size(sz::SMALL)
-            .style(|t: &Theme| iced::widget::text::Style {
-                color: Some(theme::Tokens::of(t).muted),
-            }),
-        transport(is_blank, position),
-    ]
-    .spacing(5)
-    .width(Length::Fill);
+    // Fixed content height: gives the row a definite height (no compression),
+    // so the cover's Fill height expands to the full card content while the
+    // card itself still hugs this row.
+    let body = row![cover, col![kicker, main_line].spacing(5).width(Length::Fill), transport(is_blank, position)]
+        .spacing(14)
+        .align_y(Alignment::Center)
+        .width(Length::Fill)
+        .height(Length::Fixed(40.0));
 
-    container(
-        row![cover, info, decoration()].spacing(16).align_y(Alignment::Center),
-    )
-    .padding(crate::ui::theme::pad4(14.0, 18.0, 14.0, 18.0))
-    .width(Length::Fill)
-    .style(theme::now_card)
-    .into()
+    container(body)
+        .padding(crate::ui::theme::pad4(14.0, 18.0, 14.0, 18.0))
+        .width(Length::Fill)
+        .clip(true)
+        .style(theme::now_card)
+        .into()
 }
 
 fn transport<'a>(is_blank: bool, position: String) -> Element<'a, Message> {
@@ -162,7 +192,6 @@ fn transport<'a>(is_blank: bool, position: String) -> Element<'a, Message> {
             .spacing(8)
             .align_y(Alignment::Center),
     )
-    .padding(crate::ui::theme::pad4(8.0, 0.0, 0.0, 0.0))
     .into()
 }
 
@@ -178,31 +207,5 @@ fn kbd_on_accent<'a>(label: &'a str) -> Element<'a, Message> {
                 radius: 3.0.into(),
             })
         })
-        .into()
-}
-
-/// Decorative equalizer bars on the right edge of the card.
-fn decoration() -> Element<'static, Message> {
-    let heights = [12.0, 22.0, 17.0, 27.0, 14.0];
-    let bars: Vec<Element<'static, Message, Theme>> = heights
-        .into_iter()
-        .map(|h| {
-            container(Space::new())
-                .width(Length::Fixed(3.0))
-                .height(Length::Fixed(h))
-                .style(|t: &Theme| {
-                    container::Style::default().background(Color {
-                        a: 0.35,
-                        ..theme::Tokens::of(t).accent_soft
-                    })
-                })
-                .into()
-        })
-        .collect();
-
-    row(bars)
-        .spacing(5)
-        .align_y(Alignment::End)
-        .width(Length::Shrink)
         .into()
 }
