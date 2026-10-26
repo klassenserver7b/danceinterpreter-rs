@@ -629,29 +629,36 @@ fn empty_state_card(
     message: Message,
 ) -> Element<'static, Message> {
     let card = button(
-        col![
-            material_symbol(icon, false)
-                .size(30.0)
-                .style(|t: &Theme| iced::widget::text::Style {
-                    color: Some(theme::Tokens::of(t).accent_soft),
-                }),
-            text(title)
-                .size(sz::BASE)
-                .font(theme::body_font(iced::font::Weight::Medium))
-                .style(|t: &Theme| iced::widget::text::Style {
-                    color: Some(theme::Tokens::of(t).text),
-                }),
-            text(subtitle)
-                .size(sz::TINY)
-                .style(|t: &Theme| iced::widget::text::Style {
-                    color: Some(theme::Tokens::of(t).muted),
-                }),
-        ]
-        .spacing(8)
-        .align_x(Alignment::Center),
+        container(
+            col![
+                material_symbol(icon, false)
+                    .size(30.0)
+                    .style(|t: &Theme| iced::widget::text::Style {
+                        color: Some(theme::Tokens::of(t).accent_soft),
+                    }),
+                text(title)
+                    .size(sz::BASE)
+                    .font(theme::body_font(iced::font::Weight::Medium))
+                    .style(|t: &Theme| iced::widget::text::Style {
+                        color: Some(theme::Tokens::of(t).text),
+                    }),
+                text(subtitle)
+                    .size(sz::TINY)
+                    .style(|t: &Theme| iced::widget::text::Style {
+                        color: Some(theme::Tokens::of(t).muted),
+                    }),
+            ]
+            .spacing(8)
+            .align_x(Alignment::Center)
+            .width(Length::Fill),
+        )
+        .width(Length::Fill)
+        .height(Length::Fill)
+        .align_y(Alignment::Center),
     )
     .padding(20)
     .width(Length::Fixed(200.0))
+    .height(Length::Fixed(140.0))
     .style(|t: &Theme, s: button::Status| {
         let tk = theme::Tokens::of(t);
         let hovered = matches!(s, button::Status::Hovered | button::Status::Pressed);
