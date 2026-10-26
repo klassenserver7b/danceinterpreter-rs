@@ -259,17 +259,6 @@ impl DanceInterpreter {
 
         tasks.push(Task::done(Message::Statics(StaticsMessage::Reload)));
 
-        // Drag & drop diagnostics: `window::Event::FileDropped` never arrives
-        // in some environments (Wayland sessions without data-control
-        // support, flatpak sandboxes). Log the session so console output
-        // identifies the environment when a drop goes missing.
-        println!(
-            "Session: {} | WAYLAND_DISPLAY: {} | flatpak: {}",
-            var("XDG_SESSION_TYPE").unwrap_or_else(|_| "unknown".to_string()),
-            var("WAYLAND_DISPLAY").unwrap_or_else(|_| "unset".to_string()),
-            var("container").is_ok() || var("FLATPAK_ID").is_ok(),
-        );
-
         (state, Task::batch(tasks))
     }
 
@@ -752,10 +741,10 @@ impl DanceInterpreter {
             }
 
             Message::AddAudioFiles => {
-                // Dialog-based fallback for drag & drop, which never delivers
-                // events in some environments (Wayland without data-control
-                // support, flatpak sandboxes). The portal-backed dialog grants
-                // access to the picked files, so they are always readable.
+                // Dialog-based fallback for drag & drop, which winit does not
+                // implement on native Wayland at all (see README). The
+                // portal-backed dialog grants access to the picked files, so
+                // they are always readable.
                 let Some(files) = FileDialog::new()
                     .add_filter(
                         "Audio",
