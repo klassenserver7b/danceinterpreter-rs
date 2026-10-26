@@ -1,12 +1,11 @@
 //! The operator-facing configuration window, redesigned after
-//! `docs/src/App.tsx`: left navigation sidebar, page header, "now playing"
-//! hero card, playlist/statics panels, a right rail (up-next, DJ integration,
-//! tips), the quick-show bar, toasts and modal dialogs.
+//! `docs/src/App.tsx`: left navigation sidebar, "now playing" hero card,
+//! playlist/statics panels, a right rail (up-next, DJ integration, tips), the
+//! quick-show bar, toasts and modal dialogs.
 
 pub mod dialog;
 pub mod nav_sidebar;
 pub mod now_card;
-pub mod page_header;
 pub mod playlist_view;
 pub mod right_column;
 pub mod show_bar;
@@ -139,10 +138,9 @@ impl ConfigWindow {
     pub fn view<'a>(&'a self, dance_interpreter: &'a DanceInterpreter) -> Element<'a, Message> {
         let now = Instant::now();
 
-        // Primary content column: page heading, hero card and the active panel.
+        // Primary content column: hero card and the active panel.
         let primary = container(
             col![
-                page_header::build(self, dance_interpreter),
                 now_card::build(self, dance_interpreter),
                 match self.view {
                     View::Playlist => playlist_view::build(self, dance_interpreter),
@@ -179,6 +177,7 @@ impl ConfigWindow {
         );
 
         let content = row![primary, dj_panel, rail]
+            .spacing(10)
             .width(Length::Fill)
             .height(Length::Fill);
 

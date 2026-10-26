@@ -27,7 +27,7 @@ const COL_NUMBER: f32 = 28.0;
 const COL_DANCE: f32 = 150.0;
 const COL_STATUS: f32 = 78.0;
 const COL_ACTIONS: f32 = 78.0;
-const ROW_HEIGHT: f32 = 58.0;
+const ROW_HEIGHT: f32 = 68.0;
 
 pub fn build<'a>(
     config_window: &'a ConfigWindow,
@@ -462,17 +462,19 @@ fn build_dance_cell<'a>(
 ) -> Element<'a, Message> {
     let chip = container(
         row![
-            crate::ui::config_window::nav_sidebar::dot(6.0, move |t| {
-                color.unwrap_or_else(|| theme::Tokens::of(t).muted)
+            crate::ui::config_window::nav_sidebar::dot(7.0, move |t| {
+                color
+                    .map(|c| theme::readable(c, t))
+                    .unwrap_or_else(|| theme::Tokens::of(t).muted)
             }),
             text_input("Unassigned", dance)
-                .size(sz::SMALL)
+                .size(sz::SMALL + 1.0)
                 .on_input(move |v| Message::SongDataEdit(idx, SongDataEdit::Dance(v)))
                 .on_submit(Message::SubmitPlaylistDance(idx))
                 .style(move |t: &Theme, status: iced::widget::text_input::Status| {
                     let mut style = theme::input_plain(t, status);
                     style.value = match color {
-                        Some(color) if !dance.is_empty() => color,
+                        Some(color) if !dance.is_empty() => theme::readable(color, t),
                         _ => theme::Tokens::of(t).muted,
                     };
                     style
@@ -483,10 +485,10 @@ fn build_dance_cell<'a>(
         .align_y(Alignment::Center)
         .width(Length::Fill),
     )
-    .padding([4, 8])
+    .padding([7, 11])
     .width(Length::Fill)
     .clip(true)
-    .style(move |t: &Theme| theme::chip(color.unwrap_or_else(|| theme::Tokens::of(t).muted))(t));
+    .style(theme::chip());
 
     chip.into()
 }

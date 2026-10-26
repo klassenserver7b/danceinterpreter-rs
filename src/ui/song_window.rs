@@ -1,7 +1,6 @@
 //! The audience-facing song window, redesigned after the approved
 //! `docs/src/audience.css`: a huge dance headline, the song block with cover
-//! art, an "UP NEXT" hint in the bottom-right corner and a tiny, low-contrast
-//! "danceinterpreter" brand mark in the bottom-left.
+//! art and an "UP NEXT" hint in the bottom-right corner.
 //!
 //! The window always stays dark for maximum contrast on the projector. When
 //! the display is blank (`ItemSource::Blank`), the window turns fully black.
@@ -13,7 +12,7 @@ use iced::alignment::{Horizontal, Vertical};
 use iced::font::Weight;
 use iced::widget::space::horizontal;
 use iced::widget::text::LineHeight;
-use iced::widget::{column as col, container, image, row, stack, text, Text};
+use iced::widget::{column as col, container, image, row, stack, Text};
 use iced::{ContentFit, Element, Gradient, Length, Theme, window};
 
 /// Audience text colors from `docs/src/audience.css`.
@@ -27,8 +26,6 @@ mod colors {
     pub const MUTED: iced::Color = color!(0x9A, 0xA9, 0x91);
     /// Next dance name.
     pub const NEXT: iced::Color = color!(0xC5, 0xD0, 0xBC);
-    /// Brand mark, deliberately low contrast.
-    pub const MARK: iced::Color = color!(0x7E, 0x8E, 0x73);
     /// Cover art hairline.
     pub const COVER_BORDER: iced::Color = color!(0x73, 0x74, 0x5B);
 }
@@ -100,7 +97,6 @@ impl SongWindow {
         let artist_size = h / 28.0 * scale;
         let next_label_size = h / 34.0 * scale;
         let next_dance_size = h / 24.0 * scale;
-        let mark_size = h / 40.0 * scale;
 
         // Proportional paddings / gaps.
         let pad_top = h * 0.08;
@@ -109,7 +105,6 @@ impl SongWindow {
         let song_gap = h / 33.3; // 3vh
         let song_margin = h / 16.7; // 6vh
         let cover_size = h / 9.1; // 11vh
-        let mark_pad_bottom = h * 0.07;
         let next_pad_bottom = h * 0.06;
 
         // Huge dance headline.
@@ -210,20 +205,6 @@ impl SongWindow {
                 );
             }
         }
-
-        // Tiny, low-contrast brand mark in the bottom-left corner.
-        layers = layers.push(
-            container(
-                text("danceinterpreter")
-                    .size(mark_size)
-                    .font(crate::ui::theme::body_font(Weight::Normal))
-                    .color(colors::MARK),
-            )
-            .width(Length::Fill)
-            .height(Length::Fill)
-            .padding(crate::ui::theme::pad4(0.0, 0.0, mark_pad_bottom, pad_side))
-            .align_y(Vertical::Bottom),
-        );
 
         container(layers)
             .width(Length::Fill)

@@ -632,19 +632,38 @@ pub fn toast_card(theme: &Theme) -> container::Style {
 }
 
 
-/// Colored dance chip behind the dance name.
-pub fn chip(color: Color) -> impl Fn(&Theme) -> container::Style {
-    move |_: &Theme| {
+/// Neutral dance chip: a faint text-tinted pill, like the prototype
+/// (`background:#ffffff04; border:#ffffff06`). The dance color is carried by
+/// the dot and the dance name, not by the chip surface, so arbitrary
+/// user-picked colors cannot wreck the chip's contrast.
+pub fn chip() -> impl Fn(&Theme) -> container::Style {
+    |theme: &Theme| {
+        let t = Tokens::of(theme);
         container::Style::default()
-            .background(Background::Color(Color {
-                a: 0.14,
-                ..color
-            }))
+            .background(Background::Color(with_alpha(t.text, 0.05)))
             .border(Border {
-                color: Color { a: 0.35, ..color },
+                color: with_alpha(t.text, 0.1),
                 width: 1.0,
                 radius: Radius::from(4.0),
             })
+    }
+}
+
+/// Blends a user-picked color toward the theme text color when its contrast
+/// against the background is too low. Dance colors are picked freely and are
+/// often too dark (or too close to the background) to stay readable.
+pub fn readable(color: Color, theme: &Theme) -> Color {
+    let t = Tokens::of(theme);
+    let (hi, lo) = if luminance(color) > luminance(t.bg) {
+        (color, t.bg)
+    } else {
+        (t.bg, color)
+    };
+    let ratio = (luminance(hi) + 0.05) / (luminance(lo) + 0.05);
+    if ratio < 2.6 {
+        mix(color, t.text, 0.4)
+    } else {
+        color
     }
 }
 

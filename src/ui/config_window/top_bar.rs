@@ -48,6 +48,18 @@ pub fn build<'a>(
     .spacing(13)
     .align_y(Alignment::Center);
 
+    let open_playlist = button(
+        row![
+            material_symbol_sized("folder", false, 16.0),
+            text("Open playlist").size(sz::SMALL),
+        ]
+        .spacing(8)
+        .align_y(Alignment::Center),
+    )
+    .padding([6, 8])
+    .style(theme::btn_ghost)
+    .on_press(Message::OpenPlaylist);
+
     let open_song_window = button(
         row![
             material_symbol_sized("desktop_windows", false, 16.0),
@@ -69,7 +81,7 @@ pub fn build<'a>(
     container(
         row![
             container(row![nav_toggle, breadcrumb].spacing(10).align_y(Alignment::Center)),
-            container(row![rail_toggle, open_song_window]
+            container(row![rail_toggle, open_playlist, open_song_window]
                 .spacing(10)
                 .align_y(Alignment::Center))
             .width(Length::Fill)
