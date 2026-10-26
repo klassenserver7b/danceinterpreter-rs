@@ -5,42 +5,17 @@ use crate::ui::theme::{self, sz};
 use crate::ui::widgets::{heading, material_symbol_sized};
 use crate::{DanceInterpreter, Message};
 use iced::alignment::Vertical;
-use iced::widget::{column as col, container, row, text};
+use iced::widget::{container, row, text};
 use iced::{Alignment, Element, Length, Theme};
 
 pub fn build<'a>(
     config_window: &'a ConfigWindow,
     _dance_interpreter: &'a DanceInterpreter,
 ) -> Element<'a, Message> {
-    let (title, subtitle) = match config_window.view {
-        View::Playlist => (
-            "The dance floor is yours.",
-            "A little preparation. A seamless night of dancing.",
-        ),
-        View::Statics => (
-            "A moment. A message.",
-            "Your favorite dances and announcements, ready in one click.",
-        ),
+    let title = match config_window.view {
+        View::Playlist => "The dance floor is yours.",
+        View::Statics => "A moment. A message.",
     };
-
-    let heading_block = col![
-        text("YOUR EVENING, IN RHYTHM")
-            .size(sz::MICRO)
-            .style(|t: &Theme| iced::widget::text::Style {
-                color: Some(theme::Tokens::of(t).muted),
-            }),
-        heading(title, sz::H1, iced::font::Weight::Semibold).style(|t: &Theme| {
-            iced::widget::text::Style {
-                color: Some(theme::Tokens::of(t).text),
-            }
-        }),
-        text(subtitle)
-            .size(sz::SMALL)
-            .style(|t: &Theme| iced::widget::text::Style {
-                color: Some(theme::Tokens::of(t).muted),
-            }),
-    ]
-    .spacing(6);
 
     let open_button = iced::widget::button(
         row![
@@ -55,9 +30,18 @@ pub fn build<'a>(
     .on_press(Message::OpenPlaylist);
 
     container(
-        row![heading_block, container(open_button).align_x(Alignment::End)]
-            .width(Length::Fill)
-            .align_y(Alignment::Center),
+        row![
+            heading(title, sz::H1, iced::font::Weight::Semibold).style(|t: &Theme| {
+                iced::widget::text::Style {
+                    color: Some(theme::Tokens::of(t).text),
+                }
+            }),
+            container(open_button)
+                .width(Length::Fill)
+                .align_x(Alignment::End),
+        ]
+        .width(Length::Fill)
+        .align_y(Alignment::Center),
     )
     .width(Length::Fill)
     .into()

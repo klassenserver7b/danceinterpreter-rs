@@ -1,6 +1,5 @@
-//! Top bar: breadcrumb, event-mode badge and the "open song window" action.
+//! Top bar: breadcrumb and the "open song window" action.
 
-use crate::dataloading::dataprovider::ItemSource;
 use crate::ui::config_window::{ConfigWindow, View};
 use crate::ui::theme::{self, sz};
 use crate::ui::widgets::material_symbol_sized;
@@ -10,7 +9,7 @@ use iced::{Alignment, Element, Length, Theme};
 
 pub fn build<'a>(
     config_window: &'a ConfigWindow,
-    dance_interpreter: &'a DanceInterpreter,
+    _dance_interpreter: &'a DanceInterpreter,
 ) -> Element<'a, Message> {
     let view_name = match config_window.view {
         View::Playlist => "Playlist",
@@ -38,32 +37,6 @@ pub fn build<'a>(
     .spacing(13)
     .align_y(Alignment::Center);
 
-    let event_live = !matches!(
-        dance_interpreter.data_provider.get_current_source(),
-        ItemSource::Blank
-    );
-
-    let live_badge = row![
-        crate::ui::config_window::nav_sidebar::dot(5.0, move |t| {
-            if event_live {
-                theme::Tokens::of(t).dot_green
-            } else {
-                theme::Tokens::of(t).dot_off
-            }
-        }),
-        text("EVENT MODE")
-            .size(sz::MICRO)
-            .style(move |t: &Theme| iced::widget::text::Style {
-                color: Some(if event_live {
-                    theme::Tokens::of(t).accent_soft
-                } else {
-                    theme::Tokens::of(t).faint
-                }),
-            }),
-    ]
-    .spacing(7)
-    .align_y(Alignment::Center);
-
     let open_song_window = button(
         row![
             material_symbol_sized("desktop_windows", false, 16.0),
@@ -80,7 +53,7 @@ pub fn build<'a>(
     container(
         row![
             breadcrumb,
-            container(row![live_badge, open_song_window].spacing(24).align_y(Alignment::Center))
+            container(open_song_window)
                 .width(Length::Fill)
                 .align_x(Alignment::End),
         ]

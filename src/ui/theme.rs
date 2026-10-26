@@ -155,6 +155,7 @@ pub struct Tokens {
 
     // Status
     pub dot_green: Color,
+    #[allow(dead_code)] // kept for parity with the prototype
     pub dot_off: Color,
     pub led_connected: Color,
     pub led_partial: Color,

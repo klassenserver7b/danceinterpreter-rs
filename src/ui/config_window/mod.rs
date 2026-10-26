@@ -138,7 +138,7 @@ impl ConfigWindow {
             ]
             .spacing(22),
         )
-        .padding(crate::ui::theme::pad4(26.0, 31.0, 22.0, 31.0))
+        .padding(crate::ui::theme::pad4(18.0, 31.0, 22.0, 31.0))
         .width(Length::Fill)
         .height(Length::Fill);
 

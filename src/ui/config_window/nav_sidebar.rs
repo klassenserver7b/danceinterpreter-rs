@@ -52,7 +52,6 @@ pub fn build<'a>(
     .spacing(3);
 
     let bottom = col![
-        session_note(),
         nav_item(
             "settings",
             "Settings",
@@ -286,35 +285,6 @@ fn nav_item_impl<'a>(
         .style(theme::btn_nav(selected))
         .on_press(message)
         .into()
-}
-
-fn session_note() -> Element<'static, Message> {
-    container(
-        col![
-            row![
-                status_dot(),
-                text("Ready for the dance floor")
-                    .size(sz::TINY)
-                    .style(|t: &Theme| iced::widget::text::Style {
-                        color: Some(theme::Tokens::of(t).text_soft),
-                    }),
-            ]
-            .spacing(7)
-            .align_y(Alignment::Center),
-            text("Your next great evening starts here.")
-                .size(sz::MICRO)
-                .style(|t: &Theme| iced::widget::text::Style {
-                    color: Some(theme::Tokens::of(t).faint),
-                }),
-        ]
-        .spacing(7),
-    )
-    .padding(crate::ui::theme::pad4(20.0, 10.0, 25.0, 10.0))
-    .into()
-}
-
-pub fn status_dot() -> Element<'static, Message> {
-    dot(6.0, |t| theme::Tokens::of(t).dot_green)
 }
 
 pub fn dot(

@@ -298,6 +298,7 @@ fn build_song_row<'a>(
             .style(theme::input_plain)
             .padding(0),
         text_input("Artist", &song.artist)
+            .size(sz::SMALL)
             .on_input(move |v| Message::SongDataEdit(idx, SongDataEdit::Artist(v)))
             .style(theme::input_plain_dim)
             .padding(0),
@@ -418,6 +419,7 @@ fn build_song_row<'a>(
     container(row![bar, content])
         .height(Length::Fixed(ROW_HEIGHT))
         .width(Length::Fill)
+        .align_y(Alignment::Center)
         .style(move |t: &Theme| theme::row(t, look))
         .into()
 }

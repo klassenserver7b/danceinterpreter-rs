@@ -260,6 +260,7 @@ fn build_static_row<'a>(
     container(row![bar, content])
         .height(Length::Fixed(ROW_HEIGHT))
         .width(Length::Fill)
+        .align_y(Alignment::Center)
         .style(move |t: &Theme| theme::row(t, look))
         .into()
 }
