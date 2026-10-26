@@ -2,8 +2,8 @@
 //! `docs/src/audience.css`: a huge dance headline, the song block with cover
 //! art and an "UP NEXT" hint in the bottom-right corner.
 //!
-//! The backdrop is plain black for maximum contrast on the projector; a blank
-//! display (`ItemSource::Blank`) shows the same black.
+//! The backdrop color is selectable in the settings dialog ("Backdrop"); a
+//! blank display (`ItemSource::Blank`) shows the same backdrop color.
 
 use crate::Window;
 use crate::{DanceInterpreter, Message};
@@ -13,7 +13,7 @@ use iced::font::Weight;
 use iced::widget::space::horizontal;
 use iced::widget::text::LineHeight;
 use iced::widget::{Text, column as col, container, image, row, stack};
-use iced::{ContentFit, Element, Length, Theme, window};
+use iced::{ContentFit, Element, Length, window};
 
 /// Audience text colors from `docs/src/audience.css`.
 mod colors {
@@ -26,13 +26,54 @@ mod colors {
     pub const MUTED: iced::Color = color!(0x9A, 0xA9, 0x91);
     /// Next dance name.
     pub const NEXT: iced::Color = color!(0xC5, 0xD0, 0xBC);
-    /// Cover art hairline.
-    pub const COVER_BORDER: iced::Color = color!(0x73, 0x74, 0x5B);
 }
 
-/// Plain black backdrop: maximum contrast for the projector.
-fn background_style(_theme: &Theme) -> container::Style {
-    container::Style::default().background(iced::Color::BLACK)
+/// Backdrop colors for the audience window (settings dialog, not persisted).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum Backdrop {
+    #[default]
+    Black,
+    DarkGray,
+    Gray,
+    DarkRed,
+    DarkBlue,
+    DarkCyan,
+}
+
+impl Backdrop {
+    /// Options for the settings pick list, in display order.
+    pub const ALL: &'static [Backdrop] = &[
+        Backdrop::Black,
+        Backdrop::DarkGray,
+        Backdrop::Gray,
+        Backdrop::DarkRed,
+        Backdrop::DarkBlue,
+        Backdrop::DarkCyan,
+    ];
+
+    pub fn color(self) -> iced::Color {
+        match self {
+            Backdrop::Black => iced::Color::BLACK,
+            Backdrop::DarkGray => iced::color!(0x21, 0x26, 0x23),
+            Backdrop::Gray => iced::color!(0x43, 0x4B, 0x46),
+            Backdrop::DarkRed => iced::color!(0x3A, 0x15, 0x12),
+            Backdrop::DarkBlue => iced::color!(0x10, 0x1A, 0x2E),
+            Backdrop::DarkCyan => iced::color!(0x0C, 0x28, 0x2A),
+        }
+    }
+}
+
+impl std::fmt::Display for Backdrop {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(match self {
+            Backdrop::Black => "Black",
+            Backdrop::DarkGray => "Dark gray",
+            Backdrop::Gray => "Gray",
+            Backdrop::DarkRed => "Dark red",
+            Backdrop::DarkBlue => "Dark blue",
+            Backdrop::DarkCyan => "Dark cyan",
+        })
+    }
 }
 
 pub struct SongWindow {
@@ -43,6 +84,7 @@ pub struct SongWindow {
     pub enable_image: bool,
     pub enable_next_dance: bool,
     pub scale: f32,
+    pub backdrop: Backdrop,
 }
 
 impl Window for SongWindow {
@@ -55,6 +97,7 @@ impl Window for SongWindow {
             enable_image: true,
             enable_next_dance: true,
             scale: 1.0,
+            backdrop: Backdrop::default(),
         }
     }
 
@@ -73,12 +116,14 @@ impl Window for SongWindow {
 
 impl SongWindow {
     pub fn view<'a>(&self, state: &'a DanceInterpreter) -> Element<'a, Message> {
+        let backdrop_color = self.backdrop.color();
+
         let Some(displayable_data) = state.data_provider.get_current_displayable_data() else {
-            // Blank display: pure black, nothing else.
+            // Blank display: just the backdrop, nothing else.
             return container(horizontal())
                 .width(Length::Fill)
                 .height(Length::Fill)
-                .style(|_| container::Style::default().background(iced::Color::BLACK))
+                .style(move |_| container::Style::default().background(backdrop_color))
                 .into();
         };
 
@@ -138,22 +183,12 @@ impl SongWindow {
 
             let song_block = if self.enable_image {
                 if let Some(image_handle) = displayable_data.subline_image.as_ref() {
-                    let cover = container(
-                        image(image_handle)
-                            .content_fit(ContentFit::Cover)
-                            .width(Length::Fill)
-                            .height(Length::Fill),
-                    )
-                    .width(Length::Fixed(cover_size))
-                    .height(Length::Fixed(cover_size))
-                    .clip(true)
-                    .style(|_| {
-                        container::Style::default().border(iced::Border {
-                            color: colors::COVER_BORDER,
-                            width: 1.0,
-                            radius: 3.0.into(),
-                        })
-                    });
+                    // Thumbnails (often 16:9 YouTube stills) keep their
+                    // original aspect ratio: scale to fit, never crop.
+                    let cover = image(image_handle)
+                        .content_fit(ContentFit::Contain)
+                        .width(Length::Fixed(cover_size))
+                        .height(Length::Fixed(cover_size));
 
                     row![cover, text_block]
                         .spacing(song_gap)
@@ -210,7 +245,7 @@ impl SongWindow {
         container(layers)
             .width(Length::Fill)
             .height(Length::Fill)
-            .style(background_style)
+            .style(move |_| container::Style::default().background(backdrop_color))
             .into()
     }
 }

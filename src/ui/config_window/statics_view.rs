@@ -86,10 +86,25 @@ pub fn build<'a>(
             ]
             .spacing(9)
             .align_y(Alignment::Center),
-            container(buttons::primary_small(
-                "Add static",
-                Message::OpenDialog(crate::ui::config_window::DialogState::AddStatic),
-            ))
+            container(
+                row![
+                    with_tooltip(
+                        buttons::ghost_icon(
+                            "refresh",
+                            false,
+                            16.0,
+                            Message::Statics(StaticsMessage::Reload),
+                        ),
+                        "Reload statics",
+                    ),
+                    buttons::primary_small(
+                        "Add static",
+                        Message::OpenDialog(crate::ui::config_window::DialogState::AddStatic),
+                    ),
+                ]
+                .spacing(8)
+                .align_y(Alignment::Center),
+            )
             .width(Length::Fill)
             .align_x(Alignment::End),
         ]

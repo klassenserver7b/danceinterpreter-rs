@@ -32,6 +32,27 @@ pub enum View {
     Statics,
 }
 
+/// Which field of a playlist row is being inline-edited (double-click to
+/// enter, Enter/Escape or editing another field to leave).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum EditField {
+    Title,
+    Artist,
+    Dance,
+}
+
+/// Widget id of the inline edit input for a playlist row field, so the
+/// `focus` task can target the input that only exists while editing.
+pub fn edit_input_id(idx: usize, field: EditField) -> iced::widget::Id {
+    let field = match field {
+        EditField::Title => "title",
+        EditField::Artist => "artist",
+        EditField::Dance => "dance",
+    };
+
+    iced::widget::Id::from(format!("song-{idx}-{field}"))
+}
+
 /// A short-lived notification bubble above the quick-show bar.
 #[derive(Debug, Clone)]
 pub struct Toast {
@@ -75,6 +96,9 @@ pub struct ConfigWindow {
     pub color_picker_open: Option<String>,
     pub color_picker_old_color: Option<Color>,
 
+    /// The playlist row field currently open for inline editing, if any.
+    pub editing: Option<(usize, EditField)>,
+
     pub quick_title: String,
     pub quick_artist: String,
     pub quick_dance: String,
@@ -110,6 +134,8 @@ impl Window for ConfigWindow {
             active_dialog: None,
             color_picker_open: None,
             color_picker_old_color: None,
+
+            editing: None,
 
             quick_title: String::new(),
             quick_artist: String::new(),

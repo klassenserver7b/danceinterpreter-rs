@@ -222,6 +222,17 @@ fn build_settings<'a>(
         }
     });
 
+    let backdrop_pick = pick_list(
+        crate::ui::song_window::Backdrop::ALL,
+        Some(dance_interpreter.song_window.backdrop),
+        |backdrop| Message::SongWindow(crate::SongWindowMessage::SetBackdrop(backdrop)),
+    )
+    .width(Length::Fixed(160.0))
+    .text_size(sz::SMALL + 1.0)
+    .padding([5, 8])
+    .style(theme::pick_list_style)
+    .menu_style(theme::pick_list_menu_style);
+
     let switch = |checked: bool, msg: fn(bool) -> Message| {
         toggler(checked)
             .on_toggle(msg)
@@ -245,6 +256,7 @@ fn build_settings<'a>(
         ),
         section_label("AUDIENCE WINDOW"),
         setting_row("Text scale", scale_input.into()),
+        setting_row("Backdrop", backdrop_pick.into()),
         setting_row(
             "Show thumbnails",
             switch(dance_interpreter.song_window.enable_image, |v| {
@@ -261,7 +273,7 @@ fn build_settings<'a>(
             "Open audience window",
             buttons::secondary("Focus window", Message::FocusSongWindow).into(),
         ),
-        text("The audience display always stays dark for maximum contrast.")
+        text("The backdrop fills the audience window behind the song info.")
             .size(sz::TINY)
             .style(|t: &Theme| iced::widget::text::Style {
                 color: Some(theme::Tokens::of(t).faint),

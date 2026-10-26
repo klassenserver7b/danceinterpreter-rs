@@ -13,8 +13,10 @@ use crate::dataloading::m3uloader::load_tag_data_from_m3u;
 use crate::dataloading::songinfo::SongInfo;
 use crate::traktor_api::{ServerMessage, StateUpdate, TraktorMessage, TraktorSyncAction};
 use crate::ui::config_window::sidebar::SidebarMessage;
-use crate::ui::config_window::{ConfigWindow, DialogState, PLAYLIST_SCROLLABLE_ID, Toast, View};
-use crate::ui::song_window::SongWindow;
+use crate::ui::config_window::{
+    ConfigWindow, DialogState, EditField, PLAYLIST_SCROLLABLE_ID, Toast, View, edit_input_id,
+};
+use crate::ui::song_window::{Backdrop, SongWindow};
 use crate::ui::theme;
 use fuzzy_matcher::FuzzyMatcher;
 use fuzzy_matcher::skim::SkimMatcherV2 as Matcher;
@@ -91,6 +93,7 @@ pub enum SongWindowMessage {
     EnableImage(bool),
     EnableNextDance(bool),
     ChangeScale(f32),
+    SetBackdrop(Backdrop),
 }
 
 #[derive(Debug, Clone)]
@@ -159,6 +162,8 @@ pub enum Message {
     AddBlankSong(RelativeOffset),
     SongDataEdit(usize, SongDataEdit),
     SubmitPlaylistDance(usize),
+    BeginSongEdit(usize, EditField),
+    EndSongEdit,
 
     AddTraktorSong,
 
@@ -266,6 +271,13 @@ impl DanceInterpreter {
 
         #[cfg(not(target_os = "linux"))]
         return Default::default();
+    }
+
+    /// Exits inline song editing. Called whenever the playlist mutates, so a
+    /// deleted or appended row cannot shift the open editor onto another
+    /// song.
+    fn end_song_edit(&mut self) {
+        self.config_window.editing = None;
     }
 
     pub fn title(&self, window_id: window::Id) -> String {
@@ -394,7 +406,9 @@ impl DanceInterpreter {
             }
 
             Message::EscapePressed => {
-                if self.config_window.search_visible {
+                if self.config_window.editing.is_some() {
+                    Task::done(Message::EndSongEdit)
+                } else if self.config_window.search_visible {
                     Task::done(Message::Search(SearchMessage::Toggle))
                 } else if self.config_window.active_dialog.is_some() {
                     self.close_active_dialog()
@@ -465,8 +479,11 @@ impl DanceInterpreter {
                         self.config_window.playlist_file = Some(file.clone());
                         Task::done(Message::Toast("Playlist loaded".to_string()))
                     }
-                    Err(_) => {
-                        Task::done(Message::Toast("Could not read playlist file".to_string()))
+                    Err(err) => {
+                        println!("Playlist load failed for {file:?}: {err}");
+                        Task::done(Message::Toast(format!(
+                            "Could not read playlist file: {err}"
+                        )))
                     }
                 }
             }
@@ -600,6 +617,7 @@ impl DanceInterpreter {
                         ..Default::default()
                     };
                     self.data_provider.append_song(song);
+                    self.end_song_edit();
                     self.config_window.quick_title.clear();
                     self.config_window.quick_artist.clear();
                     self.config_window.quick_dance.clear();
@@ -652,6 +670,7 @@ impl DanceInterpreter {
                             _ => "Item".to_string(),
                         };
 
+                        self.end_song_edit();
                         self.data_provider.delete_item(item);
                         Task::done(Message::Toast(format!(
                             "Deleted \u{201C}{}\u{201D} \u{00B7} Ctrl+Z to undo",
@@ -666,6 +685,7 @@ impl DanceInterpreter {
                     ().into()
                 }
                 DialogMessage::UndoDelete => {
+                    self.end_song_edit();
                     self.data_provider.undo_delete();
                     Task::done(Message::Toast("Delete undone".to_string()))
                 }
@@ -681,7 +701,9 @@ impl DanceInterpreter {
                         item.song.title == song.title && item.song.artist == song.artist
                     });
                     if !in_playlist {
-                        self.data_provider.append_song(song.clone());
+                        let song = song.clone();
+                        self.end_song_edit();
+                        self.data_provider.append_song(song);
                         self.data_provider.ensure_statics_for_playlist();
                         Task::batch([
                             Task::done(Message::SnapTo(RelativeOffset::END)),
@@ -699,20 +721,30 @@ impl DanceInterpreter {
 
             Message::FileDropped(path) => match load_tag_data_from_m3u(&path) {
                 Ok(playlist) => {
+                    self.end_song_edit();
                     self.data_provider.set_vec(playlist);
                     self.config_window.playlist_file = Some(path.clone());
                     Task::done(Message::Toast("Playlist loaded".to_string()))
                 }
                 Err(_) => match read_song_info_from_filepath(&path) {
                     Ok(song_info) => {
+                        self.end_song_edit();
                         self.data_provider.append_song(song_info);
                         self.data_provider.ensure_statics_for_playlist();
                         Task::done(Message::Toast("Song added to playlist".to_string()))
                     }
-                    Err(_) => Task::done(Message::Toast(
-                        "Unsupported file \u{2014} drop an m3u playlist or an audio file"
-                            .to_string(),
-                    )),
+                    Err(err) => {
+                        // Surface the real cause (sandbox denial, unsupported
+                        // container, corrupt tag) instead of a generic hint.
+                        println!("File drop failed for {path:?}: {err}");
+                        let name = path.file_name().map_or_else(
+                            || path.display().to_string(),
+                            |n| n.to_string_lossy().into_owned(),
+                        );
+                        Task::done(Message::Toast(format!(
+                            "Could not read \u{201C}{name}\u{201D}: {err}"
+                        )))
+                    }
                 },
             },
 
@@ -728,20 +760,34 @@ impl DanceInterpreter {
 
             Message::SubmitPlaylistDance(i) => {
                 self.data_provider.handle_song_data_submit(i);
+                self.end_song_edit();
+                ().into()
+            }
+
+            Message::BeginSongEdit(idx, field) => {
+                self.config_window.editing = Some((idx, field));
+                focus(edit_input_id(idx, field))
+            }
+
+            Message::EndSongEdit => {
+                self.end_song_edit();
                 ().into()
             }
 
             Message::AddSong(song) => {
+                self.end_song_edit();
                 self.data_provider.append_song(song);
                 ().into()
             }
 
             Message::AddBlankSong(offset) => {
+                self.end_song_edit();
                 self.data_provider.append_song(SongInfo::default());
                 Task::done(Message::SnapTo(offset))
             }
 
             Message::DeleteItem(song) => {
+                self.end_song_edit();
                 self.data_provider.delete_item(song);
                 ().into()
             }
@@ -768,6 +814,10 @@ impl DanceInterpreter {
                             (((self.song_window.scale + value) * 100.0).round() / 100.0)
                                 .clamp(0.5, 3.0);
                     }
+                    ().into()
+                }
+                SongWindowMessage::SetBackdrop(backdrop) => {
+                    self.song_window.backdrop = backdrop;
                     ().into()
                 }
             },

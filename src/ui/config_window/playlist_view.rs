@@ -2,16 +2,17 @@
 //! quick-add row and summary footer. Includes the empty/first-run state.
 
 use crate::dataloading::dataprovider::{ItemChange, ItemSource, SongDataEdit};
-use crate::ui::config_window::ConfigWindow;
 use crate::ui::config_window::search::data_matches_search_query;
 use crate::ui::config_window::sidebar::SidebarMessage;
+use crate::ui::config_window::{ConfigWindow, EditField, edit_input_id};
 use crate::ui::theme::RowLook;
 use crate::ui::theme::{self, sz};
 use crate::ui::widgets::{buttons, heading, material_symbol, material_symbol_sized};
 use crate::ui::with_tooltip;
 use crate::{DanceInterpreter, DialogMessage, Message, QuickAddMessage};
+use iced::advanced::text::{Shaping, Wrapping};
 use iced::widget::{
-    Column, Space, button, column as col, container, row, scrollable, text, text_input,
+    Column, Space, button, column as col, container, mouse_area, row, scrollable, text, text_input,
 };
 use iced::{Alignment, Color, Element, Length, Theme};
 use std::sync::LazyLock;
@@ -94,11 +95,14 @@ fn build_toolbar<'a>(
     }
 
     tools = tools.push(with_tooltip(
-        buttons::ghost_icon("add", false, 16.0, Message::Noop),
-        "Add a song below",
+        buttons::ghost_icon(
+            "undo",
+            false,
+            16.0,
+            Message::Dialog(DialogMessage::UndoDelete),
+        ),
+        "Undo delete",
     ));
-
-    tools = tools.push(build_options_menu());
 
     container(
         row![
@@ -159,52 +163,6 @@ fn build_search<'a>(config_window: &'a ConfigWindow) -> Element<'a, Message> {
     .into()
 }
 
-fn build_options_menu() -> Element<'static, Message> {
-    use iced_aw::style::Status;
-    use iced_aw::style::menu_bar::primary;
-    use iced_aw::{Menu, menu, menu_bar, menu_items};
-
-    let menu_item = |label: &'static str, message: Message| {
-        button(
-            text(label)
-                .size(sz::BASE)
-                .style(|t: &Theme| iced::widget::text::Style {
-                    color: Some(theme::Tokens::of(t).text_soft),
-                }),
-        )
-        .width(Length::Fill)
-        .padding([6, 10])
-        .style(theme::btn_nav(false))
-        .on_press(message)
-    };
-
-    let menu = Menu::new(menu_items!(
-        (menu_item("Add blank song", Message::AddBlankEntry)),
-        (menu_item("Undo delete", Message::Dialog(DialogMessage::UndoDelete))),
-        (menu_item(
-            "Reload statics",
-            Message::Statics(crate::StaticsMessage::Reload)
-        )),
-    ))
-    .max_width(220.0)
-    .offset(8.0)
-    .spacing(2.0);
-
-    let trigger = buttons::ghost_icon("more_horiz", false, 16.0, Message::Noop);
-
-    menu_bar!((trigger, menu))
-        .spacing(5.0)
-        .draw_path(menu::DrawPath::Backdrop)
-        .style(|theme: &Theme, status: Status| menu::Style {
-            path_border: iced::Border {
-                radius: 6.0.into(),
-                ..Default::default()
-            },
-            ..primary(theme, status)
-        })
-        .into()
-}
-
 // ---------------------------------------------------------------------------
 // Table
 // ---------------------------------------------------------------------------
@@ -254,7 +212,13 @@ fn build_rows<'a>(
         .enumerate()
     {
         let is_match = data_matches_search_query(&config_window.search_query, (&item.song).into());
-        rows = rows.push(build_song_row(dance_interpreter, &item.song, i, is_match));
+        rows = rows.push(build_song_row(
+            dance_interpreter,
+            &item.song,
+            i,
+            is_match,
+            config_window.editing,
+        ));
     }
 
     scrollable(rows)
@@ -270,6 +234,7 @@ fn build_song_row<'a>(
     song: &'a crate::dataloading::songinfo::SongInfo,
     idx: usize,
     is_match: bool,
+    editing: Option<(usize, EditField)>,
 ) -> Element<'a, Message> {
     let (is_current, is_next, is_traktor, is_played) =
         dance_interpreter.data_provider.get_play_state(idx);
@@ -302,24 +267,59 @@ fn build_song_row<'a>(
             .into()
     };
 
-    // Song title + artist, inline editable.
-    let song_cell = col![
+    // Song title + artist: plain text that enters inline editing on
+    // double-click (a single click is deliberately ignored, like the old
+    // dynamic text input). Placeholders keep empty rows clickable.
+    let editing_field = editing.filter(|(i, _)| *i == idx).map(|(_, field)| field);
+
+    let title_field: Element<'a, Message> = if editing_field == Some(EditField::Title) {
         text_input("Title", &song.title)
+            .id(edit_input_id(idx, EditField::Title))
             .size(sz::ROW)
             .on_input(move |v| Message::SongDataEdit(idx, SongDataEdit::Title(v)))
+            .on_submit(Message::EndSongEdit)
             .style(theme::input_plain)
-            .padding(0),
+            .padding(0)
+            .into()
+    } else {
+        mouse_area(editable_text(
+            &song.title,
+            "Title",
+            sz::ROW,
+            |t: &Theme| theme::Tokens::of(t).text_soft,
+            |t: &Theme| theme::Tokens::of(t).faint,
+        ))
+        .on_double_click(Message::BeginSongEdit(idx, EditField::Title))
+        .into()
+    };
+
+    let artist_field: Element<'a, Message> = if editing_field == Some(EditField::Artist) {
         text_input("Artist", &song.artist)
+            .id(edit_input_id(idx, EditField::Artist))
             .size(sz::SMALL + 1.0)
             .on_input(move |v| Message::SongDataEdit(idx, SongDataEdit::Artist(v)))
+            .on_submit(Message::EndSongEdit)
             .style(theme::input_plain_dim)
-            .padding(0),
-    ]
-    .spacing(4)
-    .clip(true)
-    .width(Length::Fill);
+            .padding(0)
+            .into()
+    } else {
+        mouse_area(editable_text(
+            &song.artist,
+            "Artist",
+            sz::SMALL + 1.0,
+            |t: &Theme| theme::Tokens::of(t).muted,
+            |t: &Theme| theme::Tokens::of(t).faint,
+        ))
+        .on_double_click(Message::BeginSongEdit(idx, EditField::Artist))
+        .into()
+    };
 
-    let chip = build_dance_cell(&song.dance, idx, dance_color);
+    let song_cell = col![title_field, artist_field]
+        .spacing(4)
+        .clip(true)
+        .width(Length::Fill);
+
+    let chip = build_dance_cell(&song.dance, idx, dance_color, editing_field.is_some());
 
     let status: Element<'a, Message> = if is_current {
         row![
@@ -456,8 +456,46 @@ fn build_song_row<'a>(
 }
 
 // Dance cell: compact chip with an inline editable dance name. Submitting
-// matches the dance against the known dances (assigning its color).
-fn build_dance_cell<'a>(dance: &'a str, idx: usize, color: Option<Color>) -> Element<'a, Message> {
+// matches the dance against the known dances (assigning its color). Like the
+// song fields, the name is plain text until double-clicked.
+fn build_dance_cell<'a>(
+    dance: &'a str,
+    idx: usize,
+    color: Option<Color>,
+    editing: bool,
+) -> Element<'a, Message> {
+    let dance_field: Element<'a, Message> = if editing {
+        text_input("Unassigned", dance)
+            .id(edit_input_id(idx, EditField::Dance))
+            .size(sz::SMALL + 1.0)
+            .on_input(move |v| Message::SongDataEdit(idx, SongDataEdit::Dance(v)))
+            .on_submit(Message::SubmitPlaylistDance(idx))
+            .style(move |t: &Theme, status: iced::widget::text_input::Status| {
+                let mut style = theme::input_plain(t, status);
+                style.value = match color {
+                    Some(color) if !dance.is_empty() => theme::readable(color, t),
+                    _ => theme::Tokens::of(t).muted,
+                };
+                style
+            })
+            .padding(0)
+            .into()
+    } else {
+        mouse_area(editable_text(
+            dance,
+            "Unassigned",
+            sz::SMALL + 1.0,
+            move |t: &Theme| {
+                color
+                    .map(|c| theme::readable(c, t))
+                    .unwrap_or_else(|| theme::Tokens::of(t).muted)
+            },
+            |t: &Theme| theme::Tokens::of(t).faint,
+        ))
+        .on_double_click(Message::BeginSongEdit(idx, EditField::Dance))
+        .into()
+    };
+
     let chip = container(
         row![
             crate::ui::config_window::nav_sidebar::dot(7.0, move |t| {
@@ -465,19 +503,7 @@ fn build_dance_cell<'a>(dance: &'a str, idx: usize, color: Option<Color>) -> Ele
                     .map(|c| theme::readable(c, t))
                     .unwrap_or_else(|| theme::Tokens::of(t).muted)
             }),
-            text_input("Unassigned", dance)
-                .size(sz::SMALL + 1.0)
-                .on_input(move |v| Message::SongDataEdit(idx, SongDataEdit::Dance(v)))
-                .on_submit(Message::SubmitPlaylistDance(idx))
-                .style(move |t: &Theme, status: iced::widget::text_input::Status| {
-                    let mut style = theme::input_plain(t, status);
-                    style.value = match color {
-                        Some(color) if !dance.is_empty() => theme::readable(color, t),
-                        _ => theme::Tokens::of(t).muted,
-                    };
-                    style
-                })
-                .padding(0),
+            dance_field,
         ]
         .spacing(6)
         .align_y(Alignment::Center)
@@ -489,6 +515,37 @@ fn build_dance_cell<'a>(dance: &'a str, idx: usize, color: Option<Color>) -> Ele
     .style(theme::chip());
 
     chip.into()
+}
+
+/// A plain-text stand-in for a row's inline text input (shown while the field
+/// is not being edited). Renders the placeholder word in the placeholder
+/// color when the value is empty, so blank rows stay clickable.
+fn editable_text<'a>(
+    value: &'a str,
+    placeholder: &'static str,
+    size: f32,
+    value_color: impl Fn(&Theme) -> Color + 'a,
+    placeholder_color: impl Fn(&Theme) -> Color + 'a,
+) -> Element<'a, Message> {
+    if value.is_empty() {
+        text(placeholder)
+            .size(size)
+            .shaping(Shaping::Advanced)
+            .wrapping(Wrapping::None)
+            .style(move |t: &Theme| iced::widget::text::Style {
+                color: Some(placeholder_color(t)),
+            })
+            .into()
+    } else {
+        text(value)
+            .size(size)
+            .shaping(Shaping::Advanced)
+            .wrapping(Wrapping::None)
+            .style(move |t: &Theme| iced::widget::text::Style {
+                color: Some(value_color(t)),
+            })
+            .into()
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -560,7 +617,7 @@ fn build_footer(dance_interpreter: &DanceInterpreter) -> Element<'static, Messag
                     color: Some(theme::Tokens::of(t).muted),
                 }),
             container(
-                text("Click any field to edit")
+                text("Double-click a field to edit")
                     .size(sz::TINY)
                     .style(|t: &Theme| iced::widget::text::Style {
                         color: Some(theme::Tokens::of(t).faint),
@@ -609,6 +666,13 @@ fn build_empty_playlist_view(dance_interpreter: &DanceInterpreter) -> Element<'s
         )
     };
 
+    let create_card = empty_state_card(
+        "note_add",
+        "Create playlist",
+        "Start with a blank entry",
+        Message::AddBlankEntry,
+    );
+
     let content = col![
         heading("No playlist loaded.", 22.0, iced::font::Weight::Semibold).style(|t| {
             iced::widget::text::Style {
@@ -620,15 +684,15 @@ fn build_empty_playlist_view(dance_interpreter: &DanceInterpreter) -> Element<'s
             .style(|t: &Theme| iced::widget::text::Style {
                 color: Some(theme::Tokens::of(t).muted),
             }),
-        // The two cards share the available width equally, capped at the
-        // prototype size (2 × 200 + spacing).
+        // The three cards share the available width equally, capped at
+        // 3 × 200 + spacing.
         container(
-            row![open_card, traktor_card]
+            row![open_card, traktor_card, create_card]
                 .spacing(16)
                 .width(Length::Fill),
         )
         .width(Length::Fill)
-        .max_width(416.0),
+        .max_width(632.0),
     ]
     .spacing(10)
     .align_x(Alignment::Center)
