@@ -107,7 +107,6 @@ pub fn build<'a>(
         .into()
 }
 
-const COL_DRAG: f32 = 16.0;
 const COL_FAV: f32 = 26.0;
 const COL_COLOR: f32 = 26.0;
 const COL_CAPTION: f32 = 70.0;
@@ -215,7 +214,6 @@ fn build_static_row<'a>(
     };
 
     let content = row![
-        drag_handle(),
         container(star).width(Length::Fixed(COL_FAV)),
         container(color_element).width(Length::Fixed(COL_COLOR)),
         container(name_input).width(Length::Fill).clip(true),
@@ -272,15 +270,3 @@ fn build_static_row<'a>(
     .into()
 }
 
-fn drag_handle() -> Element<'static, Message> {
-    container(
-        material_symbol_sized("drag_indicator", false, 15.0).style(|t: &Theme| {
-            iced::widget::text::Style {
-                color: Some(theme::Tokens::of(t).border),
-            }
-        }),
-    )
-    .width(Length::Fixed(COL_DRAG))
-    .align_x(Alignment::Center)
-    .into()
-}

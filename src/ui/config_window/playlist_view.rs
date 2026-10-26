@@ -22,7 +22,6 @@ pub static PLAYLIST_SCROLLABLE_ID: LazyLock<iced::widget::Id> =
     LazyLock::new(iced::widget::Id::unique);
 
 // Column metrics (design px).
-const COL_DRAG: f32 = 16.0;
 const COL_NUMBER: f32 = 28.0;
 const COL_DANCE: f32 = 150.0;
 const COL_STATUS: f32 = 78.0;
@@ -219,7 +218,6 @@ fn build_table_head() -> Element<'static, Message> {
         Space::new()
             .width(Length::Fixed(3.0))
             .height(Length::Fill),
-        Space::new().width(Length::Fixed(COL_DRAG)),
         head_cell("#", Length::Fixed(COL_NUMBER)),
         head_cell("SONG / ARTIST", Length::Fill),
         head_cell("DANCE", Length::Fixed(COL_DANCE)),
@@ -227,7 +225,7 @@ fn build_table_head() -> Element<'static, Message> {
         Space::new().width(Length::Fixed(COL_ACTIONS)),
     ]
     .spacing(7)
-    .padding([0, 14])
+    .padding([0, 10])
     .height(Length::Fixed(33.0))
     .align_y(Alignment::Center);
 
@@ -390,7 +388,6 @@ fn build_song_row<'a>(
     .align_y(Alignment::Center);
 
     let content = row![
-        drag_handle(),
         container(number).width(Length::Fixed(COL_NUMBER)),
         song_cell,
         container(chip).width(Length::Fixed(COL_DANCE)),
@@ -399,7 +396,7 @@ fn build_song_row<'a>(
     ]
     .spacing(7)
     .align_y(Alignment::Center)
-    .padding([0, 14])
+    .padding([0, 10])
     .width(Length::Fill);
 
     // The accent bar is rendered on every row at a constant 3px width (only
@@ -437,19 +434,6 @@ fn build_song_row<'a>(
     .height(Length::Fixed(ROW_HEIGHT))
     .width(Length::Fill)
     .style(move |t: &Theme| theme::row(t, look))
-    .into()
-}
-
-fn drag_handle() -> Element<'static, Message> {
-    container(
-        material_symbol_sized("drag_indicator", false, 15.0).style(|t: &Theme| {
-            iced::widget::text::Style {
-                color: Some(theme::Tokens::of(t).border),
-            }
-        }),
-    )
-    .width(Length::Fixed(COL_DRAG))
-    .align_x(Alignment::Center)
     .into()
 }
 

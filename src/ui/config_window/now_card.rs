@@ -92,53 +92,57 @@ pub fn build<'a>(
     .spacing(7)
     .align_y(Alignment::Center);
 
-    // One line: dance · title · artist. The title takes the remaining width
-    // (clipped); dance and artist keep their intrinsic width.
-    let mut main_line = row![].spacing(7).align_y(Alignment::Center).width(Length::Fill);
-    main_line = main_line.push(
-        heading(dance_name, 15.0, iced::font::Weight::Semibold).style(|t: &Theme| {
-            iced::widget::text::Style {
+    // One line: dance · title · artist. All segments share an explicit line
+    // height so the mixed font sizes sit on the same baseline, keep their
+    // intrinsic width (adjacent, nothing pushed to the far edge) and the
+    // whole line clips before the transport controls when it runs long.
+    let lh = iced::widget::text::LineHeight::Absolute(iced::Pixels(19.0));
+    let mut line = row![].spacing(7).align_y(Alignment::Center);
+    line = line.push(
+        heading(dance_name, 15.0, iced::font::Weight::Semibold)
+            .line_height(lh)
+            .style(|t: &Theme| iced::widget::text::Style {
                 color: Some(theme::Tokens::of(t).dance_headline),
-            }
-        }),
+            }),
     );
     if !title.is_empty() {
-        main_line = main_line.push(
+        line = line.push(
             text("\u{B7}")
                 .size(sz::SMALL)
+                .line_height(lh)
                 .style(|t: &Theme| iced::widget::text::Style {
-                    color: Some(theme::Tokens::of(t).faint),
+                    color: Some(theme::Tokens::of(t).muted),
                 }),
         );
-        main_line = main_line.push(
-            container(
-                text(title)
-                    .size(sz::BASE)
-                    .font(theme::body_font(iced::font::Weight::Medium))
-                    .style(|t: &Theme| iced::widget::text::Style {
-                        color: Some(theme::Tokens::of(t).text),
-                    }),
-            )
-            .width(Length::Fill)
-            .clip(true),
+        line = line.push(
+            text(title)
+                .size(sz::BASE)
+                .line_height(lh)
+                .font(theme::body_font(iced::font::Weight::Medium))
+                .style(|t: &Theme| iced::widget::text::Style {
+                    color: Some(theme::Tokens::of(t).text),
+                }),
         );
         if !artist.is_empty() {
-            main_line = main_line.push(
+            line = line.push(
                 text("\u{B7}")
                     .size(sz::SMALL)
-                    .style(|t: &Theme| iced::widget::text::Style {
-                        color: Some(theme::Tokens::of(t).faint),
-                    }),
-            );
-            main_line = main_line.push(
-                text(artist)
-                    .size(sz::SMALL)
+                    .line_height(lh)
                     .style(|t: &Theme| iced::widget::text::Style {
                         color: Some(theme::Tokens::of(t).muted),
                     }),
             );
+            line = line.push(
+                text(artist)
+                    .size(sz::SMALL)
+                    .line_height(lh)
+                    .style(|t: &Theme| iced::widget::text::Style {
+                        color: Some(theme::Tokens::of(t).text_soft),
+                    }),
+            );
         }
     }
+    let main_line = container(line).width(Length::Fill).clip(true);
 
     // Fixed content height: gives the row a definite height (no compression),
     // so the cover's Fill height expands to the full card content while the
