@@ -7,7 +7,7 @@ use crate::ui::theme::{self, sz};
 use crate::ui::widgets::{buttons, heading, kbd};
 use crate::ui::with_tooltip;
 use crate::{DanceInterpreter, DialogMessage, Message, StaticsMessage};
-use iced::widget::{Column, column as col, container, mouse_area, opaque, pick_list, row, space::Space, stack, text, text_input, toggler};
+use iced::widget::{Button, Column, column as col, container, mouse_area, opaque, pick_list, row, space::Space, stack, text, text_input, toggler};
 use iced::{Alignment, Element, Length, Theme};
 use iced_aw::number_input;
 
@@ -59,15 +59,13 @@ pub fn build_dialog<'a>(
                 .style(|t: &Theme| iced::widget::text::Style {
                     color: Some(theme::Tokens::of(t).muted),
                 })],
-                row![
+                dialog_actions([
                     buttons::secondary("Cancel", Message::Dialog(DialogMessage::Close)),
                     buttons::danger(
                         format!("Delete {}", kind),
                         Message::Dialog(DialogMessage::ConfirmDelete),
                     ),
-                ]
-                .spacing(10)
-                .into(),
+                ]),
             )
         }
         DialogState::MergeStatic { old_name, new_name } => (
@@ -80,7 +78,7 @@ pub fn build_dialog<'a>(
             .style(|t: &Theme| iced::widget::text::Style {
                 color: Some(theme::Tokens::of(t).muted),
             })],
-            row![
+            dialog_actions([
                 buttons::secondary("Cancel", Message::Dialog(DialogMessage::Cancel)),
                 buttons::primary(
                     "Merge",
@@ -89,9 +87,7 @@ pub fn build_dialog<'a>(
                         new_name.clone(),
                     )),
                 ),
-            ]
-            .spacing(10)
-            .into(),
+            ]),
         ),
         DialogState::Settings => build_settings(config_window, dance_interpreter),
         DialogState::Help => build_help(),
@@ -138,6 +134,22 @@ pub fn build_dialog<'a>(
         .align_y(Alignment::Center);
 
     opaque(stack![backdrop, centered])
+}
+
+/// Modal action row: slightly larger buttons, aligned to the right edge
+/// (the confirming / destructive action sits bottom-right).
+fn dialog_actions<'a>(
+    actions: impl IntoIterator<Item = Button<'a, Message>>,
+) -> Element<'a, Message> {
+    let items: Vec<Element<'a, Message>> = actions
+        .into_iter()
+        .map(|btn| btn.padding([10, 18]).into())
+        .collect();
+
+    container(row(items).spacing(10))
+        .width(Length::Fill)
+        .align_x(Alignment::End)
+        .into()
 }
 
 /// A labeled settings row with a bottom hairline.
@@ -330,14 +342,13 @@ fn build_add_static<'a>(
     ]
     .spacing(12);
 
-    let actions = row![
+    let actions = dialog_actions([
         buttons::secondary("Cancel", Message::Dialog(DialogMessage::Close)),
         buttons::primary(
             "Add static",
             Message::Statics(StaticsMessage::AddNamed(config_window.add_static_name.clone())),
         ),
-    ]
-    .spacing(10);
+    ]);
 
-    ("Add static".to_string(), body, actions.into())
+    ("Add static".to_string(), body, actions)
 }
