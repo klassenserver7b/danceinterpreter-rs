@@ -4,8 +4,8 @@
 use crate::dataloading::dataprovider::{ItemChange, ItemSource};
 use crate::dataloading::staticinfo::StaticInfo;
 use crate::ui::config_window::ConfigWindow;
-use crate::ui::theme::RowLook;
 use crate::ui::config_window::search::data_matches_search_query;
+use crate::ui::theme::RowLook;
 use crate::ui::theme::{self, sz};
 use crate::ui::widgets::{
     buttons, heading, material_symbol, material_symbol_colored, material_symbol_sized,
@@ -75,19 +75,21 @@ pub fn build<'a>(
                         color: Some(theme::Tokens::of(t).muted),
                     }
                 }),
-                heading("Dances & announcements", sz::PANEL_TITLE, iced::font::Weight::Semibold)
-                    .style(|t| iced::widget::text::Style {
-                        color: Some(theme::Tokens::of(t).text),
-                    }),
+                heading(
+                    "Dances & announcements",
+                    sz::PANEL_TITLE,
+                    iced::font::Weight::Semibold
+                )
+                .style(|t| iced::widget::text::Style {
+                    color: Some(theme::Tokens::of(t).text),
+                }),
             ]
             .spacing(9)
             .align_y(Alignment::Center),
-            container(
-                buttons::primary_small(
-                    "Add static",
-                    Message::OpenDialog(crate::ui::config_window::DialogState::AddStatic),
-                )
-            )
+            container(buttons::primary_small(
+                "Add static",
+                Message::OpenDialog(crate::ui::config_window::DialogState::AddStatic),
+            ))
             .width(Length::Fill)
             .align_x(Alignment::End),
         ]
@@ -121,23 +123,29 @@ fn build_static_row<'a>(
     idx: usize,
     is_match: bool,
 ) -> Element<'a, Message> {
-    let is_current = *dance_interpreter.data_provider.get_current_source()
-        == ItemSource::Static(name.clone());
+    let is_current =
+        *dance_interpreter.data_provider.get_current_source() == ItemSource::Static(name.clone());
 
     // Favorite star.
     let star: Element<'a, Message> = if static_info.is_favorite {
-        button(
-            material_symbol_colored("star", true, theme::Tokens::of(&config_window.theme).star),
-        )
+        button(material_symbol_colored(
+            "star",
+            true,
+            theme::Tokens::of(&config_window.theme).star,
+        ))
         .padding(4)
         .style(theme::btn_ghost)
-        .on_press(Message::Statics(StaticsMessage::ToggleFavorite(name.clone())))
+        .on_press(Message::Statics(StaticsMessage::ToggleFavorite(
+            name.clone(),
+        )))
         .into()
     } else {
         button(material_symbol("star", false))
             .padding(4)
             .style(theme::btn_ghost)
-            .on_press(Message::Statics(StaticsMessage::ToggleFavorite(name.clone())))
+            .on_press(Message::Statics(StaticsMessage::ToggleFavorite(
+                name.clone(),
+            )))
             .into()
     };
 
@@ -188,14 +196,18 @@ fn build_static_row<'a>(
     )
     .padding([5, 10])
     .style(theme::btn_secondary)
-    .on_press(Message::ItemChanged(ItemChange::StaticAbsolute(name.clone())));
+    .on_press(Message::ItemChanged(ItemChange::StaticAbsolute(
+        name.clone(),
+    )));
 
     let delete = with_tooltip(
         buttons::ghost_icon(
             "delete",
             false,
             14.0,
-            Message::Dialog(DialogMessage::RequestDelete(ItemSource::Static(name.clone()))),
+            Message::Dialog(DialogMessage::RequestDelete(ItemSource::Static(
+                name.clone(),
+            ))),
         ),
         "Delete static",
     );
@@ -217,13 +229,11 @@ fn build_static_row<'a>(
         container(star).width(Length::Fixed(COL_FAV)),
         container(color_element).width(Length::Fixed(COL_COLOR)),
         container(name_input).width(Length::Fill).clip(true),
-        container(
-            text(usage_label)
-                .size(sz::TINY)
-                .style(|t: &Theme| iced::widget::text::Style {
-                    color: Some(theme::Tokens::of(t).faint),
-                })
-        )
+        container(text(usage_label).size(sz::TINY).style(|t: &Theme| {
+            iced::widget::text::Style {
+                color: Some(theme::Tokens::of(t).faint),
+            }
+        }))
         .width(Length::Fixed(COL_CAPTION))
         .align_x(Alignment::End),
         show_now,
@@ -269,4 +279,3 @@ fn build_static_row<'a>(
     .style(move |t: &Theme| theme::row(t, look))
     .into()
 }
-

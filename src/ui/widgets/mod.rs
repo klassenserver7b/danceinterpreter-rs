@@ -88,13 +88,11 @@ pub fn material_symbol(id: &'_ str, filled: bool) -> Text<'_, Theme, Renderer> {
 pub fn kbd<'a>(
     label: impl text::IntoFragment<'a>,
 ) -> iced::widget::Container<'a, Message, Theme, Renderer> {
-    iced::widget::container(
-        text(label).size(theme::sz::MICRO).style(|t: &Theme| {
-            iced::widget::text::Style {
-                color: Some(theme::Tokens::of(t).kbd_text),
-            }
-        }),
-    )
+    iced::widget::container(text(label).size(theme::sz::MICRO).style(|t: &Theme| {
+        iced::widget::text::Style {
+            color: Some(theme::Tokens::of(t).kbd_text),
+        }
+    }))
     .padding([1, 5])
     .style(theme::kbd)
 }
@@ -122,7 +120,5 @@ pub fn heading<'a>(
     size: impl Into<Pixels>,
     weight: iced::font::Weight,
 ) -> Text<'a, Theme, Renderer> {
-    text(label)
-        .size(size)
-        .font(theme::head_font(weight))
+    text(label).size(size).font(theme::head_font(weight))
 }

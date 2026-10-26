@@ -13,7 +13,7 @@ use crate::dataloading::m3uloader::load_tag_data_from_m3u;
 use crate::dataloading::songinfo::SongInfo;
 use crate::traktor_api::{ServerMessage, StateUpdate, TraktorMessage, TraktorSyncAction};
 use crate::ui::config_window::sidebar::SidebarMessage;
-use crate::ui::config_window::{ConfigWindow, DialogState, Toast, View, PLAYLIST_SCROLLABLE_ID};
+use crate::ui::config_window::{ConfigWindow, DialogState, PLAYLIST_SCROLLABLE_ID, Toast, View};
 use crate::ui::song_window::SongWindow;
 use crate::ui::theme;
 use fuzzy_matcher::FuzzyMatcher;
@@ -21,11 +21,11 @@ use fuzzy_matcher::skim::SkimMatcherV2 as Matcher;
 use iced::font::Weight;
 use iced::keyboard::key::Named;
 use iced::keyboard::{Key, Modifiers};
+use iced::theme::Mode;
 use iced::widget::operation::{focus, scroll_by, snap_to};
 use iced::widget::scrollable::{AbsoluteOffset, RelativeOffset};
 use iced::widget::space::horizontal;
 use iced::window::icon::from_file_data;
-use iced::theme::Mode;
 use iced::{Element, Size, Subscription, Task, Theme, exit, keyboard, system, time, window};
 use iced_aw::ICED_AW_FONT_BYTES;
 use rfd::FileDialog;
@@ -412,10 +412,10 @@ impl DanceInterpreter {
                 ().into()
             }
             Message::Tick => {
-                if let Some(toast) = &self.config_window.toast {
-                    if toast.expired(Instant::now()) {
-                        self.config_window.toast = None;
-                    }
+                if let Some(toast) = &self.config_window.toast
+                    && toast.expired(Instant::now())
+                {
+                    self.config_window.toast = None;
                 }
                 ().into()
             }
@@ -465,9 +465,9 @@ impl DanceInterpreter {
                         self.config_window.playlist_file = Some(file.clone());
                         Task::done(Message::Toast("Playlist loaded".to_string()))
                     }
-                    Err(_) => Task::done(Message::Toast(
-                        "Could not read playlist file".to_string(),
-                    )),
+                    Err(_) => {
+                        Task::done(Message::Toast("Could not read playlist file".to_string()))
+                    }
                 }
             }
 
@@ -639,8 +639,7 @@ impl DanceInterpreter {
                     ().into()
                 }
                 DialogMessage::ConfirmDelete => {
-                    if let Some(DialogState::Delete(item)) =
-                        self.config_window.active_dialog.take()
+                    if let Some(DialogState::Delete(item)) = self.config_window.active_dialog.take()
                     {
                         let name = match &item {
                             ItemSource::Playlist(i) => self
@@ -694,32 +693,28 @@ impl DanceInterpreter {
                         ))
                     }
                 } else {
-                    Task::done(Message::Toast(
-                        "No track loaded in Traktor".to_string(),
-                    ))
+                    Task::done(Message::Toast("No track loaded in Traktor".to_string()))
                 }
             }
 
-            Message::FileDropped(path) => {
-                match load_tag_data_from_m3u(&path) {
-                    Ok(playlist) => {
-                        self.data_provider.set_vec(playlist);
-                        self.config_window.playlist_file = Some(path.clone());
-                        Task::done(Message::Toast("Playlist loaded".to_string()))
-                    }
-                    Err(_) => match read_song_info_from_filepath(&path) {
-                        Ok(song_info) => {
-                            self.data_provider.append_song(song_info);
-                            self.data_provider.ensure_statics_for_playlist();
-                            Task::done(Message::Toast("Song added to playlist".to_string()))
-                        }
-                        Err(_) => Task::done(Message::Toast(
-                            "Unsupported file \u{2014} drop an m3u playlist or an audio file"
-                                .to_string(),
-                        )),
-                    },
+            Message::FileDropped(path) => match load_tag_data_from_m3u(&path) {
+                Ok(playlist) => {
+                    self.data_provider.set_vec(playlist);
+                    self.config_window.playlist_file = Some(path.clone());
+                    Task::done(Message::Toast("Playlist loaded".to_string()))
                 }
-            }
+                Err(_) => match read_song_info_from_filepath(&path) {
+                    Ok(song_info) => {
+                        self.data_provider.append_song(song_info);
+                        self.data_provider.ensure_statics_for_playlist();
+                        Task::done(Message::Toast("Song added to playlist".to_string()))
+                    }
+                    Err(_) => Task::done(Message::Toast(
+                        "Unsupported file \u{2014} drop an m3u playlist or an audio file"
+                            .to_string(),
+                    )),
+                },
+            },
 
             Message::ItemChanged(song_change) => {
                 self.data_provider.handle_item_change(song_change);
@@ -899,8 +894,7 @@ impl DanceInterpreter {
 
     /// Closes the active dialog, restoring pending state for the merge dialog.
     fn close_active_dialog(&mut self) -> Task<Message> {
-        if let Some(DialogState::MergeStatic { old_name, .. }) = &self.config_window.active_dialog
-        {
+        if let Some(DialogState::MergeStatic { old_name, .. }) = &self.config_window.active_dialog {
             // Undo the in-progress rename (the entry's display name was edited
             // inline while typing; reset it back to its map key).
             let _ = self.data_provider.rename_static(old_name, old_name);

@@ -3,13 +3,11 @@
 
 use crate::dataloading::dataprovider::{ItemChange, ItemSource, SongDataEdit};
 use crate::ui::config_window::ConfigWindow;
-use crate::ui::theme::RowLook;
 use crate::ui::config_window::search::data_matches_search_query;
 use crate::ui::config_window::sidebar::SidebarMessage;
+use crate::ui::theme::RowLook;
 use crate::ui::theme::{self, sz};
-use crate::ui::widgets::{
-    buttons, heading, material_symbol, material_symbol_sized,
-};
+use crate::ui::widgets::{buttons, heading, material_symbol, material_symbol_sized};
 use crate::ui::with_tooltip;
 use crate::{DanceInterpreter, DialogMessage, Message, QuickAddMessage};
 use iced::widget::{
@@ -70,7 +68,12 @@ fn build_toolbar<'a>(
                 color: Some(theme::Tokens::of(t).muted),
             }
         }),
-        heading("Evening playlist", sz::PANEL_TITLE, iced::font::Weight::Semibold).style(|t| {
+        heading(
+            "Evening playlist",
+            sz::PANEL_TITLE,
+            iced::font::Weight::Semibold
+        )
+        .style(|t| {
             iced::widget::text::Style {
                 color: Some(theme::Tokens::of(t).text),
             }
@@ -97,9 +100,14 @@ fn build_toolbar<'a>(
 
     tools = tools.push(build_options_menu());
 
-    container(row![title, container(tools).width(Length::Fill).align_x(Alignment::End)]
+    container(
+        row![
+            title,
+            container(tools).width(Length::Fill).align_x(Alignment::End)
+        ]
         .width(Length::Fill)
-        .align_y(Alignment::Center))
+        .align_y(Alignment::Center),
+    )
     .padding([14, 17])
     .width(Length::Fill)
     .into()
@@ -115,7 +123,12 @@ fn build_search<'a>(config_window: &'a ConfigWindow) -> Element<'a, Message> {
         .style(theme::input_boxed)
         .padding([5, 8]);
 
-    let close = buttons::ghost_icon("close", false, 14.0, Message::Search(crate::SearchMessage::Toggle));
+    let close = buttons::ghost_icon(
+        "close",
+        false,
+        14.0,
+        Message::Search(crate::SearchMessage::Toggle),
+    );
 
     container(
         row![
@@ -168,12 +181,10 @@ fn build_options_menu() -> Element<'static, Message> {
     let menu = Menu::new(menu_items!(
         (menu_item("Add blank song", Message::AddBlankEntry)),
         (menu_item("Undo delete", Message::Dialog(DialogMessage::UndoDelete))),
-        (
-            menu_item(
-                "Reload statics",
-                Message::Statics(crate::StaticsMessage::Reload)
-            )
-        ),
+        (menu_item(
+            "Reload statics",
+            Message::Statics(crate::StaticsMessage::Reload)
+        )),
     ))
     .max_width(220.0)
     .offset(8.0)
@@ -215,9 +226,7 @@ fn build_table_head() -> Element<'static, Message> {
     // The 3px spacer mirrors the row accent bar; its Fill height also
     // inflates the line so align_y centers the head cells in the band.
     let head = row![
-        Space::new()
-            .width(Length::Fixed(3.0))
-            .height(Length::Fill),
+        Space::new().width(Length::Fixed(3.0)).height(Length::Fill),
         head_cell("#", Length::Fixed(COL_NUMBER)),
         head_cell("SONG / ARTIST", Length::Fill),
         head_cell("DANCE", Length::Fixed(COL_DANCE)),
@@ -366,21 +375,30 @@ fn build_song_row<'a>(
 
     let actions = row![
         with_tooltip(
-            buttons::ghost_icon("play_arrow", false, 14.0, Message::ItemChanged(
-                ItemChange::PlaylistAbsolute(idx)
-            )),
+            buttons::ghost_icon(
+                "play_arrow",
+                false,
+                14.0,
+                Message::ItemChanged(ItemChange::PlaylistAbsolute(idx))
+            ),
             "Show now"
         ),
         with_tooltip(
-            buttons::ghost_icon("skip_next", false, 14.0, Message::SetNextItem(
-                ItemSource::Playlist(idx)
-            )),
+            buttons::ghost_icon(
+                "skip_next",
+                false,
+                14.0,
+                Message::SetNextItem(ItemSource::Playlist(idx))
+            ),
             "Queue as next"
         ),
         with_tooltip(
-            buttons::ghost_icon("delete", false, 14.0, Message::Dialog(
-                DialogMessage::RequestDelete(ItemSource::Playlist(idx))
-            )),
+            buttons::ghost_icon(
+                "delete",
+                false,
+                14.0,
+                Message::Dialog(DialogMessage::RequestDelete(ItemSource::Playlist(idx)))
+            ),
             "Delete song"
         ),
     ]
@@ -439,11 +457,7 @@ fn build_song_row<'a>(
 
 // Dance cell: compact chip with an inline editable dance name. Submitting
 // matches the dance against the known dances (assigning its color).
-fn build_dance_cell<'a>(
-    dance: &'a str,
-    idx: usize,
-    color: Option<Color>,
-) -> Element<'a, Message> {
+fn build_dance_cell<'a>(dance: &'a str, idx: usize, color: Option<Color>) -> Element<'a, Message> {
     let chip = container(
         row![
             crate::ui::config_window::nav_sidebar::dot(7.0, move |t| {
@@ -575,11 +589,7 @@ fn build_empty_playlist_view(dance_interpreter: &DanceInterpreter) -> Element<'s
     let open_card = empty_state_card(
         "folder_open",
         "Open playlist file",
-        if traktor_available {
-            "Load an .m3u from disk"
-        } else {
-            "Load an .m3u from disk"
-        },
+        "Load an .m3u from disk",
         Message::OpenPlaylist,
     );
 
@@ -610,16 +620,28 @@ fn build_empty_playlist_view(dance_interpreter: &DanceInterpreter) -> Element<'s
             .style(|t: &Theme| iced::widget::text::Style {
                 color: Some(theme::Tokens::of(t).muted),
             }),
-        row![open_card, traktor_card].spacing(16),
+        // The two cards share the available width equally, capped at the
+        // prototype size (2 × 200 + spacing).
+        container(
+            row![open_card, traktor_card]
+                .spacing(16)
+                .width(Length::Fill),
+        )
+        .width(Length::Fill)
+        .max_width(416.0),
     ]
     .spacing(10)
     .align_x(Alignment::Center)
     .width(Length::Fill);
 
     container(
-        col![Space::new().height(Length::Fill), content, Space::new().height(Length::Fill)]
-            .width(Length::Fill)
-            .height(Length::Fill),
+        col![
+            Space::new().height(Length::Fill),
+            content,
+            Space::new().height(Length::Fill)
+        ]
+        .width(Length::Fill)
+        .height(Length::Fill),
     )
     .width(Length::Fill)
     .height(Length::Fill)
@@ -637,11 +659,11 @@ fn empty_state_card(
     let card = button(
         container(
             col![
-                material_symbol(icon, false)
-                    .size(30.0)
-                    .style(|t: &Theme| iced::widget::text::Style {
+                material_symbol(icon, false).size(30.0).style(|t: &Theme| {
+                    iced::widget::text::Style {
                         color: Some(theme::Tokens::of(t).accent_soft),
-                    }),
+                    }
+                }),
                 text(title)
                     .size(sz::BASE)
                     .font(theme::body_font(iced::font::Weight::Medium))
@@ -663,7 +685,7 @@ fn empty_state_card(
         .align_y(Alignment::Center),
     )
     .padding(20)
-    .width(Length::Fixed(200.0))
+    .width(Length::FillPortion(1))
     .height(Length::Fixed(140.0))
     .style(|t: &Theme, s: button::Status| {
         let tk = theme::Tokens::of(t);

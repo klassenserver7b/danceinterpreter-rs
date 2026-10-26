@@ -6,9 +6,7 @@ use crate::traktor_api::TraktorMessage;
 use crate::ui::config_window::sidebar::SidebarMessage;
 use crate::ui::config_window::{ConfigWindow, source_tag};
 use crate::ui::theme::{self, sz};
-use crate::ui::widgets::{
-    buttons, heading, kbd, material_symbol, material_symbol_sized,
-};
+use crate::ui::widgets::{buttons, heading, kbd, material_symbol, material_symbol_sized};
 use crate::{DanceInterpreter, Message};
 use iced::widget::{button, column as col, container, row, scrollable, text, toggler};
 use iced::{Alignment, Color, Element, Length, Theme};
@@ -90,7 +88,9 @@ fn build_up_next<'a>(dance_interpreter: &'a DanceInterpreter) -> Element<'a, Mes
             .style(|t: &Theme| iced::widget::text::Style {
                 color: Some(theme::Tokens::of(t).muted),
             }),
-        container(source_tag(tag)).width(Length::Fill).align_x(Alignment::End),
+        container(source_tag(tag))
+            .width(Length::Fill)
+            .align_x(Alignment::End),
     ]
     .spacing(7)
     .align_y(Alignment::Center);
@@ -169,7 +169,12 @@ fn build_dj_card<'a>(
                 color: Some(theme::Tokens::of(t).muted),
             }
         }),
-        heading("DJ integration", sz::PANEL_TITLE, iced::font::Weight::Semibold).style(|t| {
+        heading(
+            "DJ integration",
+            sz::PANEL_TITLE,
+            iced::font::Weight::Semibold
+        )
+        .style(|t| {
             iced::widget::text::Style {
                 color: Some(theme::Tokens::of(t).text),
             }
@@ -251,13 +256,11 @@ fn build_dj_card<'a>(
             .style(|t: &Theme| iced::widget::text::Style {
                 color: Some(theme::Tokens::of(t).text_soft),
             }),
-        container(
-            text(address.as_str())
-                .size(sz::TINY)
-                .style(|t: &Theme| iced::widget::text::Style {
-                    color: Some(theme::Tokens::of(t).faint),
-                })
-        )
+        container(text(address.as_str()).size(sz::TINY).style(|t: &Theme| {
+            iced::widget::text::Style {
+                color: Some(theme::Tokens::of(t).faint),
+            }
+        }))
         .width(Length::Fill)
         .align_x(Alignment::End),
     ]
@@ -290,12 +293,10 @@ fn build_dj_card<'a>(
     let mut foot = col![].spacing(8);
 
     if provider.get_song_info().is_some() {
-        foot = foot.push(
-            buttons::secondary(
-                "Add current song",
-                Message::AddTraktorSong,
-            ),
-        );
+        foot = foot.push(buttons::secondary(
+            "Add current song",
+            Message::AddTraktorSong,
+        ));
     }
 
     foot = foot.push(
@@ -329,14 +330,11 @@ fn build_dj_card<'a>(
         .width(Length::Fill),
     );
 
-    container(
-        col![heading_row, source_row, connection_row, sync_row, foot]
-            .spacing(12),
-    )
-    .padding(15)
-    .width(Length::Fill)
-    .style(theme::card)
-    .into()
+    container(col![heading_row, source_row, connection_row, sync_row, foot].spacing(12))
+        .padding(15)
+        .width(Length::Fill)
+        .style(theme::card)
+        .into()
 }
 
 // ---------------------------------------------------------------------------
@@ -381,7 +379,9 @@ fn build_tip() -> Element<'static, Message> {
                 )
                 .padding([4, 6])
                 .style(theme::btn_ghost)
-                .on_press(Message::OpenDialog(crate::ui::config_window::DialogState::Help))
+                .on_press(Message::OpenDialog(
+                    crate::ui::config_window::DialogState::Help
+                ))
             )
             .padding(crate::ui::theme::pad4(2.0, 0.0, 0.0, 23.0)),
         ]

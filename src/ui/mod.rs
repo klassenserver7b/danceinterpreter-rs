@@ -1,5 +1,5 @@
-use iced::widget::{container, text, tooltip};
 use iced::Element;
+use iced::widget::{container, text, tooltip};
 
 pub mod config_window;
 pub mod song_window;

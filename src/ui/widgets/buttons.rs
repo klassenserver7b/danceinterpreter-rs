@@ -16,10 +16,7 @@ fn label_text<'a>(label: impl IntoFragment<'a>) -> iced::widget::Text<'a, Theme,
 }
 
 /// Filled sage-green primary button.
-pub fn primary<'a>(
-    label: impl IntoFragment<'a> + 'a,
-    message: Message,
-) -> Button<'a, Message> {
+pub fn primary<'a>(label: impl IntoFragment<'a> + 'a, message: Message) -> Button<'a, Message> {
     button(label_text(label))
         .padding([8, 13])
         .style(theme::btn_primary)
@@ -38,10 +35,7 @@ pub fn primary_small<'a>(
 }
 
 /// Dark outlined secondary button.
-pub fn secondary<'a>(
-    label: impl IntoFragment<'a> + 'a,
-    message: Message,
-) -> Button<'a, Message> {
+pub fn secondary<'a>(label: impl IntoFragment<'a> + 'a, message: Message) -> Button<'a, Message> {
     button(label_text(label))
         .padding([8, 13])
         .style(theme::btn_secondary)
@@ -50,10 +44,7 @@ pub fn secondary<'a>(
 
 /// Outline button used in page headings.
 #[allow(dead_code)] // design-system toolkit
-pub fn outline<'a>(
-    label: impl IntoFragment<'a> + 'a,
-    message: Message,
-) -> Button<'a, Message> {
+pub fn outline<'a>(label: impl IntoFragment<'a> + 'a, message: Message) -> Button<'a, Message> {
     button(label_text(label))
         .padding([8, 13])
         .style(theme::btn_outline)

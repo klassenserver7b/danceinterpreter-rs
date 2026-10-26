@@ -76,11 +76,13 @@ pub fn build<'a>(
             .width(Length::Fixed(5.0))
             .height(Length::Fixed(5.0))
             .style(move |_: &Theme| {
-                container::Style::default().background(color).border(iced::Border {
-                    color: iced::Color::TRANSPARENT,
-                    width: 0.0,
-                    radius: 3.0.into(),
-                })
+                container::Style::default()
+                    .background(color)
+                    .border(iced::Border {
+                        color: iced::Color::TRANSPARENT,
+                        width: 0.0,
+                        radius: 3.0.into(),
+                    })
             });
 
         let btn = button(
@@ -98,7 +100,9 @@ pub fn build<'a>(
                 theme::btn_secondary(t, s)
             }
         })
-        .on_press(Message::ItemChanged(ItemChange::StaticAbsolute(name.clone())));
+        .on_press(Message::ItemChanged(ItemChange::StaticAbsolute(
+            name.clone(),
+        )));
 
         buttons_row = buttons_row.push(with_tooltip(
             btn,
@@ -113,7 +117,7 @@ pub fn build<'a>(
                     iced::widget::text::Style {
                         color: Some(theme::Tokens::of(t).muted),
                     }
-                })
+                }),
             )
             .height(Length::Fill)
             .align_y(Alignment::Center),
@@ -128,7 +132,9 @@ pub fn build<'a>(
     buttons_row = buttons_row.push(manage);
 
     let scroll = scrollable(buttons_row)
-        .direction(Direction::Horizontal(Scrollbar::new().width(6.0).scroller_width(6.0)))
+        .direction(Direction::Horizontal(
+            Scrollbar::new().width(6.0).scroller_width(6.0),
+        ))
         .width(Length::Fill)
         .height(Length::Shrink)
         .style(theme::scrollable_style);
@@ -150,11 +156,14 @@ fn quick_button<'a>(
     active: bool,
     message: Message,
 ) -> Element<'a, Message> {
-    let mut content = row![].spacing(7).height(Length::Fill).align_y(Alignment::Center);
+    let mut content = row![]
+        .spacing(7)
+        .height(Length::Fill)
+        .align_y(Alignment::Center);
 
     if let Some(icon) = icon {
         content = content.push(
-            material_symbol_sized(&icon, false, 15.0).style(move |t: &Theme| {
+            material_symbol_sized(icon, false, 15.0).style(move |t: &Theme| {
                 iced::widget::text::Style {
                     color: Some(if active {
                         theme::Tokens::of(t).active_text
@@ -166,17 +175,15 @@ fn quick_button<'a>(
         );
     }
 
-    content = content.push(
-        text(label)
-            .size(sz::TINY)
-            .style(move |t: &Theme| iced::widget::text::Style {
-                color: Some(if active {
-                    theme::Tokens::of(t).active_text
-                } else {
-                    theme::Tokens::of(t).btn2_text
-                }),
+    content = content.push(text(label).size(sz::TINY).style(move |t: &Theme| {
+        iced::widget::text::Style {
+            color: Some(if active {
+                theme::Tokens::of(t).active_text
+            } else {
+                theme::Tokens::of(t).btn2_text
             }),
-    );
+        }
+    }));
 
     if let Some(hint) = hint {
         content = content.push(hint);

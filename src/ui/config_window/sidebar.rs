@@ -77,7 +77,12 @@ impl Sidebar {
             container(source_tag("TRAKTOR PRO"))
                 .width(Length::Fill)
                 .align_x(Alignment::End),
-            buttons::ghost_icon("close", false, 16.0, Message::Sidebar(SidebarMessage::Toggle)),
+            buttons::ghost_icon(
+                "close",
+                false,
+                16.0,
+                Message::Sidebar(SidebarMessage::Toggle)
+            ),
         ]
         .spacing(8)
         .align_y(Alignment::Center);
@@ -132,11 +137,9 @@ impl Sidebar {
 
         let next_mode = col![
             control_caption("Next Song Mode"),
-            pick_list(
-                next_options.clone(),
-                Some(provider.next_mode),
-                |m| Message::Traktor(TraktorMessage::SetNextMode(m))
-            )
+            pick_list(next_options.clone(), Some(provider.next_mode), |m| {
+                Message::Traktor(TraktorMessage::SetNextMode(m))
+            })
             .width(Length::Fill)
             .text_size(sz::SMALL + 1.0)
             .padding([5, 8])
@@ -147,11 +150,9 @@ impl Sidebar {
 
         let next_mode_fallback = col![
             control_caption("Next Song Mode (Fallback)"),
-            pick_list(
-                next_options,
-                Some(provider.next_mode_fallback),
-                |m| Message::Traktor(TraktorMessage::SetNextModeFallback(m))
-            )
+            pick_list(next_options, Some(provider.next_mode_fallback), |m| {
+                Message::Traktor(TraktorMessage::SetNextModeFallback(m))
+            })
             .width(Length::Fill)
             .text_size(sz::SMALL + 1.0)
             .padding([5, 8])
@@ -235,9 +236,7 @@ impl Sidebar {
 
     /// A small LED + label showing whether a Traktor client is
     /// connected, listing client's IP available.
-    fn build_client_status<'a>(
-        dance_interpreter: &'a DanceInterpreter,
-    ) -> Element<'a, Message> {
+    fn build_client_status<'a>(dance_interpreter: &'a DanceInterpreter) -> Element<'a, Message> {
         let client_connection_state = dance_interpreter
             .data_provider
             .traktor_provider
@@ -246,12 +245,10 @@ impl Sidebar {
         let led = container(Space::new())
             .width(Length::Fixed(8.0))
             .height(Length::Fixed(8.0))
-            .style(move |t: &iced::Theme| {
-                container::Style {
-                    background: Some(theme::led_color(t, client_connection_state).into()),
-                    border: border::rounded(4.0),
-                    ..container::Style::default()
-                }
+            .style(move |t: &iced::Theme| container::Style {
+                background: Some(theme::led_color(t, client_connection_state).into()),
+                border: border::rounded(4.0),
+                ..container::Style::default()
             });
 
         let summary = match client_connection_state {
@@ -262,11 +259,14 @@ impl Sidebar {
         };
 
         let mut column = col![
-            row![led, text(summary)
-                .size(sz::SMALL)
-                .style(|t: &Theme| iced::widget::text::Style {
-                    color: Some(theme::Tokens::of(t).text_soft),
-                })]
+            row![
+                led,
+                text(summary)
+                    .size(sz::SMALL)
+                    .style(|t: &Theme| iced::widget::text::Style {
+                        color: Some(theme::Tokens::of(t).text_soft),
+                    })
+            ]
             .spacing(8)
             .align_y(Alignment::Center),
         ]
@@ -280,13 +280,11 @@ impl Sidebar {
             .map(|addr| addr.ip().to_string());
 
         if let Some(label) = label {
-            column = column.push(
-                text(label)
-                    .size(sz::MICRO)
-                    .style(|t: &Theme| iced::widget::text::Style {
-                        color: Some(theme::Tokens::of(t).faint),
-                    }),
-            );
+            column = column.push(text(label).size(sz::MICRO).style(|t: &Theme| {
+                iced::widget::text::Style {
+                    color: Some(theme::Tokens::of(t).faint),
+                }
+            }));
         }
 
         container(column)

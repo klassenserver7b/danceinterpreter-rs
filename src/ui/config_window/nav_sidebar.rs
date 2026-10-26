@@ -74,13 +74,21 @@ pub fn build<'a>(
     ]
     .spacing(3);
 
-    container(col![nav, container(bottom).padding(crate::ui::theme::pad4(20.0, 0.0, 14.0, 0.0)).height(Length::Fill)].height(Length::Fill))
-        .width(Length::Fixed(width))
-        .height(Length::Fill)
-        .clip(true)
-        .padding(crate::ui::theme::pad4(29.0, 17.0, 0.0, 17.0))
-        .style(theme::sidebar_bg)
-        .into()
+    container(
+        col![
+            nav,
+            container(bottom)
+                .padding(crate::ui::theme::pad4(20.0, 0.0, 14.0, 0.0))
+                .height(Length::Fill)
+        ]
+        .height(Length::Fill),
+    )
+    .width(Length::Fixed(width))
+    .height(Length::Fill)
+    .clip(true)
+    .padding(crate::ui::theme::pad4(29.0, 17.0, 0.0, 17.0))
+    .style(theme::sidebar_bg)
+    .into()
 }
 
 fn brand() -> Element<'static, Message> {
@@ -188,13 +196,11 @@ fn session_card<'a>(config_window: &'a ConfigWindow) -> Element<'a, Message> {
 }
 
 fn count_badge(count: usize) -> Element<'static, Message> {
-    container(
-        text(count.to_string())
-            .size(sz::MICRO)
-            .style(|t: &Theme| iced::widget::text::Style {
-                color: Some(theme::Tokens::of(t).muted),
-            }),
-    )
+    container(text(count.to_string()).size(sz::MICRO).style(|t: &Theme| {
+        iced::widget::text::Style {
+            color: Some(theme::Tokens::of(t).muted),
+        }
+    }))
     .padding([1, 6])
     .style(|t: &Theme| {
         let tk = theme::Tokens::of(t);
@@ -277,19 +283,18 @@ fn nav_item_impl<'a>(
         .into()
 }
 
-pub fn dot(
-    size: f32,
-    color: impl Fn(&Theme) -> Color + 'static,
-) -> Element<'static, Message> {
+pub fn dot(size: f32, color: impl Fn(&Theme) -> Color + 'static) -> Element<'static, Message> {
     container(iced::widget::Space::new())
         .width(Length::Fixed(size))
         .height(Length::Fixed(size))
         .style(move |t: &Theme| {
-            container::Style::default().background(color(t)).border(iced::Border {
-                color: Color::TRANSPARENT,
-                width: 0.0,
-                radius: (size / 2.0).into(),
-            })
+            container::Style::default()
+                .background(color(t))
+                .border(iced::Border {
+                    color: Color::TRANSPARENT,
+                    width: 0.0,
+                    radius: (size / 2.0).into(),
+                })
         })
         .into()
 }

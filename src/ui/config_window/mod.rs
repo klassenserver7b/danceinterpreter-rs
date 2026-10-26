@@ -157,23 +157,33 @@ impl ConfigWindow {
         let dj_panel = self
             .sidebar
             .build(dance_interpreter)
-            .width(self.sidebar.state.interpolate(
-                0.0,
-                (self.size.width / 5.0).min(400.0),
-                now,
-            ));
+            .width(
+                self.sidebar
+                    .state
+                    .interpolate(0.0, (self.size.width / 5.0).min(400.0), now),
+            );
 
-        // Collapsible columns: navigation sidebar (left) and info rail (right).
+        // Collapsible columns: navigation sidebar (left) and info rail
+        // (right). Their expanded width follows the window (like the DJ
+        // panel), capped at the design width with a readable floor.
         let nav = nav_sidebar::build(
             self,
             dance_interpreter,
-            self.nav_anim.interpolate(0.0, nav_sidebar::SIDEBAR_WIDTH, now),
+            self.nav_anim.interpolate(
+                0.0,
+                (self.size.width / 6.0).clamp(180.0, nav_sidebar::SIDEBAR_WIDTH),
+                now,
+            ),
         );
 
         let rail = right_column::build(
             self,
             dance_interpreter,
-            self.rail_anim.interpolate(0.0, right_column::RAIL_WIDTH, now),
+            self.rail_anim.interpolate(
+                0.0,
+                (self.size.width / 5.0).clamp(210.0, right_column::RAIL_WIDTH),
+                now,
+            ),
         );
 
         let content = row![primary, dj_panel, rail]
@@ -231,10 +241,9 @@ impl ConfigWindow {
 /// Shared helper: a "source tag" chip like `PLAYLIST` / `QUEUED`.
 pub fn source_tag<'a>(text: &'a str) -> Element<'a, Message> {
     container(
-        crate::ui::widgets::text_micro(text)
-            .style(|t: &Theme| iced::widget::text::Style {
-                color: Some(theme::Tokens::of(t).tag_text),
-            }),
+        crate::ui::widgets::text_micro(text).style(|t: &Theme| iced::widget::text::Style {
+            color: Some(theme::Tokens::of(t).tag_text),
+        }),
     )
     .padding([2, 5])
     .style(|t: &Theme| {

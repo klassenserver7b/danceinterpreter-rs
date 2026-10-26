@@ -5,9 +5,7 @@ use crate::dataloading::dataprovider::ItemSource;
 use crate::dataloading::displayable_data::DisplayableData;
 use crate::ui::config_window::{ConfigWindow, source_tag};
 use crate::ui::theme::{self, sz};
-use crate::ui::widgets::{
-    buttons, heading, material_symbol, material_symbol_sized,
-};
+use crate::ui::widgets::{buttons, heading, material_symbol, material_symbol_sized};
 use crate::{DanceInterpreter, Message};
 use iced::alignment::Vertical;
 use iced::widget::{column as col, container, image, row, text};
@@ -39,39 +37,40 @@ pub fn build<'a>(
         (ItemSource::Playlist(_), Some(d))
         | (ItemSource::Traktor, Some(d))
         | (ItemSource::Other(_), Some(d)) => (d.subline_upper.clone(), d.subline_lower.clone()),
-        _ => ("Ready when you are".to_string(), "Audience display".to_string()),
+        _ => (
+            "Ready when you are".to_string(),
+            "Audience display".to_string(),
+        ),
     };
 
-    let cover: Element<'a, Message> = match displayable.as_ref().and_then(|d| d.subline_image.clone())
-    {
-        Some(handle) => container(
-            image(handle)
-                .width(Length::Fill)
-                .height(Length::Fill)
-                .content_fit(ContentFit::Cover),
-        )
-        .width(Length::Fixed(56.0))
-        .height(Length::Fill)
-        .clip(true)
-        .style(theme::cover_placeholder)
-        .into(),
-        None => container(
-            material_symbol("music_note", false)
-                .size(22.0)
-                .style(|t: &Theme| iced::widget::text::Style {
+    let cover: Element<'a, Message> =
+        match displayable.as_ref().and_then(|d| d.subline_image.clone()) {
+            Some(handle) => container(
+                image(handle)
+                    .width(Length::Fill)
+                    .height(Length::Fill)
+                    .content_fit(ContentFit::Cover),
+            )
+            .width(Length::Fixed(56.0))
+            .height(Length::Fill)
+            .clip(true)
+            .style(theme::cover_placeholder)
+            .into(),
+            None => container(material_symbol("music_note", false).size(22.0).style(
+                |t: &Theme| iced::widget::text::Style {
                     color: Some(Color {
                         a: 0.35,
                         ..theme::Tokens::of(t).accent_soft
                     }),
-                }),
-        )
-        .width(Length::Fixed(56.0))
-        .height(Length::Fill)
-        .align_x(Alignment::Center)
-        .align_y(Alignment::Center)
-        .style(theme::cover_placeholder)
-        .into(),
-    };
+                },
+            ))
+            .width(Length::Fixed(56.0))
+            .height(Length::Fill)
+            .align_x(Alignment::Center)
+            .align_y(Alignment::Center)
+            .style(theme::cover_placeholder)
+            .into(),
+        };
 
     // Playlist position indicator.
     let playlist_len = provider.playlist().len();
@@ -147,11 +146,15 @@ pub fn build<'a>(
     // Fixed content height: gives the row a definite height (no compression),
     // so the cover's Fill height expands to the full card content while the
     // card itself still hugs this row.
-    let body = row![cover, col![kicker, main_line].spacing(5).width(Length::Fill), transport(is_blank, position)]
-        .spacing(14)
-        .align_y(Alignment::Center)
-        .width(Length::Fill)
-        .height(Length::Fixed(40.0));
+    let body = row![
+        cover,
+        col![kicker, main_line].spacing(5).width(Length::Fill),
+        transport(is_blank, position)
+    ]
+    .spacing(14)
+    .align_y(Alignment::Center)
+    .width(Length::Fill)
+    .height(Length::Fixed(40.0));
 
     container(body)
         .padding(crate::ui::theme::pad4(14.0, 18.0, 14.0, 18.0))
@@ -162,9 +165,12 @@ pub fn build<'a>(
 }
 
 fn transport<'a>(is_blank: bool, position: String) -> Element<'a, Message> {
-    let prev = buttons::ghost_icon("skip_previous", false, 16.0, Message::ItemChanged(
-        crate::dataloading::dataprovider::ItemChange::Previous,
-    ));
+    let prev = buttons::ghost_icon(
+        "skip_previous",
+        false,
+        16.0,
+        Message::ItemChanged(crate::dataloading::dataprovider::ItemChange::Previous),
+    );
 
     let next_button = iced::widget::button(
         row![
@@ -181,15 +187,16 @@ fn transport<'a>(is_blank: bool, position: String) -> Element<'a, Message> {
         crate::dataloading::dataprovider::ItemChange::Next,
     ));
 
-    let position_text = text(position)
-        .size(sz::SMALL)
-        .style(move |t: &Theme| iced::widget::text::Style {
-            color: Some(if is_blank {
-                theme::Tokens::of(t).faint
-            } else {
-                theme::Tokens::of(t).muted
-            }),
-        });
+    let position_text =
+        text(position)
+            .size(sz::SMALL)
+            .style(move |t: &Theme| iced::widget::text::Style {
+                color: Some(if is_blank {
+                    theme::Tokens::of(t).faint
+                } else {
+                    theme::Tokens::of(t).muted
+                }),
+            });
 
     container(
         row![prev, next_button, position_text]
@@ -206,7 +213,10 @@ fn kbd_on_accent<'a>(label: &'a str) -> Element<'a, Message> {
         .style(|t: &Theme| {
             let tk = theme::Tokens::of(t);
             container::Style::default().border(iced::Border {
-                color: Color { a: 0.4, ..tk.btn2_border },
+                color: Color {
+                    a: 0.4,
+                    ..tk.btn2_border
+                },
                 width: 1.0,
                 radius: 3.0.into(),
             })

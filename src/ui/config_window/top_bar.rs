@@ -19,7 +19,11 @@ pub fn build<'a>(
 
     let nav_toggle = with_tooltip(
         buttons::ghost_icon(
-            if config_window.nav_open() { "menu_open" } else { "menu" },
+            if config_window.nav_open() {
+                "menu_open"
+            } else {
+                "menu"
+            },
             false,
             16.0,
             Message::ToggleNavSidebar,
@@ -66,10 +70,16 @@ pub fn build<'a>(
 
     container(
         row![
-            container(row![nav_toggle, breadcrumb].spacing(10).align_y(Alignment::Center)),
-            container(row![rail_toggle, open_playlist, open_song_window]
-                .spacing(10)
-                .align_y(Alignment::Center))
+            container(
+                row![nav_toggle, breadcrumb]
+                    .spacing(10)
+                    .align_y(Alignment::Center)
+            ),
+            container(
+                row![rail_toggle, open_playlist, open_song_window]
+                    .spacing(10)
+                    .align_y(Alignment::Center)
+            )
             .width(Length::Fill)
             .align_x(Alignment::End),
         ]
@@ -89,9 +99,7 @@ pub fn divider() -> Element<'static, Message> {
     container(iced::widget::Space::new())
         .width(Length::Fill)
         .height(Length::Fixed(1.0))
-        .style(|t: &Theme| {
-            container::Style::default().background(theme::Tokens::of(t).border)
-        })
+        .style(|t: &Theme| container::Style::default().background(theme::Tokens::of(t).border))
         .into()
 }
 

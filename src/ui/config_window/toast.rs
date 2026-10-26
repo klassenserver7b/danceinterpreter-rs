@@ -1,9 +1,9 @@
 //! Toast notification bubble shown above the quick-show bar.
 
+use crate::Message;
 use crate::ui::config_window::Toast;
 use crate::ui::theme::{self, sz};
 use crate::ui::widgets::{material_symbol, material_symbol_sized};
-use crate::Message;
 use iced::alignment::Vertical;
 use iced::widget::{button, container, row, text};
 use iced::{Alignment, Element, Length, Theme};
@@ -13,10 +13,8 @@ pub fn build(toast: &Option<Toast>) -> Option<Element<'_, Message>> {
     let toast = toast.as_ref()?;
 
     let close = button(
-        material_symbol_sized("close", false, 14.0).style(|t: &Theme| {
-            iced::widget::text::Style {
-                color: Some(theme::Tokens::of(t).toast_text),
-            }
+        material_symbol_sized("close", false, 14.0).style(|t: &Theme| iced::widget::text::Style {
+            color: Some(theme::Tokens::of(t).toast_text),
         }),
     )
     .padding(2)

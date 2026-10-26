@@ -1,14 +1,14 @@
 //! Design system for the redesigned Danceinterpreter UI.
 //!
 //! The look is ported from the approved design prototype (`docs/src/App.tsx`
-//! + `docs/src/index.css`): a calm, sage-green "music studio" theme with
+//! plus `docs/src/index.css`): a calm, sage-green "music studio" theme with
 //! `Manrope` for headings and `DM Sans` for body text (bundled as static
 //! instances, see `resources/main/fonts/`).
 
+use iced::border::Radius;
 use iced::font::{Family, Style as FontStyle, Weight};
 use iced::widget::{button, checkbox, container, pick_list, scrollable, text_input, toggler};
-use iced::{color, Background, Border, Color, Font, Theme};
-use iced::border::Radius;
+use iced::{Background, Border, Color, Font, Theme, color};
 
 /// Body font family (DM Sans statics are bundled).
 pub const FONT_BODY: &str = "DM Sans";
@@ -466,7 +466,10 @@ impl Tokens {
             toast_text: tint(if is_light { 0.1 } else { 0.45 }),
 
             modal_border: mix(accent, bg, if is_light { 0.2 } else { 0.7 }),
-            backdrop: with_alpha(mix(Color::BLACK, accent, 0.05), if is_light { 0.45 } else { 0.72 }),
+            backdrop: with_alpha(
+                mix(Color::BLACK, accent, 0.05),
+                if is_light { 0.45 } else { 0.72 },
+            ),
 
             kbd_border: line(0.15),
             kbd_bg: mix(bg, accent, 0.12),
@@ -517,17 +520,12 @@ pub fn card(theme: &Theme) -> container::Style {
 
 pub fn sidebar_bg(theme: &Theme) -> container::Style {
     let t = Tokens::of(theme);
-    container::Style::default()
-        .background(t.bg)
-        .border(Border {
-            color: t.border,
-            width: 1.0,
-            radius: Radius::default(),
-        })
+    container::Style::default().background(t.bg).border(Border {
+        color: t.border,
+        width: 1.0,
+        radius: Radius::default(),
+    })
 }
-
-
-/// The bottom hairline of the top bar.
 
 /// Gradient "now playing" hero card.
 pub fn now_card(theme: &Theme) -> container::Style {
@@ -554,11 +552,13 @@ pub fn table_head(theme: &Theme) -> container::Style {
 
 pub fn showbar_bg(theme: &Theme) -> container::Style {
     let t = Tokens::of(theme);
-    container::Style::default().background(t.panel).border(Border {
-        color: t.border,
-        width: 1.0,
-        radius: Radius::default(),
-    })
+    container::Style::default()
+        .background(t.panel)
+        .border(Border {
+            color: t.border,
+            width: 1.0,
+            radius: Radius::default(),
+        })
 }
 
 /// Visual states of a playlist/statics row.
@@ -631,7 +631,6 @@ pub fn toast_card(theme: &Theme) -> container::Style {
             blur_radius: 35.0,
         })
 }
-
 
 /// Neutral dance chip: a faint text-tinted pill, like the prototype
 /// (`background:#ffffff04; border:#ffffff06`). The dance color is carried by
@@ -773,7 +772,10 @@ pub fn btn_ghost(theme: &Theme, status: button::Status) -> button::Style {
     button::Style {
         background: match status {
             button::Status::Hovered => Some(Background::Color(t.ghost_hover)),
-            button::Status::Pressed => Some(Background::Color(Color { a: 0.08, ..t.ghost_hover })),
+            button::Status::Pressed => Some(Background::Color(Color {
+                a: 0.08,
+                ..t.ghost_hover
+            })),
             _ => None,
         },
         text_color: t.muted,
@@ -822,11 +824,7 @@ pub fn btn_nav(selected: bool) -> impl Fn(&Theme, button::Status) -> button::Sty
         let base = if selected { t.accent_nav_bg } else { t.bg };
         button::Style {
             background: hover(status, base, 1.08),
-            text_color: if selected {
-                t.accent_nav_text
-            } else {
-                t.muted
-            },
+            text_color: if selected { t.accent_nav_text } else { t.muted },
             border: Border {
                 color: Color::TRANSPARENT,
                 width: 0.0,
@@ -953,7 +951,10 @@ pub fn scrollable_style(theme: &Theme, status: scrollable::Status) -> scrollable
 pub fn pick_list_style(theme: &Theme, status: pick_list::Status) -> pick_list::Style {
     let t = Tokens::of(theme);
     let bg = match status {
-        pick_list::Status::Hovered => Color { a: 1.0, ..t.btn2_bg },
+        pick_list::Status::Hovered => Color {
+            a: 1.0,
+            ..t.btn2_bg
+        },
         _ => t.panel_deep,
     };
     pick_list::Style {
@@ -1048,10 +1049,7 @@ pub fn tooltip_style(theme: &Theme) -> container::Style {
 }
 
 /// LED dot color for the DJ connection state.
-pub fn led_color(
-    theme: &Theme,
-    state: crate::traktor_api::ConnectionState,
-) -> Color {
+pub fn led_color(theme: &Theme, state: crate::traktor_api::ConnectionState) -> Color {
     let t = Tokens::of(theme);
     use crate::traktor_api::ConnectionState as S;
     match state {

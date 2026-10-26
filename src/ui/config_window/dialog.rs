@@ -7,7 +7,10 @@ use crate::ui::theme::{self, sz};
 use crate::ui::widgets::{buttons, heading, kbd};
 use crate::ui::with_tooltip;
 use crate::{DanceInterpreter, DialogMessage, Message, StaticsMessage};
-use iced::widget::{Button, Column, column as col, container, mouse_area, opaque, pick_list, row, space::Space, stack, text, text_input, toggler};
+use iced::widget::{
+    Button, Column, column as col, container, mouse_area, opaque, pick_list, row, space::Space,
+    stack, text, text_input, toggler,
+};
 use iced::{Alignment, Element, Length, Theme};
 use iced_aw::number_input;
 
@@ -103,10 +106,7 @@ pub fn build_dialog<'a>(
                     }
                 }),
                 Space::new().width(Length::Fill),
-                with_tooltip(
-                    buttons::ghost_icon("close", false, 18.0, close),
-                    "Close"
-                ),
+                with_tooltip(buttons::ghost_icon("close", false, 18.0, close), "Close"),
             ]
             .align_y(Alignment::Center),
             body,
@@ -116,7 +116,8 @@ pub fn build_dialog<'a>(
         .width(Length::Fill),
     )
     .padding(25)
-    .width(Length::Fixed(440.0))
+    .width(Length::Fill)
+    .max_width(440.0)
     .style(theme::modal_card);
 
     let backdrop = mouse_area(
@@ -153,10 +154,7 @@ fn dialog_actions<'a>(
 }
 
 /// A labeled settings row with a bottom hairline.
-fn setting_row<'a>(
-    label: &'a str,
-    control: Element<'a, Message>,
-) -> Element<'a, Message> {
+fn setting_row<'a>(label: &'a str, control: Element<'a, Message>) -> Element<'a, Message> {
     container(
         row![
             text(label)
@@ -211,11 +209,9 @@ fn build_settings<'a>(
     .style(theme::pick_list_style)
     .menu_style(theme::pick_list_menu_style);
 
-    let scale_input = number_input(
-        &dance_interpreter.song_window.scale,
-        0.5..=3.0,
-        |val| Message::SongWindow(crate::SongWindowMessage::ChangeScale(val)),
-    )
+    let scale_input = number_input(&dance_interpreter.song_window.scale, 0.5..=3.0, |val| {
+        Message::SongWindow(crate::SongWindowMessage::ChangeScale(val))
+    })
     .step(0.1)
     .width(Length::Fixed(120.0))
     .style(|t: &Theme, _status| {
@@ -237,7 +233,10 @@ fn build_settings<'a>(
     let body = col![
         setting_row(
             "Follow system theme",
-            switch(config_window.follow_system_theme, Message::EnableFollowSystemTheme),
+            switch(
+                config_window.follow_system_theme,
+                Message::EnableFollowSystemTheme
+            ),
         ),
         setting_row("Theme", theme_pick.into()),
         setting_row(
@@ -248,17 +247,15 @@ fn build_settings<'a>(
         setting_row("Text scale", scale_input.into()),
         setting_row(
             "Show thumbnails",
-            switch(
-                dance_interpreter.song_window.enable_image,
-                |v| Message::SongWindow(crate::SongWindowMessage::EnableImage(v)),
-            ),
+            switch(dance_interpreter.song_window.enable_image, |v| {
+                Message::SongWindow(crate::SongWindowMessage::EnableImage(v))
+            },),
         ),
         setting_row(
             "Show next dance",
-            switch(
-                dance_interpreter.song_window.enable_next_dance,
-                |v| Message::SongWindow(crate::SongWindowMessage::EnableNextDance(v)),
-            ),
+            switch(dance_interpreter.song_window.enable_next_dance, |v| {
+                Message::SongWindow(crate::SongWindowMessage::EnableNextDance(v))
+            },),
         ),
         setting_row(
             "Open audience window",
@@ -272,10 +269,18 @@ fn build_settings<'a>(
     ]
     .spacing(0);
 
-    ("Settings".to_string(), body, Space::new().height(Length::Fixed(0.0)).into())
+    (
+        "Settings".to_string(),
+        body,
+        Space::new().height(Length::Fixed(0.0)).into(),
+    )
 }
 
-fn build_help() -> (String, Column<'static, Message, Theme>, Element<'static, Message>) {
+fn build_help() -> (
+    String,
+    Column<'static, Message, Theme>,
+    Element<'static, Message>,
+) {
     let shortcuts: &[(&str, &str)] = &[
         ("Next song", "Space / \u{2192}"),
         ("Previous song", "\u{2190}"),
@@ -296,23 +301,29 @@ fn build_help() -> (String, Column<'static, Message, Theme>, Element<'static, Me
     let mut body = col![].spacing(4);
 
     for (action, keys) in shortcuts {
-        body = body.push(container(
-            row![
-                text(*action)
-                    .size(sz::SMALL + 1.0)
-                    .style(|t: &Theme| iced::widget::text::Style {
-                        color: Some(theme::Tokens::of(t).text_soft),
-                    })
-                    .width(Length::Fill),
-                kbd(*keys),
-            ]
-            .align_y(Alignment::Center),
-        )
-        .padding([7, 0])
-        .width(Length::Fill));
+        body = body.push(
+            container(
+                row![
+                    text(*action)
+                        .size(sz::SMALL + 1.0)
+                        .style(|t: &Theme| iced::widget::text::Style {
+                            color: Some(theme::Tokens::of(t).text_soft),
+                        })
+                        .width(Length::Fill),
+                    kbd(*keys),
+                ]
+                .align_y(Alignment::Center),
+            )
+            .padding([7, 0])
+            .width(Length::Fill),
+        );
     }
 
-    ("Keyboard shortcuts".to_string(), body, Space::new().height(Length::Fixed(0.0)).into())
+    (
+        "Keyboard shortcuts".to_string(),
+        body,
+        Space::new().height(Length::Fixed(0.0)).into(),
+    )
 }
 
 fn build_add_static<'a>(
@@ -341,7 +352,9 @@ fn build_add_static<'a>(
         buttons::secondary("Cancel", Message::Dialog(DialogMessage::Close)),
         buttons::primary(
             "Add static",
-            Message::Statics(StaticsMessage::AddNamed(config_window.add_static_name.clone())),
+            Message::Statics(StaticsMessage::AddNamed(
+                config_window.add_static_name.clone(),
+            )),
         ),
     ]);
 

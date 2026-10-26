@@ -12,7 +12,7 @@ use iced::alignment::{Horizontal, Vertical};
 use iced::font::Weight;
 use iced::widget::space::horizontal;
 use iced::widget::text::LineHeight;
-use iced::widget::{column as col, container, image, row, stack, Text};
+use iced::widget::{Text, column as col, container, image, row, stack};
 use iced::{ContentFit, Element, Gradient, Length, Theme, window};
 
 /// Audience text colors from `docs/src/audience.css`.
@@ -118,10 +118,12 @@ impl SongWindow {
             .shaping(Shaping::Advanced);
 
         // Song block: cover art beside title/artist. Statics have no sublines.
-        let has_song_info =
-            !displayable_data.subline_upper.is_empty() || !displayable_data.subline_lower.is_empty();
+        let has_song_info = !displayable_data.subline_upper.is_empty()
+            || !displayable_data.subline_lower.is_empty();
 
-        let mut center = col![dance_text].spacing(song_margin).align_x(Horizontal::Center);
+        let mut center = col![dance_text]
+            .spacing(song_margin)
+            .align_x(Horizontal::Center);
 
         if has_song_info {
             let text_block = col![
@@ -158,7 +160,9 @@ impl SongWindow {
                         })
                     });
 
-                    row![cover, text_block].spacing(song_gap).align_y(Vertical::Center)
+                    row![cover, text_block]
+                        .spacing(song_gap)
+                        .align_y(Vertical::Center)
                 } else {
                     row![text_block]
                 }
@@ -172,38 +176,40 @@ impl SongWindow {
         let center_overlay = container(center)
             .width(Length::Fill)
             .height(Length::Fill)
-            .padding(crate::ui::theme::pad4(pad_top, pad_side, pad_bottom, pad_side))
+            .padding(crate::ui::theme::pad4(
+                pad_top, pad_side, pad_bottom, pad_side,
+            ))
             .align_x(Horizontal::Center)
             .align_y(Vertical::Center);
 
         let mut layers = stack![center_overlay];
 
         // "UP NEXT" hint in the bottom-right corner.
-        if self.enable_next_dance {
-            if let Some(next_displayable_data) = state.data_provider.get_next_displayable_data() {
-                let next_block = col![
-                    Text::new("UP NEXT")
-                        .size(next_label_size)
-                        .font(crate::ui::theme::head_font(Weight::Semibold))
-                        .color(colors::MUTED),
-                    Text::new(next_displayable_data.headline)
-                        .size(next_dance_size)
-                        .font(crate::ui::theme::head_font(Weight::Medium))
-                        .color(colors::NEXT)
-                        .line_height(LineHeight::Relative(1.3))
-                        .shaping(Shaping::Advanced),
-                ]
-                .spacing(h / 60.0)
-                .align_x(Horizontal::Right);
+        if self.enable_next_dance
+            && let Some(next_displayable_data) = state.data_provider.get_next_displayable_data()
+        {
+            let next_block = col![
+                Text::new("UP NEXT")
+                    .size(next_label_size)
+                    .font(crate::ui::theme::head_font(Weight::Semibold))
+                    .color(colors::MUTED),
+                Text::new(next_displayable_data.headline)
+                    .size(next_dance_size)
+                    .font(crate::ui::theme::head_font(Weight::Medium))
+                    .color(colors::NEXT)
+                    .line_height(LineHeight::Relative(1.3))
+                    .shaping(Shaping::Advanced),
+            ]
+            .spacing(h / 60.0)
+            .align_x(Horizontal::Right);
 
-                layers = layers.push(
-                    container(row![horizontal(), next_block].width(Length::Fill))
-                        .width(Length::Fill)
-                        .height(Length::Fill)
-                        .padding(crate::ui::theme::pad4(0.0, pad_side, next_pad_bottom, 0.0))
-                        .align_y(Vertical::Bottom),
-                );
-            }
+            layers = layers.push(
+                container(row![horizontal(), next_block].width(Length::Fill))
+                    .width(Length::Fill)
+                    .height(Length::Fill)
+                    .padding(crate::ui::theme::pad4(0.0, pad_side, next_pad_bottom, 0.0))
+                    .align_y(Vertical::Bottom),
+            );
         }
 
         container(layers)
