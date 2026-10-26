@@ -22,7 +22,9 @@ pub fn build<'a>(
     let nav = col![
         brand(),
         session_card(config_window),
-        nav_label("WORKSPACE"),
+        // Breather between the session card and the nav items (the old
+        // "WORKSPACE" section label is gone — it was unclickable filler).
+        iced::widget::Space::new().height(Length::Fixed(10.0)),
         nav_item(
             "format_list_bulleted",
             "Playlist",
@@ -182,19 +184,6 @@ fn session_card<'a>(config_window: &'a ConfigWindow) -> Element<'a, Message> {
         })
     })
     .width(Length::Fill)
-    .into()
-}
-
-fn nav_label(label: &'static str) -> Element<'static, Message> {
-    container(
-        text(label)
-            .size(sz::MICRO)
-            .font(theme::body_font(iced::font::Weight::Semibold))
-            .style(|t: &Theme| iced::widget::text::Style {
-                color: Some(theme::Tokens::of(t).faint),
-            }),
-    )
-    .padding([0, 12])
     .into()
 }
 

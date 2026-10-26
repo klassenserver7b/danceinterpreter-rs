@@ -27,26 +27,12 @@ pub fn build<'a>(
         "Toggle navigation sidebar (Ctrl+B)",
     );
 
-    let breadcrumb = row![
-        text("Workspace")
-            .size(sz::SMALL)
-            .style(|t: &Theme| iced::widget::text::Style {
-                color: Some(theme::Tokens::of(t).muted),
-            }),
-        material_symbol_sized("chevron_right", false, 13.0).style(|t: &Theme| {
-            iced::widget::text::Style {
-                color: Some(theme::Tokens::of(t).faint),
-            }
-        }),
-        text(view_name)
-            .size(sz::SMALL)
-            .font(theme::body_font(iced::font::Weight::Medium))
-            .style(|t: &Theme| iced::widget::text::Style {
-                color: Some(theme::Tokens::of(t).text_soft),
-            }),
-    ]
-    .spacing(13)
-    .align_y(Alignment::Center);
+    let breadcrumb = text(view_name)
+        .size(sz::SMALL)
+        .font(theme::body_font(iced::font::Weight::Medium))
+        .style(|t: &Theme| iced::widget::text::Style {
+            color: Some(theme::Tokens::of(t).text_soft),
+        });
 
     let open_playlist = button(
         row![
