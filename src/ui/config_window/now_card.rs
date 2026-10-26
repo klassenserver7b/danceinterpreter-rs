@@ -51,14 +51,14 @@ pub fn build<'a>(
                 .height(Length::Fill)
                 .content_fit(ContentFit::Cover),
         )
-        .width(Length::Fixed(139.0))
-        .height(Length::Fixed(155.0))
+        .width(Length::Fixed(64.0))
+        .height(Length::Fixed(64.0))
         .clip(true)
         .style(theme::cover_placeholder)
         .into(),
         None => container(
             material_symbol("music_note", false)
-                .size(42.0)
+                .size(26.0)
                 .style(|t: &Theme| iced::widget::text::Style {
                     color: Some(Color {
                         a: 0.35,
@@ -66,8 +66,8 @@ pub fn build<'a>(
                     }),
                 }),
         )
-        .width(Length::Fixed(139.0))
-        .height(Length::Fixed(155.0))
+        .width(Length::Fixed(64.0))
+        .height(Length::Fixed(64.0))
         .align_x(Alignment::Center)
         .align_y(Alignment::Center)
         .style(theme::cover_placeholder)
@@ -93,7 +93,7 @@ pub fn build<'a>(
     .spacing(7)
     .align_y(Alignment::Center);
 
-    let dance_headline = heading(dance_name, sz::H1, iced::font::Weight::Semibold).style(
+    let dance_headline = heading(dance_name, sz::H2, iced::font::Weight::Semibold).style(
         |t: &Theme| iced::widget::text::Style {
             color: Some(theme::Tokens::of(t).dance_headline),
         },
@@ -103,7 +103,7 @@ pub fn build<'a>(
         kicker,
         dance_headline,
         text(title)
-            .size(14.0)
+            .size(sz::BASE)
             .font(theme::body_font(iced::font::Weight::Medium))
             .style(|t: &Theme| iced::widget::text::Style {
                 color: Some(theme::Tokens::of(t).text),
@@ -115,13 +115,13 @@ pub fn build<'a>(
             }),
         transport(is_blank, position),
     ]
-    .spacing(7)
+    .spacing(5)
     .width(Length::Fill);
 
     container(
-        row![cover, info, decoration()].spacing(24).align_y(Alignment::Center),
+        row![cover, info, decoration()].spacing(16).align_y(Alignment::Center),
     )
-    .padding(23)
+    .padding(crate::ui::theme::pad4(14.0, 18.0, 14.0, 18.0))
     .width(Length::Fill)
     .style(theme::now_card)
     .into()
@@ -162,7 +162,7 @@ fn transport<'a>(is_blank: bool, position: String) -> Element<'a, Message> {
             .spacing(8)
             .align_y(Alignment::Center),
     )
-    .padding(crate::ui::theme::pad4(13.0, 0.0, 0.0, 0.0))
+    .padding(crate::ui::theme::pad4(8.0, 0.0, 0.0, 0.0))
     .into()
 }
 
@@ -183,12 +183,12 @@ fn kbd_on_accent<'a>(label: &'a str) -> Element<'a, Message> {
 
 /// Decorative equalizer bars on the right edge of the card.
 fn decoration() -> Element<'static, Message> {
-    let heights = [18.0, 34.0, 26.0, 42.0, 22.0];
+    let heights = [12.0, 22.0, 17.0, 27.0, 14.0];
     let bars: Vec<Element<'static, Message, Theme>> = heights
         .into_iter()
         .map(|h| {
             container(Space::new())
-                .width(Length::Fixed(4.0))
+                .width(Length::Fixed(3.0))
                 .height(Length::Fixed(h))
                 .style(|t: &Theme| {
                     container::Style::default().background(Color {

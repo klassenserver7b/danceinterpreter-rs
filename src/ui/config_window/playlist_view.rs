@@ -303,7 +303,7 @@ fn build_song_row<'a>(
             .style(theme::input_plain)
             .padding(0),
         text_input("Artist", &song.artist)
-            .size(sz::SMALL)
+            .size(sz::SMALL + 1.0)
             .on_input(move |v| Message::SongDataEdit(idx, SongDataEdit::Artist(v)))
             .style(theme::input_plain_dim)
             .padding(0),
@@ -318,7 +318,7 @@ fn build_song_row<'a>(
         row![
             crate::ui::config_window::nav_sidebar::dot(5.0, |t| theme::Tokens::of(t).accent_soft),
             text("On air")
-                .size(sz::TINY)
+                .size(sz::SMALL)
                 .style(|t: &Theme| iced::widget::text::Style {
                     color: Some(theme::Tokens::of(t).accent_soft),
                 }),
@@ -330,7 +330,7 @@ fn build_song_row<'a>(
         row![
             material_symbol_sized("skip_next", false, 13.0),
             text("Up next")
-                .size(sz::TINY)
+                .size(sz::SMALL)
                 .style(|t: &Theme| iced::widget::text::Style {
                     color: Some(theme::Tokens::of(t).text_soft),
                 }),
@@ -340,7 +340,7 @@ fn build_song_row<'a>(
         .into()
     } else if is_traktor {
         text("DJ live")
-            .size(sz::TINY)
+            .size(sz::SMALL)
             .style(|t: &Theme| iced::widget::text::Style {
                 color: Some(theme::Tokens::of(t).led_partial),
             })
@@ -349,7 +349,7 @@ fn build_song_row<'a>(
         row![
             material_symbol_sized("check", false, 13.0),
             text("Played")
-                .size(sz::TINY)
+                .size(sz::SMALL)
                 .style(|t: &Theme| iced::widget::text::Style {
                     color: Some(theme::Tokens::of(t).faint),
                 }),
@@ -359,7 +359,7 @@ fn build_song_row<'a>(
         .into()
     } else {
         text("Ready")
-            .size(sz::TINY)
+            .size(sz::SMALL)
             .style(|t: &Theme| iced::widget::text::Style {
                 color: Some(theme::Tokens::of(t).faint),
             })

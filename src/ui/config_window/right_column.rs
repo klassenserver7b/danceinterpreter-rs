@@ -97,7 +97,7 @@ fn build_up_next<'a>(dance_interpreter: &'a DanceInterpreter) -> Element<'a, Mes
 
     let show_now = button(
         row![
-            text("Show now").size(sz::TINY),
+            text("Show now").size(sz::SMALL),
             material_symbol_sized("chevron_right", false, 13.0),
         ]
         .spacing(5)
@@ -122,7 +122,7 @@ fn build_up_next<'a>(dance_interpreter: &'a DanceInterpreter) -> Element<'a, Mes
                     color: Some(theme::Tokens::of(t).text),
                 }),
             text(artist)
-                .size(sz::SMALL)
+                .size(sz::SMALL + 0.5)
                 .style(|t: &Theme| iced::widget::text::Style {
                     color: Some(theme::Tokens::of(t).muted),
                 }),
@@ -212,7 +212,7 @@ fn build_dj_card<'a>(
                 } else {
                     "Source disabled"
                 })
-                .size(sz::MICRO)
+                .size(sz::TINY)
                 .style(|t: &Theme| iced::widget::text::Style {
                     color: Some(theme::Tokens::of(t).muted),
                 }),
@@ -247,13 +247,13 @@ fn build_dj_card<'a>(
             theme::led_color(t, connection)
         })),
         text(summary)
-            .size(sz::MICRO)
+            .size(sz::SMALL)
             .style(|t: &Theme| iced::widget::text::Style {
                 color: Some(theme::Tokens::of(t).text_soft),
             }),
         container(
             text(address.as_str())
-                .size(sz::MICRO)
+                .size(sz::TINY)
                 .style(|t: &Theme| iced::widget::text::Style {
                     color: Some(theme::Tokens::of(t).faint),
                 })
@@ -273,7 +273,7 @@ fn build_dj_card<'a>(
                     color: Some(theme::Tokens::of(t).text),
                 }),
             text("Automatically update the display")
-                .size(sz::MICRO)
+                .size(sz::TINY)
                 .style(|t: &Theme| iced::widget::text::Style {
                     color: Some(theme::Tokens::of(t).muted),
                 }),
@@ -305,14 +305,14 @@ fn build_dj_card<'a>(
             } else {
                 "Manual control active"
             })
-            .size(sz::MICRO)
+            .size(sz::TINY)
             .style(|t: &Theme| iced::widget::text::Style {
                 color: Some(theme::Tokens::of(t).muted),
             }),
             container(
                 button(
                     row![
-                        text("Configure").size(sz::MICRO),
+                        text("Configure").size(sz::TINY),
                         material_symbol_sized("chevron_right", false, 12.0),
                     ]
                     .spacing(3)

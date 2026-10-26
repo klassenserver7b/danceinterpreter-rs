@@ -182,7 +182,7 @@ fn build_static_row<'a>(
     let show_now = button(
         row![
             material_symbol_sized("play_arrow", false, 13.0),
-            text("Show now").size(sz::TINY),
+            text("Show now").size(sz::SMALL),
         ]
         .spacing(6)
         .align_y(Alignment::Center),

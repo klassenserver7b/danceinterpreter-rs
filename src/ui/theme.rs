@@ -61,13 +61,14 @@ pub fn icon_font_filled() -> Font {
 /// bumped by ~1px for projector-room legibility.
 pub mod sz {
     pub const BASE: f32 = 13.0;
+    #[allow(dead_code)] // kept for parity with the prototype
     pub const H1: f32 = 29.0;
     pub const H2: f32 = 19.0;
 
     /// Panel / card titles.
     pub const PANEL_TITLE: f32 = 13.0;
     /// Row primary text.
-    pub const ROW: f32 = 12.0;
+    pub const ROW: f32 = 14.0;
     /// Row secondary text, captions, subtitles.
     pub const SMALL: f32 = 12.0;
     /// Tags, eyebrows, kbd hints, footers.
