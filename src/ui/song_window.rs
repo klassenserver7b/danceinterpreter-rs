@@ -36,8 +36,12 @@ pub enum Backdrop {
     DarkGray,
     Gray,
     DarkRed,
+    DarkOrange,
+    DarkMagenta,
+    DarkPurple,
     DarkBlue,
     DarkCyan,
+    DarkGreen,
 }
 
 impl Backdrop {
@@ -47,18 +51,27 @@ impl Backdrop {
         Backdrop::DarkGray,
         Backdrop::Gray,
         Backdrop::DarkRed,
+        Backdrop::DarkOrange,
+        Backdrop::DarkMagenta,
+        Backdrop::DarkPurple,
         Backdrop::DarkBlue,
         Backdrop::DarkCyan,
+        Backdrop::DarkGreen,
     ];
 
     pub fn color(self) -> iced::Color {
         match self {
             Backdrop::Black => iced::Color::BLACK,
-            Backdrop::DarkGray => iced::color!(0x21, 0x26, 0x23),
-            Backdrop::Gray => iced::color!(0x43, 0x4B, 0x46),
+            // Neutral grays (equal channels, no green cast).
+            Backdrop::DarkGray => iced::color!(0x1F, 0x1F, 0x1F),
+            Backdrop::Gray => iced::color!(0x3D, 0x3D, 0x3D),
             Backdrop::DarkRed => iced::color!(0x3A, 0x15, 0x12),
+            Backdrop::DarkOrange => iced::color!(0x3A, 0x24, 0x10),
+            Backdrop::DarkMagenta => iced::color!(0x32, 0x10, 0x2B),
+            Backdrop::DarkPurple => iced::color!(0x23, 0x15, 0x33),
             Backdrop::DarkBlue => iced::color!(0x10, 0x1A, 0x2E),
             Backdrop::DarkCyan => iced::color!(0x0C, 0x28, 0x2A),
+            Backdrop::DarkGreen => iced::color!(0x0F, 0x2A, 0x1A),
         }
     }
 }
@@ -70,8 +83,12 @@ impl std::fmt::Display for Backdrop {
             Backdrop::DarkGray => "Dark gray",
             Backdrop::Gray => "Gray",
             Backdrop::DarkRed => "Dark red",
+            Backdrop::DarkOrange => "Dark orange",
+            Backdrop::DarkMagenta => "Dark magenta",
+            Backdrop::DarkPurple => "Dark purple",
             Backdrop::DarkBlue => "Dark blue",
             Backdrop::DarkCyan => "Dark cyan",
+            Backdrop::DarkGreen => "Dark green",
         })
     }
 }

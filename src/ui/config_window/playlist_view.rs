@@ -95,6 +95,11 @@ fn build_toolbar<'a>(
     }
 
     tools = tools.push(with_tooltip(
+        buttons::ghost_icon("upload_file", false, 16.0, Message::AddAudioFiles),
+        "Add audio files",
+    ));
+
+    tools = tools.push(with_tooltip(
         buttons::ghost_icon(
             "undo",
             false,

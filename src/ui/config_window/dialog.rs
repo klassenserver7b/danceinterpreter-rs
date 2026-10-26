@@ -194,14 +194,80 @@ fn section_label(label: &'static str) -> Element<'static, Message> {
     .into()
 }
 
+/// Settings pick list entry: wraps an iced theme with a friendly label.
+/// The builtin "Dark" theme carries our sage-green design, so it is
+/// labeled "Green".
+#[derive(Debug, Clone, PartialEq)]
+struct ThemeOption(Theme);
+
+impl std::fmt::Display for ThemeOption {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(match &self.0 {
+            Theme::Dark => "Green",
+            Theme::Light => "Light",
+            Theme::Dracula => "Dracula",
+            Theme::Nord => "Nord",
+            Theme::SolarizedDark => "Solarized Dark",
+            Theme::SolarizedLight => "Solarized Light",
+            Theme::GruvboxDark => "Gruvbox Dark",
+            Theme::GruvboxLight => "Gruvbox Light",
+            Theme::CatppuccinLatte => "Catppuccin Latte",
+            Theme::CatppuccinFrappe => "Catppuccin Frappé",
+            Theme::CatppuccinMacchiato => "Catppuccin Macchiato",
+            Theme::CatppuccinMocha => "Catppuccin Mocha",
+            Theme::TokyoNight => "Tokyo Night",
+            Theme::TokyoNightStorm => "Tokyo Night Storm",
+            Theme::TokyoNightLight => "Tokyo Night Light",
+            Theme::KanagawaWave => "Kanagawa Wave",
+            Theme::KanagawaDragon => "Kanagawa Dragon",
+            Theme::KanagawaLotus => "Kanagawa Lotus",
+            Theme::Moonfly => "Moonfly",
+            Theme::Nightfly => "Nightfly",
+            Theme::Oxocarbon => "Oxocarbon",
+            Theme::Ferra => "Ferra",
+            Theme::Custom(_) => "Custom",
+        })
+    }
+}
+
+/// Theme options in pick-list order: the default first, then the green
+/// design theme, light, and the remaining iced built-ins.
+const THEME_OPTIONS: &[ThemeOption] = &[
+    ThemeOption(Theme::Dracula),
+    ThemeOption(Theme::Dark),
+    ThemeOption(Theme::Light),
+    ThemeOption(Theme::Nord),
+    ThemeOption(Theme::SolarizedDark),
+    ThemeOption(Theme::SolarizedLight),
+    ThemeOption(Theme::GruvboxDark),
+    ThemeOption(Theme::GruvboxLight),
+    ThemeOption(Theme::CatppuccinLatte),
+    ThemeOption(Theme::CatppuccinFrappe),
+    ThemeOption(Theme::CatppuccinMacchiato),
+    ThemeOption(Theme::CatppuccinMocha),
+    ThemeOption(Theme::TokyoNight),
+    ThemeOption(Theme::TokyoNightStorm),
+    ThemeOption(Theme::TokyoNightLight),
+    ThemeOption(Theme::KanagawaWave),
+    ThemeOption(Theme::KanagawaDragon),
+    ThemeOption(Theme::KanagawaLotus),
+    ThemeOption(Theme::Moonfly),
+    ThemeOption(Theme::Nightfly),
+    ThemeOption(Theme::Oxocarbon),
+    ThemeOption(Theme::Ferra),
+];
+
 fn build_settings<'a>(
     config_window: &'a ConfigWindow,
     dance_interpreter: &'a DanceInterpreter,
 ) -> (String, Column<'a, Message, Theme>, Element<'a, Message>) {
     let theme_pick = pick_list(
-        Theme::ALL,
-        Some(config_window.theme.clone()),
-        Message::SetConfigTheme,
+        THEME_OPTIONS,
+        THEME_OPTIONS
+            .iter()
+            .find(|option| option.0 == config_window.theme)
+            .cloned(),
+        |option| Message::SetConfigTheme(option.0),
     )
     .width(Length::Fixed(160.0))
     .text_size(sz::SMALL + 1.0)

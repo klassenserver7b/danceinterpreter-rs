@@ -20,7 +20,7 @@ pub use playlist_view::PLAYLIST_SCROLLABLE_ID;
 use crate::ui::config_window::sidebar::Sidebar;
 use crate::ui::theme;
 use crate::{DanceInterpreter, Message, Window};
-use iced::widget::{column as col, container, row, stack};
+use iced::widget::{column as col, container, mouse_area, row, stack};
 use iced::{Animation, Color, Element, Length, Size, Theme, animation, window};
 use std::path::PathBuf;
 use std::time::{Duration, Instant};
@@ -118,8 +118,8 @@ impl Window for ConfigWindow {
             enable_autoscroll: true,
             sidebar: Sidebar::new(),
             view: View::Playlist,
-            theme: Theme::Dark,
-            follow_system_theme: true,
+            theme: Theme::Dracula,
+            follow_system_theme: false,
 
             nav_anim: Animation::new(true)
                 .duration(Duration::from_millis(140))
@@ -227,6 +227,17 @@ impl ConfigWindow {
         ]
         .width(Length::Fill)
         .height(Length::Fill);
+
+        // While a playlist field is open for editing, a click that no widget
+        // claims ends editing (treated like pressing Enter), so re-editing
+        // always takes a double click. The wrapper is a polite observer: the
+        // editor, buttons and other inputs capture their clicks before they
+        // ever reach it — it only fires for dead areas.
+        let main: Element<'a, Message> = if self.editing.is_some() {
+            mouse_area(main).on_press(Message::EndSongEdit).into()
+        } else {
+            main.into()
+        };
 
         // Overlays: toast bubble, then modal dialog on top.
         let mut overlays = stack![main];

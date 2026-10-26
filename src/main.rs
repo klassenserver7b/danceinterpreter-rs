@@ -166,6 +166,7 @@ pub enum Message {
     EndSongEdit,
 
     AddTraktorSong,
+    AddAudioFiles,
 
     FileDropped(PathBuf),
     ItemChanged(ItemChange),
@@ -253,6 +254,17 @@ impl DanceInterpreter {
         );
 
         tasks.push(Task::done(Message::Statics(StaticsMessage::Reload)));
+
+        // Drag & drop diagnostics: `window::Event::FileDropped` never arrives
+        // in some environments (Wayland sessions without data-control
+        // support, flatpak sandboxes). Log the session so console output
+        // identifies the environment when a drop goes missing.
+        println!(
+            "Session: {} | WAYLAND_DISPLAY: {} | flatpak: {}",
+            var("XDG_SESSION_TYPE").unwrap_or_else(|_| "unknown".to_string()),
+            var("WAYLAND_DISPLAY").unwrap_or_else(|_| "unset".to_string()),
+            var("container").is_ok() || var("FLATPAK_ID").is_ok(),
+        );
 
         (state, Task::batch(tasks))
     }
@@ -719,6 +731,56 @@ impl DanceInterpreter {
                 }
             }
 
+            Message::AddAudioFiles => {
+                // Dialog-based fallback for drag & drop, which never delivers
+                // events in some environments (Wayland without data-control
+                // support, flatpak sandboxes). The portal-backed dialog grants
+                // access to the picked files, so they are always readable.
+                let Some(files) = FileDialog::new()
+                    .add_filter(
+                        "Audio",
+                        &[
+                            "mp3", "wav", "flac", "ogg", "oga", "opus", "m4a", "aac", "wma", "aiff",
+                        ],
+                    )
+                    .add_filter("Any(*)", &["*"])
+                    .set_title("Select audio files")
+                    .set_directory(
+                        dirs::audio_dir().unwrap_or(dirs::home_dir().unwrap_or(PathBuf::from("."))),
+                    )
+                    .pick_files()
+                else {
+                    return ().into();
+                };
+
+                let mut added = 0usize;
+                for file in &files {
+                    match read_song_info_from_filepath(file) {
+                        Ok(song) => {
+                            self.data_provider.append_song(song);
+                            added += 1;
+                        }
+                        Err(err) => println!("Could not read audio file {file:?}: {err}"),
+                    }
+                }
+
+                if added > 0 {
+                    self.end_song_edit();
+                    self.data_provider.ensure_statics_for_playlist();
+                    Task::batch([
+                        Task::done(Message::SnapTo(RelativeOffset::END)),
+                        Task::done(Message::Toast(format!(
+                            "{added} song{} added",
+                            if added == 1 { "" } else { "s" }
+                        ))),
+                    ])
+                } else {
+                    Task::done(Message::Toast(
+                        "No readable audio files selected".to_string(),
+                    ))
+                }
+            }
+
             Message::FileDropped(path) => match load_tag_data_from_m3u(&path) {
                 Ok(playlist) => {
                     self.end_song_edit();
@@ -1095,15 +1157,15 @@ impl DanceInterpreter {
                     return None;
                 };
 
-                // iced reports `key` WITHOUT modifiers applied: "?" (Shift+"/"
-                // on US, Shift+"ß" on QWERTZ) arrives as the unshifted character
-                // plus the SHIFT modifier. Under SHIFT, match the modified key
-                // instead so shifted characters keep working; Ctrl/Alt
-                // shortcuts never change the character, so they are unaffected.
-                let pressed = if modifiers.shift() {
-                    modified_key.as_ref()
-                } else {
-                    key.as_ref()
+                // Shortcuts follow the keyboard layout: `modified_key` is the
+                // key as it would be typed on the current layout (shift
+                // applied — e.g. "?" on Shift+"/"), so character shortcuts
+                // match what the user actually pressed. When the platform
+                // reports no typed character (e.g. Alt combos on X11), fall
+                // back to the layout key without modifiers.
+                let pressed = match modified_key.as_ref() {
+                    Key::Character(_) => modified_key.as_ref(),
+                    _ => key.as_ref(),
                 };
 
                 match (pressed, modifiers) {
