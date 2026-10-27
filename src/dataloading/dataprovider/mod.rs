@@ -51,6 +51,7 @@ pub enum SubmitStaticResult {
     Unchanged,
     NotFound,
     NeedsMerge { old_name: String, new_name: String },
+    Failed(&'static str),
 }
 
 use indexmap::IndexMap;
@@ -465,9 +466,11 @@ impl DataProvider {
             };
         }
 
-        // If it's a completely new name, do the rename/re-keying immediately
-        let _ = self.submit_static_name(key, &typed_name);
-        SubmitStaticResult::Success
+        // If it's a completely new name, do the rename/re-keying immediately.
+        match self.submit_static_name(key, &typed_name) {
+            Ok(()) => SubmitStaticResult::Success,
+            Err(message) => SubmitStaticResult::Failed(message),
+        }
     }
 
     /// Renames every playlist row tagged `old_name` to `new_name` (shared by

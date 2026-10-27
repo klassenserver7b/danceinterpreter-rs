@@ -312,12 +312,13 @@ impl DanceInterpreter {
     }
 
     /// Writes a static's color, forcing the alpha to fully opaque (picked
-    /// colors often arrive translucent).
-    fn set_static_color(&mut self, name: &str, mut color: Color) {
+    /// colors often arrive translucent). `save` persists to the statics
+    /// file — only the final color pick saves, previews stay volatile.
+    fn set_static_color(&mut self, name: &str, mut color: Color, save: bool) {
         color.a = 1.0;
         let _ = self
             .data_provider
-            .update_static_color(name, Some(color), false);
+            .update_static_color(name, Some(color), save);
     }
 
     /// Scrolls the playlist proportionally to `index` (0-based row).
@@ -554,17 +555,20 @@ impl DanceInterpreter {
                         SubmitStaticResult::Success => {
                             Task::done(Message::Toast("Static renamed".to_string()))
                         }
+                        SubmitStaticResult::Failed(message) => {
+                            Task::done(Message::Toast(format!("Rename failed: {message}")))
+                        }
                         SubmitStaticResult::Unchanged | SubmitStaticResult::NotFound => ().into(),
                     }
                 }
                 StaticsMessage::UpdateColor(name, color) => {
-                    self.set_static_color(&name, color);
+                    self.set_static_color(&name, color, true);
                     self.config_window.color_picker_open = None;
                     self.config_window.color_picker_old_color = None;
                     ().into()
                 }
                 StaticsMessage::PreviewColor(name, color) => {
-                    self.set_static_color(&name, color);
+                    self.set_static_color(&name, color, false);
                     ().into()
                 }
                 StaticsMessage::ToggleColorPicker(name) => {
@@ -606,12 +610,14 @@ impl DanceInterpreter {
                     ().into()
                 }
                 StaticsMessage::ConfirmMerge(old_name, new_name) => {
-                    let _ = self.data_provider.merge_statics(&old_name, &new_name);
                     self.config_window.active_dialog = None;
-                    Task::done(Message::Toast(format!(
-                        "Merged into \u{201C}{}\u{201D}",
-                        new_name
-                    )))
+                    match self.data_provider.merge_statics(&old_name, &new_name) {
+                        Ok(()) => Task::done(Message::Toast(format!(
+                            "Merged into \u{201C}{}\u{201D}",
+                            new_name
+                        ))),
+                        Err(err) => Task::done(Message::Toast(format!("Merge failed: {err}"))),
+                    }
                 }
             },
 

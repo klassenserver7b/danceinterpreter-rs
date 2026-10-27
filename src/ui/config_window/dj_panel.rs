@@ -182,7 +182,7 @@ impl Sidebar {
 
         self.server_address_presets = suggestion_text_input::State::with_selection(
             detected_interfaces,
-            Some(&data_provider.traktor_provider.address.clone()),
+            Some(&data_provider.traktor_provider.address),
         );
     }
 

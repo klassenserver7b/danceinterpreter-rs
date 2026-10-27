@@ -1,4 +1,3 @@
-use std::io;
 use std::io::Result;
 use std::path::{Path, PathBuf};
 
@@ -11,14 +10,13 @@ pub fn load_tag_data_from_m3u(path: &Path) -> Result<Vec<SongInfo>> {
     let files = load_m3u_content_from_path(path)?;
     let mut songtags: Vec<SongInfo> = Vec::new();
 
+    // Skip files whose tags cannot be read instead of aborting the whole
+    // import.
     for file in files {
-        let tag = read_song_info_from_filepath(&file).map_err(|e| {
-            io::Error::new(
-                io::ErrorKind::InvalidData,
-                format!("Error reading tag from file: {}", e),
-            )
-        })?;
-        songtags.push(tag);
+        match read_song_info_from_filepath(&file) {
+            Ok(tag) => songtags.push(tag),
+            Err(err) => println!("Skipping {}: {err}", file.display()),
+        }
     }
 
     Ok(songtags)
@@ -26,7 +24,9 @@ pub fn load_tag_data_from_m3u(path: &Path) -> Result<Vec<SongInfo>> {
 
 fn load_m3u_content_from_path(path: &Path) -> Result<Vec<PathBuf>> {
     let m3u_content = std::fs::read_to_string(path)?;
-    let root = path.parent().unwrap();
+    // `parent()` is `None` for paths without a directory component; entries
+    // then resolve relative to the working directory.
+    let root = path.parent().unwrap_or_else(|| Path::new(""));
 
     let entries = m3u_content.lines().filter(|x| !x.starts_with('#'));
 
