@@ -259,8 +259,8 @@ fn build_song_row<'a>(
     };
 
     // Song title + artist: plain text that enters inline editing on
-    // double-click (a single click is deliberately ignored, like the old
-    // dynamic text input). Placeholders keep empty rows clickable.
+    // double-click (a single click is deliberately ignored). Placeholders
+    // keep empty rows clickable.
     let editing_field = editing.filter(|(i, _)| *i == idx).map(|(_, field)| field);
 
     let title_field: Element<'a, Message> = if editing_field == Some(EditField::Title) {

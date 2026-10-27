@@ -85,11 +85,8 @@ fn build_up_next<'a>(dance_interpreter: &'a DanceInterpreter) -> Element<'a, Mes
     container(
         col![
             kicker,
-            heading(dance, sz::H2, iced::font::Weight::Semibold).style(move |t: &Theme| {
-                iced::widget::text::Style {
-                    color: Some(dance_color.unwrap_or_else(|| theme::Tokens::of(t).text)),
-                }
-            }),
+            heading(dance, sz::H2, iced::font::Weight::Semibold)
+                .style(theme::text_style(move |tk| dance_color.unwrap_or(tk.text),)),
             text(title)
                 .size(sz::BASE)
                 .font(theme::body_font(iced::font::Weight::Medium))

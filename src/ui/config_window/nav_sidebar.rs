@@ -26,8 +26,7 @@ pub fn build<'a>(
     let nav = col![
         brand(),
         session_card(config_window),
-        // Breather between the session card and the nav items (the old
-        // "WORKSPACE" section label is gone — it was unclickable filler).
+        // Breather between the session card and the nav items.
         iced::widget::Space::new().height(Length::Fixed(10.0)),
         nav_item(
             "format_list_bulleted",

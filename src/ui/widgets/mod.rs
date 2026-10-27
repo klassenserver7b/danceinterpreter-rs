@@ -34,14 +34,6 @@ pub fn labeled_message_toggler(
         .style(theme::toggler_style)
 }
 
-pub fn material_symbol_colored(
-    id: &'_ str,
-    filled: bool,
-    color: impl Into<Color>,
-) -> Text<'_, Theme, Renderer> {
-    material_symbol(id, filled).color(color)
-}
-
 pub fn material_symbol_sized(
     id: &'_ str,
     filled: bool,

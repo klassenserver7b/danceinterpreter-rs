@@ -259,8 +259,6 @@ impl DataProvider {
         }
     }
 
-    // handle_static_data_edit removed (handled in main.rs now)
-
     pub fn delete_item(&mut self, song: ItemSource) {
         if self.current == song {
             self.current = ItemSource::Blank;

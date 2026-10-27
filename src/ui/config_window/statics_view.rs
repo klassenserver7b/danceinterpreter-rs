@@ -8,8 +8,7 @@ use crate::ui::config_window::{ConfigWindow, DialogState};
 use crate::ui::theme::RowLook;
 use crate::ui::theme::{self, sz};
 use crate::ui::widgets::{
-    buttons, heading, material_symbol, material_symbol_colored, material_symbol_sized,
-    panel_header, row_shell,
+    buttons, heading, material_symbol, material_symbol_sized, panel_header, row_shell,
 };
 use crate::ui::with_tooltip;
 use crate::{DanceInterpreter, DialogMessage, Message, StaticsMessage};
@@ -105,7 +104,7 @@ fn build_static_row<'a>(
     );
 
     let star_icon = if static_info.is_favorite {
-        material_symbol_colored("star", true, theme::Tokens::of(&config_window.theme).star)
+        material_symbol("star", true).color(theme::Tokens::of(&config_window.theme).star)
     } else {
         material_symbol("star", false)
     };
