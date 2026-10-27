@@ -9,23 +9,6 @@ pub struct DisplayableData {
     pub subline_image: Option<iced::widget::image::Handle>,
 }
 
-impl DisplayableData {
-    #[allow(dead_code)]
-    pub fn new(
-        headline: String,
-        subline_left: String,
-        subline_right: String,
-        subline_image: Option<iced::widget::image::Handle>,
-    ) -> Self {
-        Self {
-            headline,
-            subline_upper: subline_left,
-            subline_lower: subline_right,
-            subline_image,
-        }
-    }
-}
-
 impl From<SongInfo> for DisplayableData {
     fn from(song_info: SongInfo) -> Self {
         Self {

@@ -4,7 +4,6 @@ mod macros;
 mod traktor_api;
 mod ui;
 
-use crate::async_utils::run_subscription_with;
 use crate::dataloading::dataprovider::{
     DataProvider, ItemChange, ItemSource, SongDataEdit, SubmitStaticResult,
 };
@@ -110,7 +109,6 @@ pub enum DialogMessage {
     Close,
     RequestDelete(ItemSource),
     ConfirmDelete,
-    CancelDelete,
     UndoDelete,
     ChangeAddStaticName(String),
 }
@@ -154,7 +152,6 @@ pub enum Message {
     OpenPlaylist,
     AddBlankEntry,
 
-    AddSong(SongInfo),
     DeleteItem(ItemSource),
     AddBlankSong(RelativeOffset),
     BeginSongEdit(usize, EditField),
@@ -710,10 +707,6 @@ impl DanceInterpreter {
                         ().into()
                     }
                 }
-                DialogMessage::CancelDelete => {
-                    self.config_window.active_dialog = None;
-                    ().into()
-                }
                 DialogMessage::UndoDelete => {
                     self.cancel_song_edit();
                     self.data_provider.undo_delete();
@@ -884,11 +877,6 @@ impl DanceInterpreter {
                     );
                 }
                 self.cancel_song_edit();
-                ().into()
-            }
-
-            Message::AddSong(song) => {
-                self.append_song_and_finalize(song);
                 ().into()
             }
 
@@ -1276,7 +1264,7 @@ impl DanceInterpreter {
 
         if let Some(addr) = self.data_provider.traktor_provider.get_socket_addr() {
             subscriptions.push(
-                run_subscription_with(addr, |addr| traktor_api::run_server(*addr))
+                Subscription::run_with(addr, |addr| traktor_api::run_server(*addr))
                     .map(|m| Message::Traktor(TraktorMessage::ServerMessage(Box::new(m)))),
             );
         }

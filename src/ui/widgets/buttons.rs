@@ -16,7 +16,7 @@ fn label_text<'a>(label: impl IntoFragment<'a>) -> iced::widget::Text<'a, Theme,
 }
 
 /// Shared body of the labelled button builders.
-pub(crate) fn labelled<'a>(
+fn labelled<'a>(
     label: impl IntoFragment<'a> + 'a,
     message: Message,
     style: fn(&Theme, button::Status) -> button::Style,

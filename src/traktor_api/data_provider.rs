@@ -46,12 +46,6 @@ impl Display for TraktorSyncMode {
     }
 }
 
-impl Display for TraktorSyncAction {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{:?}", self)
-    }
-}
-
 #[derive(Debug, Clone)]
 pub enum TraktorMessage {
     ServerMessage(Box<ServerMessage>),
@@ -100,7 +94,6 @@ pub struct TraktorDataProvider {
 
     channel: Option<UnboundedSender<AppMessage>>,
 
-    time_offset_ms: i64,
     pub state: Option<State>,
     covers: HashMap<String, image::Handle>,
     pub cover_loader_addr: Option<SocketAddr>,
@@ -113,7 +106,6 @@ pub struct TraktorDataProvider {
     should_scroll: bool,
 
     pub debug_logging: bool,
-    log: Vec<String>,
 }
 
 impl Default for TraktorDataProvider {
@@ -129,7 +121,6 @@ impl Default for TraktorDataProvider {
             sync: false,
             sync_mode: TraktorSyncMode::Relative,
 
-            time_offset_ms: 0,
             state: None,
             covers: HashMap::new(),
 
@@ -143,7 +134,6 @@ impl Default for TraktorDataProvider {
             cover_loader_addr: None,
 
             debug_logging: false,
-            log: Vec::new(),
         }
     }
 }
@@ -158,18 +148,7 @@ impl TraktorDataProvider {
         self.enabled && self.channel.as_ref().is_some_and(|c| !c.is_closed())
     }
 
-    #[allow(dead_code)]
-    pub fn get_log(&self) -> &[String] {
-        &self.log
-    }
-
-    #[allow(dead_code)]
-    pub fn clear_log(&mut self) {
-        self.log.clear();
-    }
-
     pub fn reconnect(&mut self) {
-        self.time_offset_ms = 0;
         self.state = None;
         self.sync_x_fader_is_left = true;
         self.update_song_info(&[]);
@@ -419,19 +398,9 @@ impl TraktorDataProvider {
         match message {
             ServerMessage::Ready(channel) => {
                 self.channel = Some(channel);
-
-                self.time_offset_ms = 0;
-                self.state = None;
-                self.sync_x_fader_is_left = true;
-                self.update_song_info(playlist);
-
                 self.reconnect();
             }
-            ServerMessage::Connect {
-                time_offset_ms,
-                initial_state,
-            } => {
-                self.time_offset_ms = time_offset_ms;
+            ServerMessage::Connect { initial_state, .. } => {
                 self.sync_x_fader_is_left = initial_state.mixer.x_fader < 0.5;
                 self.state = Some(*initial_state);
                 self.update_song_info(playlist);
@@ -485,11 +454,7 @@ impl TraktorDataProvider {
                 let loaded_files = self.get_loaded_files();
                 self.covers.retain(|path, _| loaded_files.contains(path));
             }
-            ServerMessage::Log(msg) => {
-                if self.debug_logging {
-                    self.log.push(msg);
-                }
-            }
+            ServerMessage::Log(_) => {}
             ServerMessage::ClientChanged(addr) => {
                 self.cover_loader_addr = addr;
             }

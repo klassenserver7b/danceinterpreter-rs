@@ -68,7 +68,7 @@ pub fn build_dialog<'a>(
                 .size(sz::BASE)
                 .style(theme::text_style(|tk| tk.muted))],
                 dialog_actions([
-                    buttons::secondary("Cancel", Message::Dialog(DialogMessage::CancelDelete)),
+                    buttons::secondary("Cancel", Message::Dialog(DialogMessage::Close)),
                     buttons::danger(
                         format!("Delete {}", kind),
                         Message::Dialog(DialogMessage::ConfirmDelete),

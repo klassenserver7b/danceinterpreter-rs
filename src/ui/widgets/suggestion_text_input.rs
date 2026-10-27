@@ -12,7 +12,6 @@ use iced::overlay::menu;
 use iced::time::Instant;
 use iced::{Element, Event, Length, Padding, Pixels, Rectangle, Size, Theme, Vector};
 
-use iced::advanced::text::LineHeight;
 use iced::widget::{TextInput, text_input};
 use std::cell::RefCell;
 use std::fmt::Display;
@@ -29,7 +28,6 @@ where
 {
     state: &'a State<T>,
     text_input: TextInput<'a, TextInputEvent, Theme, Renderer>,
-    font: Option<Renderer::Font>,
     selection: text_input::Value,
     on_selected: Box<dyn Fn(T) -> Message>,
     on_option_hovered: Option<Box<dyn Fn(T) -> Message>>,
@@ -38,9 +36,7 @@ where
     on_input: Option<Box<dyn Fn(String) -> Message>>,
     padding: Padding,
     size: Option<f32>,
-    text_shaping: text::Shaping,
     menu_class: <Theme as menu::Catalog>::Class<'a>,
-    menu_height: Length,
 }
 
 impl<'a, T, Message, Theme, Renderer> SuggestionTextInput<'a, T, Message, Theme, Renderer>
@@ -67,7 +63,6 @@ where
         Self {
             state,
             text_input,
-            font: None,
             selection: text_input::Value::new(&selection),
             on_selected: Box::new(on_selected),
             on_option_hovered: None,
@@ -76,9 +71,7 @@ where
             on_close: None,
             padding: text_input::DEFAULT_PADDING,
             size: None,
-            text_shaping: text::Shaping::default(),
             menu_class: <Theme as Catalog>::default_menu(),
-            menu_height: Length::Shrink,
         }
     }
 
@@ -117,21 +110,6 @@ where
         self
     }
 
-    /// Sets the [`Renderer::Font`] of the [`SuggestionTextInput`].
-    ///
-    /// [`Renderer::Font`]: text::Renderer
-    pub fn font(mut self, font: Renderer::Font) -> Self {
-        self.text_input = self.text_input.font(font);
-        self.font = Some(font);
-        self
-    }
-
-    /// Sets the [`text_input::Icon`] of the [`SuggestionTextInput`].
-    pub fn icon(mut self, icon: text_input::Icon<Renderer::Font>) -> Self {
-        self.text_input = self.text_input.icon(icon);
-        self
-    }
-
     /// Sets the text size of the [`SuggestionTextInput`].
     pub fn size(mut self, size: impl Into<Pixels>) -> Self {
         let size = size.into();
@@ -139,34 +117,6 @@ where
         self.text_input = self.text_input.size(size);
         self.size = Some(size.0);
 
-        self
-    }
-
-    /// Sets the [`LineHeight`] of the [`SuggestionTextInput`].
-    pub fn line_height(self, line_height: impl Into<LineHeight>) -> Self {
-        Self {
-            text_input: self.text_input.line_height(line_height),
-            ..self
-        }
-    }
-
-    /// Sets the width of the [`SuggestionTextInput`].
-    pub fn width(self, width: impl Into<Length>) -> Self {
-        Self {
-            text_input: self.text_input.width(width),
-            ..self
-        }
-    }
-
-    /// Sets the height of the menu of the [`SuggestionTextInput`].
-    pub fn menu_height(mut self, menu_height: impl Into<Length>) -> Self {
-        self.menu_height = menu_height.into();
-        self
-    }
-
-    /// Sets the [`text::Shaping`] strategy of the [`SuggestionTextInput`].
-    pub fn text_shaping(mut self, shaping: text::Shaping) -> Self {
-        self.text_shaping = shaping;
         self
     }
 
@@ -190,23 +140,6 @@ where
         <Theme as menu::Catalog>::Class<'a>: From<menu::StyleFn<'a, Theme>>,
     {
         self.menu_class = (Box::new(style) as menu::StyleFn<'a, Theme>).into();
-        self
-    }
-
-    /// Sets the style class of the input of the [`SuggestionTextInput`].
-    #[must_use]
-    pub fn input_class(
-        mut self,
-        class: impl Into<<Theme as text_input::Catalog>::Class<'a>>,
-    ) -> Self {
-        self.text_input = self.text_input.class(class);
-        self
-    }
-
-    /// Sets the style class of the menu of the [`SuggestionTextInput`].
-    #[must_use]
-    pub fn menu_class(mut self, class: impl Into<<Theme as menu::Catalog>::Class<'a>>) -> Self {
-        self.menu_class = class.into();
         self
     }
 }
@@ -273,33 +206,6 @@ where
                 filtered_options,
             }),
         }
-    }
-
-    /// Returns the options of the [`State`].
-    ///
-    /// These are the options provided when the [`State`]
-    /// was constructed with [`State::new`].
-    pub fn options(&self) -> &[T] {
-        &self.options
-    }
-
-    /// Pushes a new option to the [`State`].
-    pub fn push(&mut self, new_option: T) {
-        let mut inner = self.inner.borrow_mut();
-
-        inner.option_matchers.push(build_matcher(&new_option));
-        self.options.push(new_option);
-
-        inner.filtered_options = Filtered::new(
-            search(&self.options, &inner.option_matchers, &inner.value)
-                .cloned()
-                .collect(),
-        );
-    }
-
-    /// Returns ownership of the options of the [`State`].
-    pub fn into_options(self) -> Vec<T> {
-        self.options
     }
 
     fn value(&self) -> String {
@@ -564,12 +470,7 @@ where
                     &self.menu_class,
                 )
                 .width(bounds.width)
-                .padding(self.padding)
-                .text_shaping(self.text_shaping);
-
-                if let Some(font) = self.font {
-                    menu = menu.font(font);
-                }
+                .padding(self.padding);
 
                 if let Some(size) = self.size {
                     menu = menu.text_size(size);
@@ -579,7 +480,7 @@ where
                     layout.position() + translation,
                     *viewport,
                     bounds.height,
-                    self.menu_height,
+                    Length::Shrink,
                 ))
             }
         } else {

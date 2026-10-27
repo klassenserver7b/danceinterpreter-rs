@@ -7,7 +7,6 @@ use iced::{Alignment, Color, Element, Font, Length, Pixels, Renderer, Theme};
 pub mod buttons;
 pub mod canvas;
 pub mod color_swatch;
-pub mod parity;
 pub mod suggestion_text_input;
 
 /// Accent bar width of table rows (the table head reserves a matching
