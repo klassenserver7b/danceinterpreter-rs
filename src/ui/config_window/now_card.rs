@@ -157,7 +157,7 @@ fn transport<'a>(is_blank: bool, position: String) -> Element<'a, Message> {
 
     let next_button = iced::widget::button(
         row![
-            material_symbol_sized("skip_next", false, 15.0),
+            material_symbol_sized("skip_next", false, sz::ICON_SM),
             text("Next song").size(sz::BASE),
             kbd("Space", kbd_accent),
         ]

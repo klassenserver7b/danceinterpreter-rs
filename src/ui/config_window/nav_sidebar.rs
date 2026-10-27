@@ -131,7 +131,7 @@ fn session_card<'a>(config_window: &'a ConfigWindow) -> Element<'a, Message> {
 
     let icon_box = container(
         material_symbol("graphic_eq", false)
-            .size(15.0)
+            .size(sz::ICON_SM)
             .style(theme::text_style(|tk| tk.accent_nav_text)),
     )
     .width(Length::Fixed(30.0))

@@ -6,7 +6,7 @@ use crate::dataloading::staticinfo::StaticInfo;
 use crate::ui::config_window::search::data_matches_search_query;
 use crate::ui::config_window::{ConfigWindow, DialogState};
 use crate::ui::theme::RowLook;
-use crate::ui::theme::{self, sz};
+use crate::ui::theme::{self, pad4, sz};
 use crate::ui::widgets::{
     buttons, card_panel, delete_button, heading, icon_button_tooltip, material_symbol,
     material_symbol_sized, panel_header, row_shell,
@@ -147,7 +147,7 @@ fn build_static_row<'a>(
 
     let show_now = button(
         row![
-            material_symbol_sized("play_arrow", false, 13.0),
+            material_symbol_sized("play_arrow", false, sz::ICON_XXS),
             text("Show now").size(sz::SMALL),
         ]
         .spacing(6)
@@ -190,7 +190,7 @@ fn build_static_row<'a>(
     ]
     .spacing(10)
     .align_y(Alignment::Center)
-    .padding(theme::pad4(0.0, 19.0, 0.0, 14.0))
+    .padding(pad4(0.0, 19.0, 0.0, 14.0))
     .width(Length::Fill);
 
     let look = RowLook::table(idx, is_current, is_match);

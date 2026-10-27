@@ -103,9 +103,9 @@ fn build_search<'a>(config_window: &'a ConfigWindow) -> Element<'a, Message> {
         .id(config_window.search_input_id.clone())
         .on_input(|v| Message::Search(SearchMessage::Changed(v)))
         .style(theme::input_boxed)
-        .padding([5, 8]);
+        .padding(theme::INPUT_PAD);
 
-    let mut search_row = row![icon_muted("search", 15.0), input,]
+    let mut search_row = row![icon_muted("search", sz::ICON_SM), input,]
         .spacing(6)
         .align_y(Alignment::Center);
 
@@ -113,7 +113,7 @@ fn build_search<'a>(config_window: &'a ConfigWindow) -> Element<'a, Message> {
     if !config_window.search_query.is_empty() {
         search_row = search_row.push(icon_button_tooltip(
             "backspace",
-            14.0,
+            sz::ICON_XS,
             Message::Search(SearchMessage::Clear),
             "Clear search",
         ));
@@ -122,7 +122,7 @@ fn build_search<'a>(config_window: &'a ConfigWindow) -> Element<'a, Message> {
     search_row = search_row.push(buttons::ghost_icon(
         "close",
         false,
-        14.0,
+        sz::ICON_XS,
         Message::Search(SearchMessage::Toggle),
     ));
 
@@ -281,13 +281,13 @@ fn build_song_row<'a>(
     let actions = row![
         icon_button_tooltip(
             "play_arrow",
-            14.0,
+            sz::ICON_XS,
             Message::ItemChanged(ItemChange::PlaylistAbsolute(idx)),
             "Show now"
         ),
         icon_button_tooltip(
             "skip_next",
-            14.0,
+            sz::ICON_XS,
             Message::SetNextItem(ItemSource::Playlist(idx)),
             "Queue as next"
         ),
@@ -322,7 +322,7 @@ fn build_number_cell(
     is_played: bool,
 ) -> Element<'static, Message> {
     if is_traktor && !is_current {
-        material_symbol_sized("agriculture", false, 15.0)
+        material_symbol_sized("agriculture", false, sz::ICON_SM)
             .style(theme::text_style(|tk| tk.led_partial))
             .into()
     } else if is_current {
@@ -358,7 +358,7 @@ fn build_status(
         .into()
     } else if is_next {
         row![
-            material_symbol_sized("skip_next", false, 13.0),
+            material_symbol_sized("skip_next", false, sz::ICON_XXS),
             text("Up next")
                 .size(sz::SMALL)
                 .style(theme::text_style(|tk| tk.text_soft)),
@@ -373,7 +373,7 @@ fn build_status(
             .into()
     } else if is_played {
         row![
-            material_symbol_sized("check", false, 13.0),
+            material_symbol_sized("check", false, sz::ICON_XXS),
             text("Played")
                 .size(sz::SMALL)
                 .style(theme::text_style(|tk| tk.faint)),
@@ -512,7 +512,7 @@ fn build_quick_add<'a>(config_window: &'a ConfigWindow) -> Element<'a, Message> 
                 .on_input(move |v| Message::QuickAdd(on_input(v)))
                 .on_submit(submit.clone())
                 .style(theme::input_boxed)
-                .padding([5, 8])
+                .padding(theme::INPUT_PAD)
         };
 
     let content = row![

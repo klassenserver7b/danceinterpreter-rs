@@ -22,6 +22,9 @@ pub const FONT_ICON_FILLED: &str = "Material Icons";
 /// Horizontal page gutter of the primary content column and top bar.
 pub const PAGE_GUTTER: f32 = 31.0;
 
+/// Vertical/horizontal padding of boxed text inputs and pick lists.
+pub const INPUT_PAD: [f32; 2] = [5.0, 8.0];
+
 pub fn body_font(weight: Weight) -> Font {
     Font {
         family: Family::Name(FONT_BODY),
@@ -61,6 +64,13 @@ pub mod sz {
     pub const MICRO: f32 = 9.5;
     /// Default icon size.
     pub const ICON: f32 = 16.0;
+    /// Panel icons a notch under [`ICON`] (search, section and nav icons).
+    pub const ICON_SM: f32 = 15.0;
+    /// Row action icons (delete, play, skip, backspace, toast close).
+    pub const ICON_XS: f32 = 14.0;
+    /// Icons inline with small text (status rows, chevrons, button trailing
+    /// icons).
+    pub const ICON_XXS: f32 = 13.0;
 }
 
 /// Corner radius scale (design pixels), mirroring the prototype.

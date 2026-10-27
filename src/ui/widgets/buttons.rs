@@ -82,7 +82,7 @@ pub fn ghost_labelled<'a>(
     .align_y(Vertical::Center);
 
     if let Some(trailing_icon) = trailing_icon {
-        content = content.push(material_symbol_sized(trailing_icon, false, 13.0));
+        content = content.push(material_symbol_sized(trailing_icon, false, sz::ICON_XXS));
     }
 
     button(content)

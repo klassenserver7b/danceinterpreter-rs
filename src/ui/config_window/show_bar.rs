@@ -144,7 +144,7 @@ fn quick_button<'a>(
 
     if let Some(icon) = icon {
         content = content.push(
-            material_symbol_sized(icon, false, 15.0)
+            material_symbol_sized(icon, false, sz::ICON_SM)
                 .style(theme::text_style(move |tk| pill_text(tk, active))),
         );
     }

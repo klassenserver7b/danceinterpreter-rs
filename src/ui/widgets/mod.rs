@@ -120,7 +120,7 @@ pub fn panel_header<'a>(
 ) -> Element<'a, Message> {
     container(
         iced::widget::row![
-            icon_muted(icon, 15.0),
+            icon_muted(icon, theme::sz::ICON_SM),
             heading(title, theme::sz::PANEL_TITLE, iced::font::Weight::Semibold)
                 .style(theme::text_style(|tk| tk.text)),
             text(subtitle)
@@ -153,7 +153,7 @@ pub fn delete_button<'a>(
 ) -> Element<'a, Message> {
     icon_button_tooltip(
         "delete",
-        14.0,
+        theme::sz::ICON_XS,
         Message::Dialog(DialogMessage::RequestDelete(source)),
         tip,
     )

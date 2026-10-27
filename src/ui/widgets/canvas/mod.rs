@@ -16,6 +16,10 @@ use iced::{Color, Point, Theme};
 pub const BG_RADIUS: f32 = 0.46;
 /// Icon arc radius, as a fraction of the canvas' smaller dimension.
 pub const ARC_RADIUS: f32 = 0.30;
+/// Icon stroke width, as a fraction of the canvas' smaller dimension.
+pub const STROKE_FRAC: f32 = 0.07;
+/// Restart arrowhead size, as a fraction of the canvas' smaller dimension.
+pub const ARROW_FRAC: f32 = 0.13;
 
 /// Geometry and colors the icon on top of the shared base needs.
 pub struct IconBase {
@@ -38,7 +42,7 @@ pub fn draw_icon_base(theme: &Theme, frame: &mut Frame, enabled: bool) -> IconBa
     let dim = size.width.min(size.height);
     let center = Point::new(size.width / 2.0, size.height / 2.0);
     let arc_r = dim * ARC_RADIUS;
-    let stroke_w = dim * 0.07;
+    let stroke_w = dim * STROKE_FRAC;
 
     let tk = theme::Tokens::of(theme);
     let icon_color = if enabled { tk.accent_soft } else { tk.muted };

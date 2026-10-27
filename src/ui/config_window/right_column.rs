@@ -63,7 +63,8 @@ fn build_up_next<'a>(dance_interpreter: &'a DanceInterpreter) -> Element<'a, Mes
     let dance_color = provider.get_dance_color(&dance);
 
     let kicker = row![
-        material_symbol_sized("skip_next", false, 13.0).style(theme::text_style(|tk| tk.muted)),
+        material_symbol_sized("skip_next", false, sz::ICON_XXS)
+            .style(theme::text_style(|tk| tk.muted)),
         text("COMING UP NEXT")
             .size(sz::TINY)
             .style(theme::text_style(|tk| tk.muted)),
@@ -75,7 +76,7 @@ fn build_up_next<'a>(dance_interpreter: &'a DanceInterpreter) -> Element<'a, Mes
     let show_now = button(
         row![
             text("Show now").size(sz::SMALL),
-            material_symbol_sized("chevron_right", false, 13.0),
+            material_symbol_sized("chevron_right", false, sz::ICON_XXS),
         ]
         .spacing(5)
         .align_y(Alignment::Center),
@@ -126,7 +127,7 @@ fn build_dj_card<'a>(dance_interpreter: &'a DanceInterpreter) -> Element<'a, Mes
     let summary = connection.summary();
 
     let heading_row = row![
-        material_symbol_sized("link", false, 15.0).style(theme::text_style(|tk| tk.muted)),
+        material_symbol_sized("link", false, sz::ICON_SM).style(theme::text_style(|tk| tk.muted)),
         heading(
             "DJ integration",
             sz::PANEL_TITLE,
@@ -273,7 +274,7 @@ fn build_tip() -> Element<'static, Message> {
         col![
             row![
                 material_symbol("help", false)
-                    .size(15.0)
+                    .size(sz::ICON_SM)
                     .style(theme::text_style(|tk| tk.accent_soft)),
                 row![
                     text("Press")

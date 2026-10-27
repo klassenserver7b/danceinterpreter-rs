@@ -283,7 +283,7 @@ where
         pick_list(options, Some(selected), on_selected)
             .width(Length::Fill)
             .text_size(sz::BASE)
-            .padding([5, 8])
+            .padding(theme::INPUT_PAD)
             .style(theme::pick_list_style)
             .menu_style(theme::pick_list_menu_style),
     )

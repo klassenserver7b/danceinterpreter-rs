@@ -19,7 +19,8 @@ pub fn build(toast: &Option<Toast>) -> Option<Element<'_, Message>> {
     let toast = toast.as_ref()?;
 
     let close = button(
-        material_symbol_sized("close", false, 14.0).style(theme::text_style(|tk| tk.toast_text)),
+        material_symbol_sized("close", false, sz::ICON_XS)
+            .style(theme::text_style(|tk| tk.toast_text)),
     )
     .padding(2)
     .style(|t: &Theme, s: button::Status| {

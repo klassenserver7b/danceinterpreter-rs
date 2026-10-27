@@ -3,13 +3,16 @@ use iced::widget::canvas::{self, Frame, Path};
 use iced::{Point, Radians, Theme};
 use std::f32::consts::PI;
 
+/// Half the power arc's top gap, in degrees.
+const GAP_HALF_DEG: f32 = 35.0;
+
 pub fn draw(theme: &Theme, frame: &mut Frame, enabled: bool) {
     let base @ IconBase { center, arc_r, .. } = draw_icon_base(theme, frame, enabled);
 
     // Power arc
     // Gap of 70° centered at the top (-π/2 in screen coords).
     // Arc drawn from right edge of gap → clockwise around → left edge of gap.
-    let gap_half = 35.0_f32.to_radians(); // half the gap angle
+    let gap_half = GAP_HALF_DEG.to_radians();
     let top = -PI / 2.0; // top of circle (-90°)
     let start = top + gap_half; // right side of gap  ≈ -55°
     let end = top - gap_half + 2.0 * PI; // left side of gap   ≈ 235° (going all the way around)

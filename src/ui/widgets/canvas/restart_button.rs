@@ -1,7 +1,10 @@
-use crate::ui::widgets::canvas::{IconBase, draw_icon_base, stroke_icon};
+use crate::ui::widgets::canvas::{ARROW_FRAC, IconBase, draw_icon_base, stroke_icon};
 use iced::widget::canvas::{self, Frame, Path};
 use iced::{Point, Radians, Theme};
 use std::f32::consts::PI;
+
+/// The restart arc's top gap, in degrees.
+const GAP_DEG: f32 = 30.0;
 
 pub fn draw(theme: &Theme, frame: &mut Frame, enabled: bool) {
     let base @ IconBase {
@@ -10,7 +13,7 @@ pub fn draw(theme: &Theme, frame: &mut Frame, enabled: bool) {
 
     // Restart arc
     // 300° clockwise arc, 60° gap left from the top.
-    let gap = 30.0_f32.to_radians();
+    let gap = GAP_DEG.to_radians();
     let bot = PI / 2.0;
     let top = -bot;
     let arc_start = top - gap / 2.0;
@@ -42,7 +45,7 @@ pub fn draw(theme: &Theme, frame: &mut Frame, enabled: bool) {
     let (s, c) = 45.0_f32.to_radians().sin_cos();
     let w1 = (-c, -s); // rotate +45°
     let w2 = (-c, s); // rotate -45°
-    let arrow_size = dim * 0.13;
+    let arrow_size = dim * ARROW_FRAC;
 
     let tip = Point::new(end_x, end_y);
     let p1 = Point::new(end_x - w1.0 * arrow_size, end_y + w1.1 * arrow_size);

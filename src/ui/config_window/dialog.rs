@@ -252,7 +252,7 @@ fn build_settings<'a>(
     )
     .width(Length::Fixed(160.0))
     .text_size(sz::BASE)
-    .padding([5, 8])
+    .padding(theme::INPUT_PAD)
     .style(theme::pick_list_style)
     .menu_style(theme::pick_list_menu_style);
 
@@ -276,7 +276,7 @@ fn build_settings<'a>(
     )
     .width(Length::Fixed(160.0))
     .text_size(sz::BASE)
-    .padding([5, 8])
+    .padding(theme::INPUT_PAD)
     .style(theme::pick_list_style)
     .menu_style(theme::pick_list_menu_style);
 
