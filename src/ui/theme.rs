@@ -19,6 +19,9 @@ pub const FONT_ICON: &str = "Material Symbols Outlined";
 /// Filled icon font (Material Icons).
 pub const FONT_ICON_FILLED: &str = "Material Icons";
 
+/// Horizontal page gutter of the primary content column and top bar.
+pub const PAGE_GUTTER: f32 = 31.0;
+
 pub fn body_font(weight: Weight) -> Font {
     Font {
         family: Family::Name(FONT_BODY),

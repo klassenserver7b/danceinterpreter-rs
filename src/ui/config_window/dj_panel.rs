@@ -20,6 +20,9 @@ use iced::{Alignment, Animation, Element, Length, Theme, animation};
 use network_interface::Addr::V4;
 use network_interface::{NetworkInterface, NetworkInterfaceConfig};
 
+/// Full width of the slide-in DJ integration panel when expanded.
+pub const PANEL_WIDTH: f32 = 400.0;
+
 pub struct Sidebar {
     pub state: Animation<bool>,
     pub power_button_cache: canvas::Cache,

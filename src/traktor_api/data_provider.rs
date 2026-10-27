@@ -1,3 +1,4 @@
+use crate::dataloading::dataprovider::PlaylistItem;
 use crate::dataloading::songinfo::SongInfo;
 use crate::traktor_api::{
     AppMessage, ChannelState, DeckContentState, DeckState, MixerState, ServerMessage, State,
@@ -234,7 +235,7 @@ impl TraktorDataProvider {
         }
     }
 
-    fn update_song_info(&mut self, playlist: &[SongInfo]) {
+    fn update_song_info(&mut self, playlist: &[PlaylistItem]) {
         let old_song_info = self.cached_song_info.take();
         self.cached_next_song_info = None;
 
@@ -281,7 +282,7 @@ impl TraktorDataProvider {
             TraktorSyncMode::AbsoluteByNumber => {
                 let current_index = playlist
                     .iter()
-                    .position(|s| content.number == s.track_number);
+                    .position(|item| content.number == item.song.track_number);
 
                 self.cached_sync_action = match current_index {
                     None => TraktorSyncAction::Relative(0),
@@ -291,7 +292,7 @@ impl TraktorDataProvider {
             TraktorSyncMode::AbsoluteByName => {
                 let current_index = playlist
                     .iter()
-                    .position(|s| Self::songs_name_match(&current_song_info, s));
+                    .position(|item| Self::songs_name_match(&current_song_info, &item.song));
 
                 self.cached_sync_action = match current_index {
                     None => TraktorSyncAction::Relative(0),
@@ -306,7 +307,7 @@ impl TraktorDataProvider {
         &self,
         fallback: bool,
         current_channel: &ChannelState,
-        playlist: &[SongInfo],
+        playlist: &[PlaylistItem],
     ) -> Option<SongInfo> {
         let mode = if !fallback {
             self.next_mode
@@ -355,16 +356,16 @@ impl TraktorDataProvider {
             TraktorNextMode::PlaylistByNumber => {
                 let current_index = playlist
                     .iter()
-                    .position(|s| current_song_info.track_number == s.track_number);
+                    .position(|item| current_song_info.track_number == item.song.track_number);
 
-                current_index.and_then(|ci| playlist.get(ci + 1).cloned())
+                current_index.and_then(|ci| playlist.get(ci + 1).map(|item| item.song.clone()))
             }
             TraktorNextMode::PlaylistByName => {
                 let current_index = playlist
                     .iter()
-                    .position(|s| Self::songs_name_match(current_song_info, s));
+                    .position(|item| Self::songs_name_match(current_song_info, &item.song));
 
-                current_index.and_then(|ci| playlist.get(ci + 1).cloned())
+                current_index.and_then(|ci| playlist.get(ci + 1).map(|item| item.song.clone()))
             }
         }
     }
@@ -372,7 +373,7 @@ impl TraktorDataProvider {
     fn copy_song_info_from_deck(
         &self,
         content: &DeckContentState,
-        playlist: &[SongInfo],
+        playlist: &[PlaylistItem],
     ) -> SongInfo {
         let mut song_info = SongInfo::new(
             content.number,
@@ -385,8 +386,8 @@ impl TraktorDataProvider {
         if song_info.album_art.is_none() {
             song_info.album_art = playlist
                 .iter()
-                .find(|s| Self::songs_name_match(&song_info, s))
-                .and_then(|s| s.album_art.clone());
+                .find(|item| Self::songs_name_match(&song_info, &item.song))
+                .and_then(|item| item.song.album_art.clone());
         }
 
         song_info
@@ -414,7 +415,7 @@ impl TraktorDataProvider {
         files
     }
 
-    pub fn process_message(&mut self, message: ServerMessage, playlist: &[SongInfo]) {
+    pub fn process_message(&mut self, message: ServerMessage, playlist: &[PlaylistItem]) {
         match message {
             ServerMessage::Ready(channel) => {
                 self.channel = Some(channel);
@@ -505,13 +506,13 @@ impl TraktorDataProvider {
         should_scroll
     }
 
-    pub fn get_current_index(&self, playlist: &[SongInfo]) -> Option<usize> {
+    pub fn get_current_index(&self, playlist: &[PlaylistItem]) -> Option<usize> {
         let traktor_song = self.get_song_info()?;
 
         playlist
             .iter()
             .enumerate()
-            .find(|(_i, s)| TraktorDataProvider::songs_name_match(s, traktor_song))
+            .find(|(_i, item)| TraktorDataProvider::songs_name_match(&item.song, traktor_song))
             .map(|(i, _s)| i)
     }
 

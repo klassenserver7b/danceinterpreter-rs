@@ -231,8 +231,12 @@ fn build_song_row<'a>(
     editing: Option<(usize, EditField)>,
     edit_draft: &'a str,
 ) -> Element<'a, Message> {
-    let (is_current, is_next, is_traktor, is_played) =
-        dance_interpreter.data_provider.get_play_state(idx);
+    let crate::dataloading::dataprovider::RowPlayState {
+        is_current,
+        is_next,
+        is_traktor,
+        is_played,
+    } = dance_interpreter.data_provider.get_play_state(idx);
 
     let dance_color = dance_interpreter.data_provider.get_dance_color(&song.dance);
 

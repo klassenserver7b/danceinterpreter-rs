@@ -3,10 +3,10 @@
 
 use crate::dataloading::dataprovider::ItemSource;
 use crate::ui::config_window::ConfigWindow;
-use crate::ui::theme::{self, sz};
+use crate::ui::theme::{self, pad4, sz};
 use crate::ui::widgets::{buttons, heading, kbd};
 use crate::ui::with_tooltip;
-use crate::{DanceInterpreter, DialogMessage, Message, StaticsMessage};
+use crate::{DanceInterpreter, DialogMessage, Message, SongWindowMessage, StaticsMessage};
 use iced::widget::{
     Button, Column, column as col, container, mouse_area, opaque, pick_list, row, space::Space,
     stack, text, text_input, toggler,
@@ -180,7 +180,7 @@ fn section_label(label: &'static str) -> Element<'static, Message> {
             .font(theme::body_font(iced::font::Weight::Semibold))
             .style(theme::text_style(|tk| tk.muted)),
     )
-    .padding(crate::ui::theme::pad4(16.0, 0.0, 2.0, 0.0))
+    .padding(pad4(16.0, 0.0, 2.0, 0.0))
     .into()
 }
 
@@ -266,7 +266,7 @@ fn build_settings<'a>(
     .menu_style(theme::pick_list_menu_style);
 
     let scale_input = number_input(&dance_interpreter.song_window.scale, 0.5..=3.0, |val| {
-        Message::SongWindow(crate::SongWindowMessage::ChangeScale(val))
+        Message::SongWindow(SongWindowMessage::ChangeScale(val))
     })
     .step(0.1)
     .width(Length::Fixed(120.0))
@@ -281,7 +281,7 @@ fn build_settings<'a>(
     let backdrop_pick = pick_list(
         crate::ui::song_window::Backdrop::ALL,
         Some(dance_interpreter.song_window.backdrop),
-        |backdrop| Message::SongWindow(crate::SongWindowMessage::SetBackdrop(backdrop)),
+        |backdrop| Message::SongWindow(SongWindowMessage::SetBackdrop(backdrop)),
     )
     .width(Length::Fixed(160.0))
     .text_size(sz::BASE)
@@ -309,13 +309,13 @@ fn build_settings<'a>(
         setting_row(
             "Show thumbnails",
             switch(dance_interpreter.song_window.enable_image, |v| {
-                Message::SongWindow(crate::SongWindowMessage::EnableImage(v))
+                Message::SongWindow(SongWindowMessage::EnableImage(v))
             },),
         ),
         setting_row(
             "Show next dance",
             switch(dance_interpreter.song_window.enable_next_dance, |v| {
-                Message::SongWindow(crate::SongWindowMessage::EnableNextDance(v))
+                Message::SongWindow(SongWindowMessage::EnableNextDance(v))
             },),
         ),
         setting_row(

@@ -1,59 +1,8 @@
-//! Combo boxes display a dropdown list of searchable and selectable options.
-//!
-//! # Example
-//! ```no_run
-//! # mod iced { pub mod widget { pub use iced_widget::*; } pub use iced_widget::Renderer; pub use iced_widget::core::*; }
-//! # pub type Element<'a, Message> = iced_widget::core::Element<'a, Message, iced_widget::Theme, iced_widget::Renderer>;
-//! #
-//! use iced::widget::combo_box;
-//!
-//! struct State {
-//!    fruits: combo_box::State<Fruit>,
-//!    favorite: Option<Fruit>,
-//! }
-//!
-//! #[derive(Debug, Clone)]
-//! enum Fruit {
-//!     Apple,
-//!     Orange,
-//!     Strawberry,
-//!     Tomato,
-//! }
-//!
-//! #[derive(Debug, Clone)]
-//! enum Message {
-//!     FruitSelected(Fruit),
-//! }
-//!
-//! fn view(state: &State) -> Element<'_, Message> {
-//!     combo_box(
-//!         &state.fruits,
-//!         "Select your favorite fruit...",
-//!         state.favorite.as_ref(),
-//!         Message::FruitSelected
-//!     )
-//!     .into()
-//! }
-//!
-//! fn update(state: &mut State, message: Message) {
-//!     match message {
-//!         Message::FruitSelected(fruit) => {
-//!             state.favorite = Some(fruit);
-//!         }
-//!     }
-//! }
-//!
-//! impl std::fmt::Display for Fruit {
-//!     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-//!         f.write_str(match self {
-//!             Self::Apple => "Apple",
-//!             Self::Orange => "Orange",
-//!             Self::Strawberry => "Strawberry",
-//!             Self::Tomato => "Tomato",
-//!         })
-//!     }
-//! }
-//! ```
+//! A text input with a searchable suggestion dropdown, vendored from
+//! iced's `combo_box` (`iced_widget-0.14`) and adapted: options come from a
+//! plain list instead of a `State<T>`-managed cursor, the input always shows
+//! the current value, and Enter submits the typed text (not just a picked
+//! option). Used for the Traktor server address field.
 use iced::advanced::{Clipboard, Layout, Shell, Widget, layout, renderer, text, widget};
 use iced::keyboard;
 use iced::keyboard::key;
@@ -70,60 +19,9 @@ use std::fmt::Display;
 
 /// A widget for searching and selecting a single value from a list of options.
 ///
-/// # Example
-/// ```no_run
-/// # mod iced { pub mod widget { pub use iced_widget::*; } pub use iced_widget::Renderer; pub use iced_widget::core::*; }
-/// # pub type Element<'a, Message> = iced_widget::core::Element<'a, Message, iced_widget::Theme, iced_widget::Renderer>;
-/// #
-/// use iced::widget::combo_box;
-///
-/// struct State {
-///    fruits: combo_box::State<Fruit>,
-///    favorite: Option<Fruit>,
-/// }
-///
-/// #[derive(Debug, Clone)]
-/// enum Fruit {
-///     Apple,
-///     Orange,
-///     Strawberry,
-///     Tomato,
-/// }
-///
-/// #[derive(Debug, Clone)]
-/// enum Message {
-///     FruitSelected(Fruit),
-/// }
-///
-/// fn view(state: &State) -> Element<'_, Message> {
-///     combo_box(
-///         &state.fruits,
-///         "Select your favorite fruit...",
-///         state.favorite.as_ref(),
-///         Message::FruitSelected
-///     )
-///     .into()
-/// }
-///
-/// fn update(state: &mut State, message: Message) {
-///     match message {
-///         Message::FruitSelected(fruit) => {
-///             state.favorite = Some(fruit);
-///         }
-///     }
-/// }
-///
-/// impl std::fmt::Display for Fruit {
-///     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-///         f.write_str(match self {
-///             Self::Apple => "Apple",
-///             Self::Orange => "Orange",
-///             Self::Strawberry => "Strawberry",
-///             Self::Tomato => "Tomato",
-///         })
-///     }
-/// }
-/// ```
+/// Unlike the upstream `combo_box`, the embedded text input always shows the
+/// given `selection` (or the last typed text) rather than a placeholder, and
+/// the option list is supplied per call site instead of living in `State`.
 pub struct SuggestionTextInput<'a, T, Message, Theme = iced::Theme, Renderer = iced::Renderer>
 where
     Theme: Catalog,
@@ -327,6 +225,17 @@ struct Inner<T> {
     filtered_options: Filtered<T>,
 }
 
+impl<T> Inner<T>
+where
+    T: Clone,
+{
+    /// Resets the typed value and restores the full (unfiltered) option list.
+    fn reset(&mut self, options: Vec<T>) {
+        self.value = String::new();
+        self.filtered_options.update(options);
+    }
+}
+
 #[derive(Debug, Clone)]
 struct Filtered<T> {
     options: Vec<T>,
@@ -438,13 +347,6 @@ where
         }
     }
 
-    fn empty() -> Self {
-        Self {
-            options: vec![],
-            updated: Instant::now(),
-        }
-    }
-
     fn update(&mut self, options: Vec<T>) {
         self.options = options;
         self.updated = Instant::now();
@@ -487,13 +389,7 @@ where
         renderer: &Renderer,
         limits: &layout::Limits,
     ) -> layout::Node {
-        let is_focused = {
-            let text_input_state = tree.children[0]
-                .state
-                .downcast_ref::<text_input::State<Renderer::Paragraph>>();
-
-            text_input_state.is_focused()
-        };
+        let is_focused = text_input_focused::<Renderer>(tree);
 
         self.text_input.layout(
             &mut tree.children[0],
@@ -513,13 +409,7 @@ where
         cursor: mouse::Cursor,
         viewport: &Rectangle,
     ) {
-        let is_focused = {
-            let text_input_state = tree.children[0]
-                .state
-                .downcast_ref::<text_input::State<Renderer::Paragraph>>();
-
-            text_input_state.is_focused()
-        };
+        let is_focused = text_input_focused::<Renderer>(tree);
 
         let selection = if is_focused || self.selection.is_empty() {
             None
@@ -545,7 +435,7 @@ where
     fn state(&self) -> widget::tree::State {
         widget::tree::State::new(Menu::<T> {
             menu: menu::State::new(),
-            filtered_options: Filtered::empty(),
+            filtered_options: Filtered::new(Vec::new()),
             hovered_option: Some(0),
             new_selection: None,
         })
@@ -570,15 +460,7 @@ where
         shell: &mut Shell<'_, Message>,
         viewport: &Rectangle,
     ) {
-        let menu = tree.state.downcast_mut::<Menu<T>>();
-
-        let started_focused = {
-            let text_input_state = tree.children[0]
-                .state
-                .downcast_ref::<text_input::State<Renderer::Paragraph>>();
-
-            text_input_state.is_focused()
-        };
+        let started_focused = text_input_focused::<Renderer>(tree);
 
         // Create a new list of local messages
         let mut local_messages = Vec::new();
@@ -604,158 +486,14 @@ where
         shell.request_input_method(local_shell.input_method());
 
         // Then finally react to them here
-        for message in local_messages {
-            let TextInputEvent::TextChanged(new_value) = message;
+        self.handle_text_changed(local_messages, tree, shell);
 
-            if let Some(on_input) = &self.on_input {
-                shell.publish(on_input(new_value.clone()));
-            }
-
-            // Couple the filtered options with the `SuggestionTextInput`
-            // value and only recompute them when the value changes,
-            // instead of doing it in every `view` call
-            self.state.with_inner_mut(|state| {
-                menu.hovered_option = Some(0);
-                state.value = new_value;
-
-                state.filtered_options.update(
-                    search(&self.state.options, &state.option_matchers, &state.value)
-                        .cloned()
-                        .collect(),
-                );
-            });
-            shell.invalidate_layout();
-            shell.request_redraw();
-        }
-
-        let is_focused = {
-            let text_input_state = tree.children[0]
-                .state
-                .downcast_ref::<text_input::State<Renderer::Paragraph>>();
-
-            text_input_state.is_focused()
-        };
-
-        if is_focused {
-            self.state.with_inner(|state| {
-                if !started_focused && let Some(on_option_hovered) = &mut self.on_option_hovered {
-                    let hovered_option = menu.hovered_option.unwrap_or(0);
-
-                    if let Some(option) = state.filtered_options.options.get(hovered_option) {
-                        shell.publish(on_option_hovered(option.clone()));
-                    }
-                }
-
-                if let Event::Keyboard(keyboard::Event::KeyPressed {
-                    key: keyboard::Key::Named(named_key),
-                    modifiers,
-                    ..
-                }) = event
-                {
-                    let shift_modifier = modifiers.shift();
-                    match (named_key, shift_modifier) {
-                        (key::Named::Enter, _) => {
-                            if let Some(index) = &menu.hovered_option
-                                && let Some(option) = state.filtered_options.options.get(*index)
-                            {
-                                menu.new_selection = Some(option.clone());
-                            }
-
-                            shell.capture_event();
-                            shell.request_redraw();
-                        }
-                        (key::Named::ArrowUp, _) | (key::Named::Tab, true) => {
-                            if let Some(index) = &mut menu.hovered_option {
-                                if *index == 0 {
-                                    *index = state.filtered_options.options.len().saturating_sub(1);
-                                } else {
-                                    *index = index.saturating_sub(1);
-                                }
-                            } else {
-                                menu.hovered_option = Some(0);
-                            }
-
-                            if let Some(on_option_hovered) = &mut self.on_option_hovered
-                                && let Some(option) = menu
-                                    .hovered_option
-                                    .and_then(|index| state.filtered_options.options.get(index))
-                            {
-                                // Notify the selection
-                                shell.publish(on_option_hovered(option.clone()));
-                            }
-
-                            shell.capture_event();
-                            shell.request_redraw();
-                        }
-                        (key::Named::ArrowDown, _) | (key::Named::Tab, false)
-                            if !modifiers.shift() =>
-                        {
-                            if let Some(index) = &mut menu.hovered_option {
-                                if *index >= state.filtered_options.options.len().saturating_sub(1)
-                                {
-                                    *index = 0;
-                                } else {
-                                    *index = index.saturating_add(1).min(
-                                        state.filtered_options.options.len().saturating_sub(1),
-                                    );
-                                }
-                            } else {
-                                menu.hovered_option = Some(0);
-                            }
-
-                            if let Some(on_option_hovered) = &mut self.on_option_hovered
-                                && let Some(option) = menu
-                                    .hovered_option
-                                    .and_then(|index| state.filtered_options.options.get(index))
-                            {
-                                // Notify the selection
-                                shell.publish(on_option_hovered(option.clone()));
-                            }
-
-                            shell.capture_event();
-                            shell.request_redraw();
-                        }
-                        _ => {}
-                    }
-                }
-            });
-        }
+        self.handle_keyboard(started_focused, tree, event, shell);
 
         // If the overlay menu has selected something
-        self.state.with_inner_mut(|state| {
-            if let Some(selection) = menu.new_selection.take() {
-                // Clear the value and reset the options and menu
-                state.value = String::new();
-                state.filtered_options.update(self.state.options.clone());
-                menu.menu = menu::State::default();
+        self.commit_pending_selection(tree, layout, renderer, clipboard, shell, viewport);
 
-                // Notify the selection
-                shell.publish((self.on_selected)(selection));
-
-                // Unfocus the input
-                let mut local_messages = Vec::new();
-                let mut local_shell = Shell::new(&mut local_messages);
-                self.text_input.update(
-                    &mut tree.children[0],
-                    &Event::Mouse(mouse::Event::ButtonPressed(mouse::Button::Left)),
-                    layout,
-                    mouse::Cursor::Unavailable,
-                    renderer,
-                    clipboard,
-                    &mut local_shell,
-                    viewport,
-                );
-                shell.request_input_method(local_shell.input_method());
-            }
-        });
-
-        let is_focused = {
-            let text_input_state = tree.children[0]
-                .state
-                .downcast_ref::<text_input::State<Renderer::Paragraph>>();
-
-            text_input_state.is_focused()
-        };
+        let is_focused = text_input_focused::<Renderer>(tree);
 
         if started_focused != is_focused {
             // Focus changed, invalidate widget tree to force a fresh `view`
@@ -791,15 +529,7 @@ where
         viewport: &Rectangle,
         translation: Vector,
     ) -> Option<overlay::Element<'b, Message, Theme, Renderer>> {
-        let is_focused = {
-            let text_input_state = tree.children[0]
-                .state
-                .downcast_ref::<text_input::State<Renderer::Paragraph>>();
-
-            text_input_state.is_focused()
-        };
-
-        if is_focused {
+        if text_input_focused::<Renderer>(tree) {
             let Menu {
                 menu,
                 filtered_options,
@@ -820,8 +550,7 @@ where
                     hovered_option,
                     |selection| {
                         self.state.with_inner_mut(|state| {
-                            state.value = String::new();
-                            state.filtered_options.update(self.state.options.clone());
+                            state.reset(self.state.options.clone());
                         });
 
                         tree.children[0]
@@ -856,6 +585,165 @@ where
         } else {
             None
         }
+    }
+}
+
+impl<T, Message, Theme, Renderer> SuggestionTextInput<'_, T, Message, Theme, Renderer>
+where
+    T: Display + Clone + 'static,
+    Message: Clone,
+    Theme: Catalog,
+    Renderer: text::Renderer,
+{
+    /// Publishes [`Self::on_input`] for every text change the embedded input
+    /// produced and re-filters the option list for the new query.
+    fn handle_text_changed(
+        &mut self,
+        local_messages: Vec<TextInputEvent>,
+        tree: &mut widget::Tree,
+        shell: &mut Shell<'_, Message>,
+    ) {
+        for TextInputEvent::TextChanged(new_value) in local_messages {
+            if let Some(on_input) = &self.on_input {
+                shell.publish(on_input(new_value.clone()));
+            }
+
+            // Couple the filtered options with the `SuggestionTextInput`
+            // value and only recompute them when the value changes,
+            // instead of doing it in every `view` call
+            let menu = tree.state.downcast_mut::<Menu<T>>();
+            self.state.with_inner_mut(|state| {
+                menu.hovered_option = Some(0);
+                state.value = new_value;
+
+                state.filtered_options.update(
+                    search(&self.state.options, &state.option_matchers, &state.value)
+                        .cloned()
+                        .collect(),
+                );
+            });
+            shell.invalidate_layout();
+            shell.request_redraw();
+        }
+    }
+
+    /// Reacts to keyboard events while the input is focused: on first focus
+    /// publishes [`Self::on_option_hovered`], the arrow / tab keys cycle the
+    /// hover highlight and Enter marks the hovered option for selection.
+    fn handle_keyboard(
+        &mut self,
+        started_focused: bool,
+        tree: &mut widget::Tree,
+        event: &Event,
+        shell: &mut Shell<'_, Message>,
+    ) {
+        if !text_input_focused::<Renderer>(tree) {
+            return;
+        }
+
+        let menu = tree.state.downcast_mut::<Menu<T>>();
+
+        self.state.with_inner(|state| {
+            if !started_focused && let Some(on_option_hovered) = &mut self.on_option_hovered {
+                let hovered_option = menu.hovered_option.unwrap_or(0);
+
+                if let Some(option) = state.filtered_options.options.get(hovered_option) {
+                    shell.publish(on_option_hovered(option.clone()));
+                }
+            }
+
+            let Event::Keyboard(keyboard::Event::KeyPressed {
+                key: keyboard::Key::Named(named_key),
+                modifiers,
+                ..
+            }) = event
+            else {
+                return;
+            };
+
+            let shift_modifier = modifiers.shift();
+
+            // Arrow keys and Tab cycle the hover highlight through the
+            // option list (wrapping around) and publish the newly hovered
+            // option.
+            let cycle = match (named_key, shift_modifier) {
+                (key::Named::ArrowUp, _) | (key::Named::Tab, true) => Some(-1),
+                (key::Named::ArrowDown, _) | (key::Named::Tab, false) if !modifiers.shift() => {
+                    Some(1)
+                }
+                _ => None,
+            };
+
+            if let Some(delta) = cycle {
+                cycle_hovered(menu, state.filtered_options.options.len(), delta);
+
+                if let Some(on_option_hovered) = &mut self.on_option_hovered
+                    && let Some(option) = menu
+                        .hovered_option
+                        .and_then(|index| state.filtered_options.options.get(index))
+                {
+                    // Notify the selection
+                    shell.publish(on_option_hovered(option.clone()));
+                }
+
+                shell.capture_event();
+                shell.request_redraw();
+            }
+
+            if named_key == &key::Named::Enter {
+                if let Some(index) = &menu.hovered_option
+                    && let Some(option) = state.filtered_options.options.get(*index)
+                {
+                    menu.new_selection = Some(option.clone());
+                }
+
+                shell.capture_event();
+                shell.request_redraw();
+            }
+        });
+    }
+
+    /// Commits a pending menu selection (Enter or click): resets the query,
+    /// restores the full option list, publishes [`Self::on_selected`] and
+    /// unfocuses the embedded input.
+    fn commit_pending_selection(
+        &mut self,
+        tree: &mut widget::Tree,
+        layout: Layout<'_>,
+        renderer: &Renderer,
+        clipboard: &mut dyn Clipboard,
+        shell: &mut Shell<'_, Message>,
+        viewport: &Rectangle,
+    ) {
+        let menu = tree.state.downcast_mut::<Menu<T>>();
+
+        self.state.with_inner_mut(|state| {
+            let Some(selection) = menu.new_selection.take() else {
+                return;
+            };
+
+            // Clear the value and reset the options and menu
+            state.reset(self.state.options.clone());
+            menu.menu = menu::State::default();
+
+            // Notify the selection
+            shell.publish((self.on_selected)(selection));
+
+            // Unfocus the input
+            let mut local_messages = Vec::new();
+            let mut local_shell = Shell::new(&mut local_messages);
+            self.text_input.update(
+                &mut tree.children[0],
+                &Event::Mouse(mouse::Event::ButtonPressed(mouse::Button::Left)),
+                layout,
+                mouse::Cursor::Unavailable,
+                renderer,
+                clipboard,
+                &mut local_shell,
+                viewport,
+            );
+            shell.request_input_method(local_shell.input_method());
+        });
     }
 }
 
@@ -928,4 +816,26 @@ where
     let mut matcher = option.to_string();
     matcher.retain(|c| c.is_ascii_alphanumeric());
     matcher.to_lowercase()
+}
+
+/// Whether the embedded text input of the widget in `tree` is focused.
+fn text_input_focused<Renderer: text::Renderer>(tree: &widget::Tree) -> bool {
+    tree.children[0]
+        .state
+        .downcast_ref::<text_input::State<Renderer::Paragraph>>()
+        .is_focused()
+}
+
+/// Moves the menu's hovered option by `delta` (-1 or 1), wrapping around the
+/// option list; an unset hover starts at the first option.
+fn cycle_hovered<T>(menu: &mut Menu<T>, count: usize, delta: isize) {
+    let next = match menu.hovered_option {
+        Some(index) if count > 0 => {
+            let step = delta.rem_euclid(count as isize) as usize;
+            (index + step) % count
+        }
+        _ => 0,
+    };
+
+    menu.hovered_option = Some(next);
 }

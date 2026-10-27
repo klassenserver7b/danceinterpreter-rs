@@ -2,7 +2,7 @@
 
 use crate::Message;
 use crate::ui::config_window::Toast;
-use crate::ui::theme::{self, sz};
+use crate::ui::theme::{self, pad4, sz};
 use crate::ui::widgets::{material_symbol, material_symbol_sized};
 use iced::alignment::Vertical;
 use iced::widget::{button, container, row, text};
@@ -46,7 +46,7 @@ pub fn build(toast: &Option<Toast>) -> Option<Element<'_, Message>> {
             .height(Length::Fill)
             .align_x(Alignment::Center)
             .align_y(Vertical::Bottom)
-            .padding(crate::ui::theme::pad4(
+            .padding(pad4(
                 0.0,
                 0.0,
                 crate::ui::config_window::show_bar::DOCK_CLEARANCE,

@@ -2,7 +2,7 @@
 
 use crate::Message;
 use crate::ui::config_window::{ConfigWindow, View};
-use crate::ui::theme::{self, sz};
+use crate::ui::theme::{self, pad4, sz};
 use crate::ui::widgets::buttons;
 use crate::ui::with_tooltip;
 use iced::widget::{Column, column as col, container, row, text};
@@ -77,7 +77,7 @@ pub fn build<'a>(config_window: &'a ConfigWindow) -> Element<'a, Message> {
         .width(Length::Fill)
         .align_y(Alignment::Center),
     )
-    .padding([18, 31])
+    .padding(pad4(18.0, theme::PAGE_GUTTER, 18.0, theme::PAGE_GUTTER))
     .width(Length::Fill)
     .align_y(Alignment::Center)
     .style(theme::page_bg)

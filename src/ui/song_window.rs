@@ -6,6 +6,7 @@
 //! blank display (`ItemSource::Blank`) shows the same backdrop color.
 
 use crate::Window;
+use crate::ui::theme::pad4;
 use crate::{DanceInterpreter, Message};
 use iced::advanced::text::Shaping;
 use iced::alignment::{Horizontal, Vertical};
@@ -198,21 +199,24 @@ impl SongWindow {
             .spacing(h / 60.0)
             .align_x(Horizontal::Left);
 
-            let song_block = if self.enable_image {
-                if let Some(image_handle) = displayable_data.subline_image.as_ref() {
-                    // Thumbnails (often 16:9 YouTube stills) keep their
-                    // original aspect ratio: scale to fit, never crop.
-                    let cover = image(image_handle)
-                        .content_fit(ContentFit::Contain)
-                        .width(Length::Fixed(cover_size))
-                        .height(Length::Fixed(cover_size));
+            // Cover art only when enabled and an image is actually loaded;
+            // thumbnails (often 16:9 YouTube stills) keep their original
+            // aspect ratio: scale to fit, never crop.
+            let cover_handle = if self.enable_image {
+                displayable_data.subline_image.as_ref()
+            } else {
+                None
+            };
 
-                    row![cover, text_block]
-                        .spacing(song_gap)
-                        .align_y(Vertical::Center)
-                } else {
-                    row![text_block]
-                }
+            let song_block = if let Some(image_handle) = cover_handle {
+                let cover = image(image_handle)
+                    .content_fit(ContentFit::Contain)
+                    .width(Length::Fixed(cover_size))
+                    .height(Length::Fixed(cover_size));
+
+                row![cover, text_block]
+                    .spacing(song_gap)
+                    .align_y(Vertical::Center)
             } else {
                 row![text_block]
             };
@@ -223,9 +227,7 @@ impl SongWindow {
         let center_overlay = container(center)
             .width(Length::Fill)
             .height(Length::Fill)
-            .padding(crate::ui::theme::pad4(
-                pad_top, pad_side, pad_bottom, pad_side,
-            ))
+            .padding(pad4(pad_top, pad_side, pad_bottom, pad_side))
             .align_x(Horizontal::Center)
             .align_y(Vertical::Center);
 
@@ -254,7 +256,7 @@ impl SongWindow {
                 container(row![horizontal(), next_block].width(Length::Fill))
                     .width(Length::Fill)
                     .height(Length::Fill)
-                    .padding(crate::ui::theme::pad4(0.0, pad_side, next_pad_bottom, 0.0))
+                    .padding(pad4(0.0, pad_side, next_pad_bottom, 0.0))
                     .align_y(Vertical::Bottom),
             );
         }

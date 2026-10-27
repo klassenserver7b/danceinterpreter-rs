@@ -18,7 +18,7 @@ pub use dialog::DialogState;
 pub use playlist_view::PLAYLIST_SCROLLABLE_ID;
 
 use crate::ui::config_window::dj_panel::Sidebar;
-use crate::ui::theme;
+use crate::ui::theme::{self, pad4};
 use crate::{DanceInterpreter, Message, Window};
 use iced::widget::{column as col, container, mouse_area, row, stack};
 use iced::{Alignment, Animation, Color, Element, Length, Size, Theme, animation, window};
@@ -183,6 +183,13 @@ impl Window for ConfigWindow {
 }
 
 impl ConfigWindow {
+    /// Expanded width of a window-proportional side panel: a fraction of the
+    /// window width, clamped between a readable floor and the panel's design
+    /// width (all in px).
+    fn expanded_width(window_width: f32, fraction: f32, min: f32, max: f32) -> f32 {
+        (window_width / fraction).clamp(min, max)
+    }
+
     pub fn view<'a>(&'a self, dance_interpreter: &'a DanceInterpreter) -> Element<'a, Message> {
         let now = Instant::now();
 
@@ -197,16 +204,18 @@ impl ConfigWindow {
             ]
             .spacing(22),
         )
-        .padding(crate::ui::theme::pad4(18.0, 31.0, 22.0, 31.0))
+        .padding(pad4(18.0, theme::PAGE_GUTTER, 22.0, theme::PAGE_GUTTER))
         .width(Length::Fill)
         .height(Length::Fill);
 
         // Slide-in DJ integration panel (animated width, pushes content).
         let dj_panel = self.sidebar.build(
             dance_interpreter,
-            self.sidebar
-                .state
-                .interpolate(0.0, (self.size.width / 5.0).min(400.0), now),
+            self.sidebar.state.interpolate(
+                0.0,
+                Self::expanded_width(self.size.width, 5.0, 0.0, dj_panel::PANEL_WIDTH),
+                now,
+            ),
         );
 
         // Collapsible columns: navigation sidebar (left) and info rail
@@ -217,7 +226,7 @@ impl ConfigWindow {
             dance_interpreter,
             self.nav_anim.interpolate(
                 0.0,
-                (self.size.width / 6.0).clamp(180.0, nav_sidebar::SIDEBAR_WIDTH),
+                Self::expanded_width(self.size.width, 6.0, 180.0, nav_sidebar::SIDEBAR_WIDTH),
                 now,
             ),
         );
@@ -226,7 +235,7 @@ impl ConfigWindow {
             dance_interpreter,
             self.rail_anim.interpolate(
                 0.0,
-                (self.size.width / 5.0).clamp(210.0, right_column::RAIL_WIDTH),
+                Self::expanded_width(self.size.width, 5.0, 210.0, right_column::RAIL_WIDTH),
                 now,
             ),
         );
@@ -321,9 +330,14 @@ pub mod search {
     use crate::dataloading::displayable_data::DisplayableData;
     use fuzzy_matcher::FuzzyMatcher;
     use fuzzy_matcher::skim::SkimMatcherV2 as Matcher;
+    use std::sync::LazyLock;
+
+    /// The skim matcher is expensive to construct (builds lookup tables), so
+    /// one shared instance serves every keystroke of every search field.
+    static MATCHER: LazyLock<Matcher> = LazyLock::new(Matcher::default);
 
     pub fn data_matches_search_query(search_query: &str, data: DisplayableData) -> bool {
-        let matcher = Matcher::default();
+        let matcher = &*MATCHER;
 
         !search_query.is_empty()
             && matcher

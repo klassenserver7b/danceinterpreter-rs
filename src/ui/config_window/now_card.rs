@@ -4,7 +4,7 @@
 use crate::dataloading::dataprovider::ItemSource;
 use crate::dataloading::displayable_data::DisplayableData;
 use crate::ui::config_window::source_tag;
-use crate::ui::theme::{self, sz};
+use crate::ui::theme::{self, pad4, sz};
 use crate::ui::widgets::{buttons, heading, kbd, material_symbol, material_symbol_sized};
 use crate::{DanceInterpreter, Message};
 use iced::alignment::Vertical;
@@ -140,7 +140,7 @@ pub fn build<'a>(dance_interpreter: &'a DanceInterpreter) -> Element<'a, Message
     .height(Length::Fixed(40.0));
 
     container(body)
-        .padding(crate::ui::theme::pad4(14.0, 18.0, 14.0, 18.0))
+        .padding(pad4(14.0, 18.0, 14.0, 18.0))
         .width(Length::Fill)
         .clip(true)
         .style(theme::now_card)

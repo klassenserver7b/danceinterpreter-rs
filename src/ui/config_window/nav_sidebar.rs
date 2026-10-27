@@ -2,7 +2,7 @@
 //! settings / help entries.
 
 use crate::ui::config_window::{ConfigWindow, DialogState, View};
-use crate::ui::theme::{self, sz};
+use crate::ui::theme::{self, pad4, sz};
 use crate::ui::widgets::{kbd, material_symbol};
 use crate::{DanceInterpreter, Message};
 use iced::widget::{column as col, container, row, text};
@@ -69,7 +69,7 @@ pub fn build<'a>(
         col![
             nav,
             container(bottom)
-                .padding(crate::ui::theme::pad4(20.0, 0.0, 14.0, 0.0))
+                .padding(pad4(20.0, 0.0, 14.0, 0.0))
                 .height(Length::Fill)
         ]
         .height(Length::Fill),
@@ -77,7 +77,7 @@ pub fn build<'a>(
     .width(Length::Fixed(width))
     .height(Length::Fill)
     .clip(true)
-    .padding(crate::ui::theme::pad4(29.0, 17.0, 0.0, 17.0))
+    .padding(pad4(29.0, 17.0, 0.0, 17.0))
     .style(theme::sidebar_bg)
     .into()
 }
@@ -112,7 +112,7 @@ fn brand() -> Element<'static, Message> {
     .spacing(0);
 
     container(row![symbol, name].spacing(9).align_y(Alignment::Center))
-        .padding(crate::ui::theme::pad4(0.0, 3.0, 33.0, 3.0))
+        .padding(pad4(0.0, 3.0, 33.0, 3.0))
         .into()
 }
 
@@ -257,7 +257,7 @@ fn version_row() -> Element<'static, Message> {
         .spacing(7)
         .align_y(Alignment::Center),
     )
-    .padding(crate::ui::theme::pad4(0.0, 0.0, 0.0, 3.0))
+    .padding(pad4(0.0, 0.0, 0.0, 3.0))
     .height(Length::Fixed(VERSION_ROW_HEIGHT))
     .align_y(Alignment::Center)
     .into()

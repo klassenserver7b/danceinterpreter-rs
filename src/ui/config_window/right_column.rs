@@ -3,9 +3,10 @@
 
 use crate::dataloading::dataprovider::ItemChange;
 use crate::traktor_api::TraktorMessage;
+use crate::ui::config_window::DialogState;
 use crate::ui::config_window::dj_panel::SidebarMessage;
 use crate::ui::config_window::source_tag_right;
-use crate::ui::theme::{self, sz};
+use crate::ui::theme::{self, pad4, sz};
 use crate::ui::widgets::{buttons, heading, kbd, material_symbol, material_symbol_sized};
 use crate::{DanceInterpreter, Message};
 use iced::widget::{button, column as col, container, row, scrollable, text, toggler};
@@ -27,7 +28,7 @@ pub fn build<'a>(dance_interpreter: &'a DanceInterpreter, width: f32) -> Element
         .width(Length::Fixed(width))
         .height(Length::Fill)
         .clip(true)
-        .padding(crate::ui::theme::pad4(14.0, 14.0, 16.0, 14.0))
+        .padding(pad4(14.0, 14.0, 16.0, 14.0))
         .style(move |t: &Theme| theme::panel_collapsible(t, width));
 
     rail.into()
@@ -96,7 +97,7 @@ fn build_up_next<'a>(dance_interpreter: &'a DanceInterpreter) -> Element<'a, Mes
             text(artist)
                 .size(sz::CAPTION)
                 .style(theme::text_style(|tk| tk.muted)),
-            container(show_now).padding(crate::ui::theme::pad4(4.0, 0.0, 0.0, 0.0)),
+            container(show_now).padding(pad4(4.0, 0.0, 0.0, 0.0)),
         ]
         .spacing(6),
     )
@@ -172,7 +173,7 @@ fn build_dj_card<'a>(dance_interpreter: &'a DanceInterpreter) -> Element<'a, Mes
             ]
             .spacing(2)
             .width(Length::Fill),
-            crate::ui::widgets::buttons::ghost_icon(
+            buttons::ghost_icon(
                 "expand_more",
                 false,
                 sz::ICON,
@@ -313,11 +314,9 @@ fn build_tip() -> Element<'static, Message> {
                 )
                 .padding([4, 6])
                 .style(theme::btn_ghost)
-                .on_press(Message::OpenDialog(
-                    crate::ui::config_window::DialogState::Help
-                ))
+                .on_press(Message::OpenDialog(DialogState::Help))
             )
-            .padding(crate::ui::theme::pad4(2.0, 0.0, 0.0, 23.0)),
+            .padding(pad4(2.0, 0.0, 0.0, 23.0)),
         ]
         .spacing(2),
     )

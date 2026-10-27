@@ -986,7 +986,6 @@ dependencies = [
  "rfd",
  "serde",
  "serde_json",
- "tempfile",
  "tokio",
  "tokio-tungstenite 0.30.0",
  "url",

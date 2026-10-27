@@ -61,10 +61,22 @@ pub struct PlaylistItem {
     pub played: bool,
 }
 
+/// Playback flags of a single playlist row, as the table renderer needs them.
+#[derive(Debug, Clone, Copy, Default)]
+pub struct RowPlayState {
+    /// The row the audience display is showing.
+    pub is_current: bool,
+    /// The row queued to play after the current one.
+    pub is_next: bool,
+    /// The row matching Traktor's live deck.
+    pub is_traktor: bool,
+    /// The row has already been played.
+    pub is_played: bool,
+}
+
 #[derive(Default)]
 pub struct DataProvider {
     pub traktor_provider: TraktorDataProvider,
-    pub statics_path: Option<PathBuf>,
 
     playlist: Vec<PlaylistItem>,
     statics: IndexMap<String, StaticInfo>,
@@ -87,12 +99,7 @@ impl DataProvider {
             })
             .collect();
 
-        let dances: Vec<String> = self
-            .playlist
-            .iter()
-            .map(|item| item.song.dance.clone())
-            .collect();
-        for dance in dances {
+        for dance in self.playlist_dances() {
             self.ensure_static(&dance);
         }
 
@@ -103,28 +110,41 @@ impl DataProvider {
         }
     }
 
-    pub fn set_statics(&mut self, vec: Vec<StaticInfo>) {
+    fn set_statics(&mut self, vec: Vec<StaticInfo>) {
         self.statics = vec.into_iter().map(|s| (s.name.clone(), s)).collect();
     }
 
-    pub fn get_current_displayable_data(&self) -> Option<DisplayableData> {
-        match self.current {
-            ItemSource::Static(ref name) => self.statics.get(name).map(|s| s.into()),
-            ItemSource::Playlist(i) => self.playlist.get(i).map(|item| (&item.song).into()),
-            ItemSource::Other(ref song) => Some(song.into()),
+    /// All dance names used by the playlist, in row order (collected first so
+    /// the statics map can be mutated while iterating).
+    fn playlist_dances(&self) -> Vec<String> {
+        self.playlist
+            .iter()
+            .map(|item| item.song.dance.clone())
+            .collect()
+    }
+
+    /// Maps an item source to its displayable data, with the Traktor song
+    /// passed in (current vs. next deck lookup differs per call site).
+    fn displayable_for(
+        &self,
+        source: &ItemSource,
+        traktor_song: Option<&SongInfo>,
+    ) -> Option<DisplayableData> {
+        match source {
+            ItemSource::Static(name) => self.statics.get(name).map(|s| s.into()),
+            ItemSource::Playlist(i) => self.playlist.get(*i).map(|item| (&item.song).into()),
+            ItemSource::Other(song) => Some(song.into()),
             ItemSource::Blank => None,
-            ItemSource::Traktor => self.traktor_provider.get_song_info().map(|s| s.into()),
+            ItemSource::Traktor => traktor_song.map(|s| s.into()),
         }
+    }
+
+    pub fn get_current_displayable_data(&self) -> Option<DisplayableData> {
+        self.displayable_for(&self.current, self.traktor_provider.get_song_info())
     }
     pub fn get_next_displayable_data(&self) -> Option<DisplayableData> {
         if let Some(next) = self.next.as_ref() {
-            return match next {
-                ItemSource::Static(name) => self.statics.get(name).map(|s| s.into()),
-                ItemSource::Playlist(i) => self.playlist.get(*i).map(|item| (&item.song).into()),
-                ItemSource::Other(song) => Some(song.into()),
-                ItemSource::Blank => None,
-                ItemSource::Traktor => self.traktor_provider.get_next_song_info().map(|s| s.into()),
-            };
+            return self.displayable_for(next, self.traktor_provider.get_next_song_info());
         }
 
         match self.current {
@@ -202,22 +222,16 @@ impl DataProvider {
         });
     }
 
-    pub fn ensure_static(&mut self, dance: &str) {
+    fn ensure_static(&mut self, dance: &str) {
         if !dance.is_empty() && !self.statics.contains_key(dance) {
             self.statics
                 .insert(dance.to_string(), StaticInfo::new(dance.to_string()));
         }
     }
 
+    /// Inserts a placeholder static under an unused "New Static N" name.
     pub fn add_static(&mut self) {
-        let mut name = "New Static".to_string();
-        let mut counter = 1;
-        while self.statics.contains_key(&name) {
-            counter += 1;
-            name = format!("New Static {}", counter);
-        }
-        self.statics.insert(name.clone(), StaticInfo::new(name));
-        self.save_statics();
+        self.add_named_static("New Static");
     }
 
     /// Adds a static with the given name (uniquified when it already exists).
@@ -250,8 +264,8 @@ impl DataProvider {
     pub fn delete_item(&mut self, song: ItemSource) {
         if self.current == song {
             self.current = ItemSource::Blank;
-        } else if self.next == Some(song.clone()) {
-            self.next = None;
+        } else {
+            self.next.take_if(|next| *next == song);
         }
 
         if let ItemSource::Playlist(i) = song {
@@ -358,24 +372,12 @@ impl DataProvider {
 
     pub fn process_traktor_message(&mut self, message: traktor_api::ServerMessage) {
         self.set_current_as_played();
-        self.traktor_provider.process_message(
-            message,
-            &self
-                .playlist
-                .iter()
-                .map(|i| i.song.clone())
-                .collect::<Vec<_>>(),
-        );
+        self.traktor_provider
+            .process_message(message, &self.playlist);
     }
 
-    pub fn get_current_traktor_index(&self) -> Option<usize> {
-        self.traktor_provider.get_current_index(
-            &self
-                .playlist
-                .iter()
-                .map(|i| i.song.clone())
-                .collect::<Vec<_>>(),
-        )
+    fn get_current_traktor_index(&self) -> Option<usize> {
+        self.traktor_provider.get_current_index(&self.playlist)
     }
 
     pub fn take_scroll_index(&mut self) -> Option<usize> {
@@ -398,41 +400,36 @@ impl DataProvider {
         self.traktor_provider.take_should_scroll();
     }
 
-    pub fn get_play_state(&self, playlist_index: usize) -> (bool, bool, bool, bool) {
-        let mut is_current = false;
-        let mut is_next = false;
-        let mut is_traktor = false;
-        let is_played = self
-            .playlist
-            .get(playlist_index)
-            .map(|item| item.played)
-            .unwrap_or(false);
+    pub fn get_play_state(&self, playlist_index: usize) -> RowPlayState {
+        let mut state = RowPlayState {
+            is_played: self
+                .playlist
+                .get(playlist_index)
+                .map(|item| item.played)
+                .unwrap_or(false),
+            ..RowPlayState::default()
+        };
 
         if let ItemSource::Playlist(i) = self.current {
-            is_current = playlist_index == i;
-            is_next = playlist_index == (i + 1);
+            state.is_current = playlist_index == i;
+            state.is_next = playlist_index == (i + 1);
         }
 
         if let Some(ItemSource::Playlist(i)) = self.next {
-            is_next = playlist_index == i;
+            state.is_next = playlist_index == i;
         }
 
         if matches!(self.current, ItemSource::Traktor)
             && let Some(index) = self.get_current_traktor_index()
         {
-            is_traktor = playlist_index == index;
+            state.is_traktor = playlist_index == index;
         }
 
-        (is_current, is_next, is_traktor, is_played)
+        state
     }
 
     pub fn ensure_statics_for_playlist(&mut self) {
-        let dances: Vec<String> = self
-            .playlist
-            .iter()
-            .map(|item| item.song.dance.clone())
-            .collect();
-        for dance in dances {
+        for dance in self.playlist_dances() {
             self.ensure_static(&dance);
         }
         self.save_statics();
@@ -475,11 +472,17 @@ impl DataProvider {
         SubmitStaticResult::Success
     }
 
-    pub fn submit_static_name(
-        &mut self,
-        old_name: &str,
-        new_name: &str,
-    ) -> Result<(), &'static str> {
+    /// Renames every playlist row tagged `old_name` to `new_name` (shared by
+    /// rename and merge).
+    fn rekey_playlist(&mut self, old_name: &str, new_name: &str) {
+        for item in &mut self.playlist {
+            if item.song.dance == old_name {
+                item.song.dance = new_name.to_string();
+            }
+        }
+    }
+
+    fn submit_static_name(&mut self, old_name: &str, new_name: &str) -> Result<(), &'static str> {
         if self.statics.contains_key(new_name) {
             return Err("Static with new name already exists");
         }
@@ -487,11 +490,7 @@ impl DataProvider {
         if let Some(mut static_info) = self.statics.shift_remove(old_name) {
             static_info.name = new_name.to_string();
             self.statics.insert(new_name.to_string(), static_info);
-            for item in &mut self.playlist {
-                if item.song.dance == old_name {
-                    item.song.dance = new_name.to_string();
-                }
-            }
+            self.rekey_playlist(old_name, new_name);
             self.save_statics();
             Ok(())
         } else {
@@ -522,11 +521,7 @@ impl DataProvider {
         }
 
         if self.statics.shift_remove(old_name).is_some() {
-            for item in &mut self.playlist {
-                if item.song.dance == old_name {
-                    item.song.dance = new_name.to_string();
-                }
-            }
+            self.rekey_playlist(old_name, new_name);
             self.save_statics();
             Ok(())
         } else {
@@ -551,24 +546,11 @@ impl DataProvider {
         }
     }
 
-    #[allow(dead_code)]
-    pub fn set_statics_path(&mut self, path: PathBuf) {
-        self.statics_path = Some(path);
-    }
-
     fn save_statics(&self) {
         let values: Vec<&StaticInfo> = self.statics.values().collect();
         if let Ok(json) = serde_json::to_string_pretty(&values) {
-            let _ = std::fs::write(self.get_statics_path(), json);
+            let _ = std::fs::write(Self::default_statics_path(), json);
         }
-    }
-
-    pub fn get_statics_path(&self) -> PathBuf {
-        if let Some(path) = &self.statics_path {
-            return path.clone();
-        }
-
-        Self::default_statics_path()
     }
 
     #[cfg(test)]
@@ -591,7 +573,7 @@ impl DataProvider {
     }
 
     pub fn load_statics(&mut self) {
-        let statics: Vec<StaticInfo> = std::fs::read_to_string(self.get_statics_path())
+        let statics: Vec<StaticInfo> = std::fs::read_to_string(Self::default_statics_path())
             .map(|file_content| serde_json::from_str(&file_content).ok())
             .unwrap_or_default()
             .unwrap_or_default();
@@ -624,30 +606,29 @@ mod tests {
     use super::*;
     use crate::dataloading::songinfo::SongInfo;
 
-    fn test_provider() -> (DataProvider, tempfile::TempDir) {
-        let dir = tempfile::tempdir().expect("failed to create temp dir");
-        let mut provider = DataProvider::default();
-        provider.set_statics_path(dir.path().join("statics.json"));
-        (provider, dir)
+    fn test_provider() -> DataProvider {
+        // Statics persistence targets std::env::temp_dir() in test builds
+        // (default_statics_path), so no repo files are touched.
+        DataProvider::default()
     }
 
     #[test]
     fn test_ensure_static_empty() {
-        let (mut provider, _dir) = test_provider();
+        let mut provider = test_provider();
         provider.ensure_static("");
         assert!(provider.statics.is_empty());
     }
 
     #[test]
     fn test_ensure_static_new() {
-        let (mut provider, _dir) = test_provider();
+        let mut provider = test_provider();
         provider.ensure_static("Waltz");
         assert!(provider.statics.contains_key("Waltz"));
     }
 
     #[test]
     fn test_ensure_static_existing() {
-        let (mut provider, _dir) = test_provider();
+        let mut provider = test_provider();
         provider.ensure_static("Waltz");
         provider.statics.get_mut("Waltz").unwrap().is_favorite = true;
 
@@ -657,7 +638,7 @@ mod tests {
 
     #[test]
     fn test_playlist_dance_updates_triggering_static_creation() {
-        let (mut provider, _dir) = test_provider();
+        let mut provider = test_provider();
         let song = SongInfo {
             dance: "Waltz".to_string(),
             ..Default::default()
@@ -676,7 +657,7 @@ mod tests {
 
     #[test]
     fn test_ensure_statics_for_playlist() {
-        let (mut provider, _dir) = test_provider();
+        let mut provider = test_provider();
         let song = SongInfo {
             dance: "Waltz".to_string(),
             ..Default::default()
@@ -692,7 +673,7 @@ mod tests {
 
     #[test]
     fn test_submit_static_name() {
-        let (mut provider, _dir) = test_provider();
+        let mut provider = test_provider();
         provider.ensure_static("OldDance");
         let song = SongInfo {
             dance: "OldDance".to_string(),
@@ -712,7 +693,7 @@ mod tests {
 
     #[test]
     fn test_rename_static_display_name() {
-        let (mut provider, _dir) = test_provider();
+        let mut provider = test_provider();
         provider.ensure_static("OldDance");
 
         assert!(provider.rename_static("OldDance", "NewDisplay").is_ok());
@@ -725,7 +706,7 @@ mod tests {
 
     #[test]
     fn test_update_static_color() {
-        let (mut provider, _dir) = test_provider();
+        let mut provider = test_provider();
         provider.ensure_static("ColorDance");
 
         let color = Color::from_rgb(1.0, 0.0, 0.0);
@@ -751,7 +732,7 @@ mod tests {
 
     #[test]
     fn test_toggle_static_favorite() {
-        let (mut provider, _dir) = test_provider();
+        let mut provider = test_provider();
         provider.ensure_static("FavDance");
 
         assert!(!provider.statics.get("FavDance").unwrap().is_favorite);
@@ -765,7 +746,7 @@ mod tests {
 
     #[test]
     fn test_merge_statics() {
-        let (mut provider, _dir) = test_provider();
+        let mut provider = test_provider();
         provider.ensure_static("SourceDance");
         provider.ensure_static("TargetDance");
         let song = SongInfo {
