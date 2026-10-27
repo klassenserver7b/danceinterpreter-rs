@@ -54,10 +54,10 @@ pub fn material_symbol(id: &'_ str, filled: bool) -> Text<'_, Theme, Renderer> {
 }
 
 /// Keyboard hint pill, e.g. `Space`, `Ctrl+F`. `style` picks the pill look —
-/// usually [`crate::ui::theme::kbd_style`], or a tinted variant on colored surfaces.
+/// usually [`theme::kbd_style`], or a tinted variant on colored surfaces.
 pub fn kbd<'a>(
     label: impl text::IntoFragment<'a>,
-    style: fn(&Theme) -> iced::widget::container::Style,
+    style: fn(&Theme) -> container::Style,
 ) -> iced::widget::Container<'a, Message, Theme, Renderer> {
     iced::widget::container(text(label).size(theme::sz::MICRO))
         .padding([1, 5])
@@ -76,7 +76,7 @@ pub fn dot(size: f32, color: impl Fn(&Theme) -> Color + 'static) -> Element<'sta
         .width(Length::Fixed(size))
         .height(Length::Fixed(size))
         .style(move |t: &Theme| {
-            iced::widget::container::Style::default()
+            container::Style::default()
                 .background(color(t))
                 .border(iced::Border {
                     color: Color::TRANSPARENT,
@@ -92,9 +92,7 @@ pub fn divider() -> Element<'static, Message> {
     container(iced::widget::Space::new())
         .width(Length::Fill)
         .height(Length::Fixed(1.0))
-        .style(|t: &Theme| {
-            iced::widget::container::Style::default().background(theme::Tokens::of(t).border)
-        })
+        .style(|t: &Theme| container::Style::default().background(theme::Tokens::of(t).border))
         .into()
 }
 
@@ -211,7 +209,7 @@ pub fn row_shell<'a, Message: 'a>(
         .width(Length::Fixed(ACCENT_BAR_W))
         .height(Length::Fill)
         .style(move |t: &Theme| {
-            iced::widget::container::Style::default().background(if look.current {
+            container::Style::default().background(if look.current {
                 current_bar(t)
             } else {
                 Color::TRANSPARENT

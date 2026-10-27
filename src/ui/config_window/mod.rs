@@ -346,7 +346,7 @@ impl ConfigWindow {
 }
 
 /// Shared helper: a "source tag" chip like `PLAYLIST` / `QUEUED`.
-pub fn source_tag<'a>(text: &'a str) -> Element<'a, Message> {
+pub fn source_tag(text: &str) -> Element<'_, Message> {
     container(text_micro(text).style(theme::text_style(|tk| tk.tag_text)))
         .padding([2, 5])
         .style(|t: &Theme| {
@@ -361,7 +361,7 @@ pub fn source_tag<'a>(text: &'a str) -> Element<'a, Message> {
 }
 
 /// [`source_tag`] pushed to the right edge of the row it lives in.
-pub fn source_tag_right<'a>(text: &'a str) -> Element<'a, Message> {
+pub fn source_tag_right(text: &str) -> Element<'_, Message> {
     container(source_tag(text))
         .width(Length::Fill)
         .align_x(Alignment::End)

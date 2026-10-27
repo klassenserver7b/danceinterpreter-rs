@@ -4,11 +4,13 @@ mod macros;
 mod traktor_api;
 mod ui;
 
+use crate::dataloading::m3uloader::discover_playlists;
+
 use crate::dataloading::dataprovider::{
     DataProvider, ItemChange, ItemSource, SongDataEdit, SubmitStaticResult,
 };
 use crate::dataloading::id3tagreader::read_song_info_from_filepath;
-use crate::dataloading::m3uloader::{PlaylistLoad, discover_playlists, load_tag_data_from_m3u};
+use crate::dataloading::m3uloader::{PlaylistLoad, load_tag_data_from_m3u};
 use crate::dataloading::songinfo::SongInfo;
 use crate::traktor_api::{ServerMessage, StateUpdate, TraktorMessage, TraktorSyncAction};
 use crate::ui::config_window::toast;
@@ -85,8 +87,8 @@ pub enum StaticsMessage {
     /// Closes the editor without writing anything (Escape).
     CancelEdit,
     DraftChanged(String),
-    UpdateColor(String, iced::Color),
-    PreviewColor(String, iced::Color),
+    UpdateColor(String, Color),
+    PreviewColor(String, Color),
     ToggleColorPicker(String),
     AddBlank,
     AddNamed(String),
@@ -290,7 +292,7 @@ impl DanceInterpreter {
 
     /// Discards the open editor's draft without writing anything (the
     /// playlist mutating under the editor). Also expires the Escape rollback
-    /// snapshot: with the playlist changing, the snapshotted index may end
+    /// snapshot: with the playlist changing, the snapshot index may end
     /// up pointing at another song.
     fn cancel_song_edit(&mut self) {
         self.config_window.editing = None;
@@ -341,7 +343,7 @@ impl DanceInterpreter {
         toast::task(summary)
     }
 
-    /// Loads an m3u and installs it as the current playlist.
+    /// Loads a m3u and installs it as the current playlist.
     fn load_playlist_from(&mut self, file: PathBuf) -> Task<Message> {
         match load_tag_data_from_m3u(&file) {
             Ok(load) => self.load_playlist_file(&file, load),
@@ -566,7 +568,7 @@ impl DanceInterpreter {
                 if var("container").is_ok() {
                     // Flatpak: the folder pick doubles as the sandbox access
                     // grant. Playlist discovery, entry resolution and tag
-                    // reads all stay inside the granted folder afterwards,
+                    // reads all stay inside the granted folder afterward,
                     // so they work through the document portal no matter
                     // whether it hands out real paths or fuse paths.
                     return self.open_playlist_via_folder_grant();
@@ -597,7 +599,7 @@ impl DanceInterpreter {
             Message::Statics(msg) => match msg {
                 StaticsMessage::Reload => {
                     // The editor cannot survive a reload; the key may be gone
-                    // or carry different data afterwards.
+                    // or carry different data afterward.
                     self.config_window.static_editing = None;
                     self.data_provider.load_statics();
                     toast::task("Statics reloaded")

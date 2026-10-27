@@ -11,8 +11,8 @@ use iced::{Alignment, Element, Length, Task, Theme};
 
 /// Task that shows a toast with `text` — the standard way `update`
 /// surfaces short-lived feedback.
-pub fn task(text: impl Into<String>) -> Task<crate::Message> {
-    Task::done(crate::Message::Toast(text.into()))
+pub fn task(text: impl Into<String>) -> Task<Message> {
+    Task::done(Message::Toast(text.into()))
 }
 
 /// Widest the toast bubble may get; longer messages truncate with a `…`

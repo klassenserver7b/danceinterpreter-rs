@@ -172,14 +172,6 @@ where
         Size::new(self.width, Length::Shrink)
     }
 
-    fn tag(&self) -> widget::tree::Tag {
-        widget::tree::Tag::of::<paragraph::Plain<Renderer::Paragraph>>()
-    }
-
-    fn state(&self) -> widget::tree::State {
-        widget::tree::State::new(paragraph::Plain::<Renderer::Paragraph>::default())
-    }
-
     fn layout(
         &mut self,
         tree: &mut widget::Tree,
@@ -244,6 +236,14 @@ where
             (self.style)(theme).color.unwrap_or(defaults.text_color),
             *viewport,
         );
+    }
+
+    fn tag(&self) -> widget::tree::Tag {
+        widget::tree::Tag::of::<paragraph::Plain<Renderer::Paragraph>>()
+    }
+
+    fn state(&self) -> widget::tree::State {
+        widget::tree::State::new(paragraph::Plain::<Renderer::Paragraph>::default())
     }
 }
 

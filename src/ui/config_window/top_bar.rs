@@ -7,7 +7,7 @@ use crate::ui::widgets::{buttons, divider, icon_button_tooltip, push_right};
 use iced::widget::{Column, column as col, container, row, text};
 use iced::{Alignment, Element, Length, Theme};
 
-pub fn build<'a>(config_window: &'a ConfigWindow) -> Element<'a, Message> {
+pub fn build(config_window: &ConfigWindow) -> Element<'_, Message> {
     let view_name = match config_window.view {
         View::Playlist => "Playlist",
         View::Statics => "Statics",
@@ -77,8 +77,6 @@ pub fn build<'a>(config_window: &'a ConfigWindow) -> Element<'a, Message> {
 }
 
 /// Vertical stack helper used by the shell (bar + hairline).
-pub fn bar_with_divider<'a>(
-    bar: Element<'a, Message>,
-) -> Column<'a, Message, Theme, iced::Renderer> {
+pub fn bar_with_divider(bar: Element<Message>) -> Column<Message, Theme, iced::Renderer> {
     col![bar, divider()]
 }

@@ -105,7 +105,7 @@ fn build_toolbar<'a>(
     )
 }
 
-fn build_search<'a>(config_window: &'a ConfigWindow) -> Element<'a, Message> {
+fn build_search(config_window: &ConfigWindow) -> Element<'_, Message> {
     let input = text_input("Find a song, artist, dance…", &config_window.search_query)
         .size(sz::TINY)
         .width(Length::Fixed(SEARCH_WIDTH))
@@ -513,7 +513,7 @@ pub(crate) fn editable_text<'a>(
 // Quick add + footer
 // ---------------------------------------------------------------------------
 
-fn build_quick_add<'a>(config_window: &'a ConfigWindow) -> Element<'a, Message> {
+fn build_quick_add(config_window: &ConfigWindow) -> Element<'_, Message> {
     let submit = Message::QuickAdd(QuickAddMessage::Submit);
 
     let quick_input =

@@ -736,7 +736,7 @@ pub fn kbd_style(theme: &Theme) -> container::Style {
 
 /// Hover/press shift for a button background. Dark themes brighten the fill;
 /// light themes darken it (brightening washes out near-white fills there).
-/// `factor` is the brighten factor on dark themes (e.g. `1.06`).
+/// `factor` is the brightness factor on dark themes (e.g. `1.06`).
 fn shift(status: button::Status, is_light: bool, base: Color, factor: f32) -> Option<Background> {
     let tinted = if is_light {
         let k = 2.0 - factor;

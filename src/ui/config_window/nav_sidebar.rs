@@ -106,7 +106,7 @@ fn brand() -> Element<'static, Message> {
         .into()
 }
 
-fn session_card<'a>(config_window: &'a ConfigWindow) -> Element<'a, Message> {
+fn session_card(config_window: &ConfigWindow) -> Element<'_, Message> {
     let (title, subtitle) = match &config_window.playlist_file {
         Some(path) => (
             path.file_name()

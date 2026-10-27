@@ -39,7 +39,7 @@ pub fn build<'a>(
 // Now playing
 // ---------------------------------------------------------------------------
 
-fn build_now_playing<'a>(dance_interpreter: &'a DanceInterpreter) -> Element<'a, Message> {
+fn build_now_playing(dance_interpreter: &DanceInterpreter) -> Element<'_, Message> {
     let provider = &dance_interpreter.data_provider;
     let current = provider.get_current_source();
 
@@ -159,7 +159,7 @@ fn build_now_playing<'a>(dance_interpreter: &'a DanceInterpreter) -> Element<'a,
 // Up next
 // ---------------------------------------------------------------------------
 
-fn build_up_next<'a>(dance_interpreter: &'a DanceInterpreter) -> Element<'a, Message> {
+fn build_up_next(dance_interpreter: &DanceInterpreter) -> Element<'_, Message> {
     let provider = &dance_interpreter.data_provider;
     let queued = provider.get_queued_next().is_some();
     let next = provider.get_next_displayable_data();

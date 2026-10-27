@@ -7,7 +7,7 @@ use crate::dataloading::songinfo::SongInfo;
 use percent_encoding::percent_decode_str;
 use url::Url;
 
-/// Result of loading an m3u: the songs whose tags could be read plus every
+/// Result of loading a m3u: the songs whose tags could be read plus every
 /// skipped entry with its reason. Entries can legitimately be unreadable —
 /// audio outside a flatpak sandbox grant, absolute paths pointing elsewhere
 /// — and silently dropping them made empty playlists look like successful

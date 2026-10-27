@@ -18,7 +18,7 @@ pub const DOCK_CLEARANCE: f32 = 92.0;
 /// Height of the show bar's pills and of the label band.
 pub const PILL_HEIGHT: f32 = 33.0;
 
-pub fn build<'a>(dance_interpreter: &'a DanceInterpreter) -> Element<'a, Message> {
+pub fn build(dance_interpreter: &DanceInterpreter) -> Element<'_, Message> {
     let current = dance_interpreter.data_provider.get_current_source().clone();
 
     let label = row![

@@ -1,6 +1,6 @@
 //! The audience-facing song window, redesigned after the approved
 //! `docs/src/audience.css`: a huge dance headline, the song block with cover
-//! art and an "UP NEXT" hint in the bottom-right corner.
+//! art and a "UP NEXT" hint in the bottom-right corner.
 //!
 //! The backdrop color is selectable in the settings dialog ("Backdrop"); a
 //! blank display (`ItemSource::Blank`) shows the same backdrop color.

@@ -287,7 +287,7 @@ fn build_settings<'a>(
     .width(Length::Fixed(120.0))
     .style(|t: &Theme, _status| {
         let tk = theme::Tokens::of(t);
-        iced_aw::style::number_input::Style {
+        number_input::Style {
             button_background: Some(iced::Background::Color(tk.btn2_bg)),
             icon_color: tk.btn2_text,
         }
@@ -415,9 +415,9 @@ fn version_line() -> Element<'static, Message> {
     .into()
 }
 
-fn build_add_static<'a>(
-    config_window: &'a ConfigWindow,
-) -> (String, Column<'a, Message, Theme>, Element<'a, Message>) {
+fn build_add_static(
+    config_window: &ConfigWindow,
+) -> (String, Column<'_, Message, Theme>, Element<'_, Message>) {
     let submit = Message::Statics(StaticsMessage::AddNamed(
         config_window.add_static_name.clone(),
     ));

@@ -1,6 +1,6 @@
 //! Button builders for the redesigned UI.
 //!
-//! All styles come from [`crate::ui::theme`]; the builders here only exist to
+//! All styles come from [`theme`]; the builders here only exist to
 //! avoid repeating padding / alignment / icon boilerplate.
 
 use crate::Message;
@@ -54,12 +54,12 @@ pub fn danger<'a>(label: impl IntoFragment<'a> + 'a, message: Message) -> Button
 }
 
 /// Icon-only button with the ghost style (transparent, hover wash).
-pub fn ghost_icon<'a>(
-    icon_id: &'a str,
+pub fn ghost_icon(
+    icon_id: &str,
     filled: bool,
     size: impl Into<Pixels>,
     message: Message,
-) -> Button<'a, Message> {
+) -> Button<'_, Message> {
     button(material_symbol_sized(icon_id, filled, size))
         .padding(5)
         .style(theme::btn_ghost)

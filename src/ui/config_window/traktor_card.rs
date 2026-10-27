@@ -159,7 +159,7 @@ pub fn build<'a>(
 }
 
 /// LED + summary, plus the cover loader's IP when present.
-fn connection_card<'a>(dance_interpreter: &'a DanceInterpreter) -> Element<'a, Message> {
+fn connection_card(dance_interpreter: &DanceInterpreter) -> Element<'_, Message> {
     let provider = &dance_interpreter.data_provider.traktor_provider;
     let connection = provider.get_connection_state();
 
