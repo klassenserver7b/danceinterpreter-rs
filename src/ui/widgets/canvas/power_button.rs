@@ -1,37 +1,17 @@
+use crate::ui::widgets::canvas::{IconBase, draw_icon_base, stroke_icon};
 use iced::mouse::Cursor;
-use iced::widget::canvas;
-use iced::widget::canvas::{Frame, LineCap, Path, Stroke};
+use iced::widget::canvas::{self, Frame, Path};
 use iced::{Point, Radians, Rectangle, Theme};
 use std::f32::consts::PI;
 
 pub fn draw(theme: &Theme, frame: &mut Frame, _bounds: Rectangle, _cursor: Cursor, enabled: bool) {
-    let size = frame.size();
-    let cx = size.width / 2.0;
-    let cy = size.height / 2.0;
-    let center = Point::new(cx, cy);
-
-    // Scale everything relative to the smaller dimension
-    let dim = size.width.min(size.height);
-    let bg_r = dim * 0.46; // background circle radius
-    let arc_r = dim * 0.30; // power arc radius
-    let stroke_w = dim * 0.07;
-
-    // Colors (design-system tokens)
-    let tk = crate::ui::theme::Tokens::of(theme);
-    let (icon_color, bg_color) = if enabled {
-        (tk.accent_soft, tk.panel_deep)
-    } else {
-        (tk.muted, tk.panel_deep)
-    };
-
-    let bg_path = Path::new(|b| b.circle(center, bg_r));
-    frame.fill(
-        &bg_path,
-        canvas::Fill {
-            style: canvas::Style::Solid(bg_color),
-            ..canvas::Fill::default()
-        },
-    );
+    let base @ IconBase {
+        cx,
+        cy,
+        center,
+        arc_r,
+        ..
+    } = draw_icon_base(theme, frame, enabled);
 
     // Power arc
     // Gap of 70° centered at the top (-π/2 in screen coords).
@@ -49,14 +29,7 @@ pub fn draw(theme: &Theme, frame: &mut Frame, _bounds: Rectangle, _cursor: Curso
             end_angle: Radians(end),
         });
     });
-
-    frame.stroke(
-        &arc,
-        Stroke::default()
-            .with_color(icon_color)
-            .with_width(stroke_w)
-            .with_line_cap(LineCap::Butt),
-    );
+    stroke_icon(frame, &arc, &base, 1.0);
 
     // Power line (vertical, through the gap)
     // Runs from ~20% inside the radius up to the circumference.
@@ -64,12 +37,5 @@ pub fn draw(theme: &Theme, frame: &mut Frame, _bounds: Rectangle, _cursor: Curso
         b.move_to(Point::new(cx, cy - arc_r * 0.18));
         b.line_to(Point::new(cx, cy - arc_r));
     });
-
-    frame.stroke(
-        &line,
-        Stroke::default()
-            .with_color(icon_color)
-            .with_width(stroke_w)
-            .with_line_cap(LineCap::Butt),
-    );
+    stroke_icon(frame, &line, &base, 1.0);
 }

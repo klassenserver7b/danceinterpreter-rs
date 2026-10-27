@@ -1,37 +1,18 @@
+use crate::ui::widgets::canvas::{IconBase, draw_icon_base, stroke_icon};
 use iced::mouse::Cursor;
-use iced::widget::canvas;
-use iced::widget::canvas::{Frame, LineCap, Path, Stroke};
+use iced::widget::canvas::{self, Frame, Path};
 use iced::{Point, Radians, Rectangle, Theme};
 use std::f32::consts::PI;
 
 pub fn draw(theme: &Theme, frame: &mut Frame, _bounds: Rectangle, _cursor: Cursor, enabled: bool) {
-    let size = frame.size();
-    let cx = size.width / 2.0;
-    let cy = size.height / 2.0;
-    let center = Point::new(cx, cy);
-    let dim = size.width.min(size.height);
-    let bg_r = dim * 0.46;
-    let arc_r = dim * 0.30;
-    let stroke_w = dim * 0.07;
-    let arrow_size = dim * 0.13;
-
-    // Colors (design-system tokens)
-    let tk = crate::ui::theme::Tokens::of(theme);
-    let (icon_color, bg_color) = if enabled {
-        (tk.accent_soft, tk.panel_deep)
-    } else {
-        (tk.muted, tk.panel_deep)
-    };
-
-    // Background circle
-    let bg_path = Path::new(|b| b.circle(center, bg_r));
-    frame.fill(
-        &bg_path,
-        canvas::Fill {
-            style: canvas::Style::Solid(bg_color),
-            ..canvas::Fill::default()
-        },
-    );
+    let base @ IconBase {
+        cx,
+        cy,
+        center,
+        dim,
+        arc_r,
+        ..
+    } = draw_icon_base(theme, frame, enabled);
 
     // Restart arc
     // 300° clockwise arc, 60° gap left from the top.
@@ -57,14 +38,9 @@ pub fn draw(theme: &Theme, frame: &mut Frame, _bounds: Rectangle, _cursor: Curso
             end_angle: Radians(arc_end),
         });
     });
-    frame.stroke(
-        &arc,
-        Stroke::default()
-            .with_color(icon_color)
-            .with_width(stroke_w)
-            .with_line_cap(LineCap::Butt),
-    );
+    stroke_icon(frame, &arc, &base, 1.0);
 
+    // The 16.0 factor is arc/arrow geometry (rad→px nudge), not a font size.
     let end_x = cx - gap * 16.0;
     let end_y = cy - arc_r;
 
@@ -72,6 +48,7 @@ pub fn draw(theme: &Theme, frame: &mut Frame, _bounds: Rectangle, _cursor: Curso
     let (s, c) = 45.0_f32.to_radians().sin_cos();
     let w1 = (-c, -s); // rotate +45°
     let w2 = (-c, s); // rotate -45°
+    let arrow_size = dim * 0.13;
 
     let tip = Point::new(end_x, end_y);
     let p1 = Point::new(end_x - w1.0 * arrow_size, end_y + w1.1 * arrow_size);
@@ -82,11 +59,5 @@ pub fn draw(theme: &Theme, frame: &mut Frame, _bounds: Rectangle, _cursor: Curso
         b.line_to(tip);
         b.line_to(p2);
     });
-    frame.stroke(
-        &arrowhead,
-        Stroke::default()
-            .with_color(icon_color)
-            .with_width(stroke_w * 0.75)
-            .with_line_cap(LineCap::Butt),
-    );
+    stroke_icon(frame, &arrowhead, &base, 0.75);
 }
