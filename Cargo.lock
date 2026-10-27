@@ -961,7 +961,7 @@ checksum = "f27ae1dd37df86211c42e150270f82743308803d90a6f6e6651cd730d5e1732f"
 
 [[package]]
 name = "danceinterpreter-rs"
-version = "0.8.4"
+version = "0.9.0"
 dependencies = [
  "bytes",
  "dirs",
