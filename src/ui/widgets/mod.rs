@@ -11,10 +11,10 @@ use iced::{Alignment, Color, Element, Font, Length, Pixels, Renderer, Theme};
 pub mod buttons;
 /// Canvas-drawn animated controls.
 pub mod canvas;
-/// Text that truncates with a trailing ellipsis (…) when it does not fit.
-pub mod ellipsis_text;
 /// Small round color preview button.
 pub mod color_swatch;
+/// Text that truncates with a trailing ellipsis (…) when it does not fit.
+pub mod ellipsis_text;
 /// Vendored combo-box-style text input with a suggestion menu.
 pub mod suggestion_text_input;
 

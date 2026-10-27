@@ -73,6 +73,15 @@ fn build_toolbar<'a>(
 
     if config_window.search_visible {
         tools = tools.push(build_search(config_window));
+    } else {
+        // The closed search leaves an unused gap in the header; a button in
+        // its spot expands into the bar on press (Toggle focuses the input).
+        tools = tools.push(icon_button_tooltip(
+            "search",
+            sz::ICON,
+            Message::Search(SearchMessage::Toggle),
+            "Find a song (Ctrl+F)",
+        ));
     }
 
     tools = tools.push(icon_button_tooltip(
@@ -264,7 +273,9 @@ fn build_song_row<'a>(
         .into()
     };
 
-    let song_cell = col![title_field, artist_field].spacing(4).width(Length::Fill);
+    let song_cell = col![title_field, artist_field]
+        .spacing(4)
+        .width(Length::Fill);
 
     let chip = build_dance_cell(
         &song.dance,

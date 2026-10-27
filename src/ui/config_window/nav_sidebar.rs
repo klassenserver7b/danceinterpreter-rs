@@ -3,7 +3,7 @@
 
 use crate::ui::config_window::{ConfigWindow, DialogState, View};
 use crate::ui::theme::{self, pad4, sz};
-use crate::ui::widgets::{kbd, material_symbol, push_right, EllipsisText};
+use crate::ui::widgets::{EllipsisText, kbd, material_symbol, push_right};
 use crate::{DanceInterpreter, Message};
 use iced::widget::{column as col, container, row, text};
 use iced::{Alignment, Color, Element, Length, Theme};

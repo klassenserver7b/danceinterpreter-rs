@@ -28,7 +28,10 @@ const DIALOG_PAD: f32 = 25.0;
 #[derive(Debug, Clone)]
 pub enum DialogState {
     Delete(ItemSource),
-    MergeStatic { old_name: String, new_name: String },
+    MergeStatic {
+        old_name: String,
+        new_name: String,
+    },
     Settings,
     Help,
     AddStatic,

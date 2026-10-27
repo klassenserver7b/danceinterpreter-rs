@@ -95,8 +95,7 @@ fn load_m3u_entries(path: &Path) -> io::Result<Vec<(String, PathBuf)>> {
         .lines()
         .filter(|line| !line.starts_with('#'))
         .map(|entry| {
-            let resolved =
-                parse_file_uri(entry).unwrap_or_else(|| parse_encoded_file_name(entry));
+            let resolved = parse_file_uri(entry).unwrap_or_else(|| parse_encoded_file_name(entry));
             (entry.to_string(), root.join(resolved))
         })
         .collect())
@@ -177,12 +176,16 @@ mod tests {
         let resolved: Vec<PathBuf> = entries.into_iter().map(|(_, path)| path).collect();
         // Percent-encoded and plain relative entries resolve against the
         // m3u's directory …
-        assert!(resolved
-            .iter()
-            .any(|p| p.ends_with("Tanzmusik/01_Competition Fever; SAP Rockets.mp3")));
-        assert!(resolved
-            .iter()
-            .any(|p| p.ends_with("Tanzmusik/02_10 Hours; BLOOD SUGAR.mp3")));
+        assert!(
+            resolved
+                .iter()
+                .any(|p| p.ends_with("Tanzmusik/01_Competition Fever; SAP Rockets.mp3"))
+        );
+        assert!(
+            resolved
+                .iter()
+                .any(|p| p.ends_with("Tanzmusik/02_10 Hours; BLOOD SUGAR.mp3"))
+        );
         // … `file://` URIs and absolute paths are taken as-is (the latter
         // only on unix) …
         #[cfg(not(windows))]

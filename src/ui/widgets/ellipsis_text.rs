@@ -10,12 +10,12 @@
 //! prefix that still fits together with a trailing `…`, so the cut is always
 //! visible and deliberate.
 
+use iced::advanced::Layout;
 use iced::advanced::layout::{self};
 use iced::advanced::renderer;
 use iced::advanced::text::paragraph::{self, Paragraph};
 use iced::advanced::text::{self, LineHeight, Shaping, Wrapping};
 use iced::advanced::widget::{self, Widget};
-use iced::advanced::Layout;
 use iced::alignment;
 use iced::mouse;
 use iced::widget::text::Style;
