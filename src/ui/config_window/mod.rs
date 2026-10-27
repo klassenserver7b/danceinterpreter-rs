@@ -288,17 +288,18 @@ impl ConfigWindow {
         // The wrapper is a polite observer: the editor, buttons and other
         // inputs capture their clicks before they ever reach it — it only
         // fires for dead areas.
-        let main: Element<'a, Message> = if self.editing.is_some() || self.static_editing.is_some()
-        {
-            let commit = if self.editing.is_some() {
-                Message::EndSongEdit
-            } else {
-                Message::Statics(StaticsMessage::EndEdit)
-            };
-            mouse_area(main).on_press(commit).into()
-        } else {
-            main.into()
-        };
+        //
+        // The wrapper is ALWAYS present: toggling the root widget's type
+        // between frames would make iced discard the whole subtree state
+        // (widget tags no longer match), resetting every scrollable to the
+        // top the moment an editor opens.
+        let mut main = mouse_area(main);
+        if self.editing.is_some() {
+            main = main.on_press(Message::EndSongEdit);
+        } else if self.static_editing.is_some() {
+            main = main.on_press(Message::Statics(StaticsMessage::EndEdit));
+        }
+        let main: Element<'a, Message> = main.into();
 
         // Overlays: toast bubble, then modal dialog on top.
         let mut overlays = stack![main];
