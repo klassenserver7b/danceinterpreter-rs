@@ -11,7 +11,7 @@ use crate::ui::widgets::canvas::canvas_toggle::CanvasToggle;
 use crate::ui::widgets::canvas::{power_button, restart_button};
 use crate::ui::widgets::suggestion_text_input;
 use crate::ui::widgets::suggestion_text_input::SuggestionTextInput;
-use crate::ui::widgets::{buttons, heading, labeled_message_toggler, material_symbol};
+use crate::ui::widgets::{buttons, heading, icon_muted, labeled_message_toggler};
 use crate::ui::with_tooltip;
 use crate::{DanceInterpreter, Message};
 use iced::alignment::Vertical;
@@ -69,9 +69,7 @@ impl Sidebar {
         let provider = &dance_interpreter.data_provider.traktor_provider;
 
         let header = row![
-            material_symbol("link", false)
-                .size(sz::ICON)
-                .style(theme::text_style(|tk| tk.muted)),
+            icon_muted("link", sz::ICON),
             heading("DJ integration", sz::H2, iced::font::Weight::Medium)
                 .style(theme::text_style(|tk| tk.text)),
             source_tag_right("TRAKTOR PRO"),
@@ -258,16 +256,7 @@ impl Sidebar {
         container(column)
             .padding(10)
             .width(Length::Fill)
-            .style(|t: &Theme| {
-                let tk = theme::Tokens::of(t);
-                container::Style::default()
-                    .background(tk.panel_deep)
-                    .border(iced::Border {
-                        color: tk.border,
-                        width: 1.0,
-                        radius: 5.0.into(),
-                    })
-            })
+            .style(|t: &Theme| theme::inset_card(t, theme::r::MD))
             .into()
     }
 }

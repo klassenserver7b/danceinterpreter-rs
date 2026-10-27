@@ -8,10 +8,9 @@ use crate::ui::config_window::{ConfigWindow, EditField, edit_input_id};
 use crate::ui::theme::RowLook;
 use crate::ui::theme::{self, sz};
 use crate::ui::widgets::{
-    ACCENT_BAR_W, buttons, dot, heading, material_symbol, material_symbol_sized, panel_header,
-    row_shell,
+    ACCENT_BAR_W, buttons, card_panel, delete_button, dot, eyebrow, heading, icon_button_tooltip,
+    icon_muted, material_symbol, material_symbol_sized, panel_header, push_right, row_shell,
 };
-use crate::ui::with_tooltip;
 use crate::{DanceInterpreter, DialogMessage, Message, QuickAddMessage, SearchMessage};
 use iced::advanced::text::{Shaping, Wrapping};
 use iced::widget::{
@@ -55,12 +54,7 @@ pub fn build<'a>(
     .width(Length::Fill)
     .height(Length::Fill);
 
-    container(panel)
-        .width(Length::Fill)
-        .height(Length::Fill)
-        .style(theme::card)
-        .clip(true)
-        .into()
+    card_panel(panel).into()
 }
 
 // ---------------------------------------------------------------------------
@@ -80,18 +74,17 @@ fn build_toolbar<'a>(
         tools = tools.push(build_search(config_window));
     }
 
-    tools = tools.push(with_tooltip(
-        buttons::ghost_icon("upload_file", false, sz::ICON, Message::AddAudioFiles),
+    tools = tools.push(icon_button_tooltip(
+        "upload_file",
+        sz::ICON,
+        Message::AddAudioFiles,
         "Add audio files",
     ));
 
-    tools = tools.push(with_tooltip(
-        buttons::ghost_icon(
-            "undo",
-            false,
-            sz::ICON,
-            Message::Dialog(DialogMessage::UndoDelete),
-        ),
+    tools = tools.push(icon_button_tooltip(
+        "undo",
+        sz::ICON,
+        Message::Dialog(DialogMessage::UndoDelete),
         "Undo delete",
     ));
 
@@ -112,22 +105,16 @@ fn build_search<'a>(config_window: &'a ConfigWindow) -> Element<'a, Message> {
         .style(theme::input_boxed)
         .padding([5, 8]);
 
-    let mut search_row = row![
-        material_symbol_sized("search", false, 15.0).style(theme::text_style(|tk| tk.muted)),
-        input,
-    ]
-    .spacing(6)
-    .align_y(Alignment::Center);
+    let mut search_row = row![icon_muted("search", 15.0), input,]
+        .spacing(6)
+        .align_y(Alignment::Center);
 
     // ✕ clears the query without hiding the search bar.
     if !config_window.search_query.is_empty() {
-        search_row = search_row.push(with_tooltip(
-            buttons::ghost_icon(
-                "backspace",
-                false,
-                14.0,
-                Message::Search(SearchMessage::Clear),
-            ),
+        search_row = search_row.push(icon_button_tooltip(
+            "backspace",
+            14.0,
+            Message::Search(SearchMessage::Clear),
             "Clear search",
         ));
     }
@@ -141,16 +128,7 @@ fn build_search<'a>(config_window: &'a ConfigWindow) -> Element<'a, Message> {
 
     container(search_row)
         .padding([0, 8])
-        .style(|t: &Theme| {
-            let tk = theme::Tokens::of(t);
-            container::Style::default()
-                .background(tk.panel_deep)
-                .border(iced::Border {
-                    color: tk.border,
-                    width: 1.0,
-                    radius: theme::r::SM.into(),
-                })
-        })
+        .style(|t: &Theme| theme::inset_card(t, theme::r::SM))
         .height(Length::Fixed(SEARCH_HEIGHT))
         .align_y(Alignment::Center)
         .into()
@@ -162,14 +140,7 @@ fn build_search<'a>(config_window: &'a ConfigWindow) -> Element<'a, Message> {
 
 fn build_table_head() -> Element<'static, Message> {
     let head_cell = |label: &'static str, width: Length| -> Element<'static, Message> {
-        container(
-            text(label)
-                .size(sz::MICRO)
-                .font(theme::body_font(iced::font::Weight::Semibold))
-                .style(theme::text_style(|tk| tk.muted_head)),
-        )
-        .width(width)
-        .into()
+        container(eyebrow(label)).width(width).into()
     };
 
     // The accent-bar spacer mirrors the rows' accent bar; its Fill height
@@ -361,33 +332,19 @@ fn build_song_row<'a>(
     };
 
     let actions = row![
-        with_tooltip(
-            buttons::ghost_icon(
-                "play_arrow",
-                false,
-                14.0,
-                Message::ItemChanged(ItemChange::PlaylistAbsolute(idx))
-            ),
+        icon_button_tooltip(
+            "play_arrow",
+            14.0,
+            Message::ItemChanged(ItemChange::PlaylistAbsolute(idx)),
             "Show now"
         ),
-        with_tooltip(
-            buttons::ghost_icon(
-                "skip_next",
-                false,
-                14.0,
-                Message::SetNextItem(ItemSource::Playlist(idx))
-            ),
+        icon_button_tooltip(
+            "skip_next",
+            14.0,
+            Message::SetNextItem(ItemSource::Playlist(idx)),
             "Queue as next"
         ),
-        with_tooltip(
-            buttons::ghost_icon(
-                "delete",
-                false,
-                14.0,
-                Message::Dialog(DialogMessage::RequestDelete(ItemSource::Playlist(idx)))
-            ),
-            "Delete song"
-        ),
+        delete_button(ItemSource::Playlist(idx), "Delete song"),
     ]
     .spacing(2)
     .align_y(Alignment::Center);
@@ -404,11 +361,7 @@ fn build_song_row<'a>(
     .padding([0, 10])
     .width(Length::Fill);
 
-    let look = RowLook {
-        zebra: idx % 2 == 1,
-        current: is_current,
-        matched: is_match && !is_current,
-    };
+    let look = RowLook::table(idx, is_current, is_match);
 
     row_shell(content, look, |t| theme::Tokens::of(t).accent_bar)
 }
@@ -510,7 +463,7 @@ fn build_quick_add<'a>(config_window: &'a ConfigWindow) -> Element<'a, Message> 
     let submit = Message::QuickAdd(QuickAddMessage::Submit);
 
     let content = row![
-        material_symbol_sized("add", false, sz::ICON).style(theme::text_style(|tk| tk.muted)),
+        icon_muted("add", sz::ICON),
         text_input("Add a song title…", &config_window.quick_title)
             .size(sz::ROW)
             .on_input(|v| Message::QuickAdd(QuickAddMessage::UpdateTitle(v)))
@@ -564,13 +517,11 @@ fn build_footer(dance_interpreter: &DanceInterpreter) -> Element<'static, Messag
             text(format!("{} played · {} remaining", played, remaining))
                 .size(sz::TINY)
                 .style(theme::text_style(|tk| tk.muted)),
-            container(
+            push_right(
                 text("Double-click a field to edit")
                     .size(sz::TINY)
-                    .style(theme::text_style(|tk| tk.faint))
-            )
-            .width(Length::Fill)
-            .align_x(Alignment::End),
+                    .style(theme::text_style(|tk| tk.faint)),
+            ),
         ]
         .width(Length::Fill),
     )
@@ -639,7 +590,7 @@ fn build_empty_playlist_view(dance_interpreter: &DanceInterpreter) -> Element<'s
     .align_x(Alignment::Center)
     .width(Length::Fill);
 
-    container(
+    card_panel(
         col![
             Space::new().height(Length::Fill),
             content,
@@ -648,10 +599,6 @@ fn build_empty_playlist_view(dance_interpreter: &DanceInterpreter) -> Element<'s
         .width(Length::Fill)
         .height(Length::Fill),
     )
-    .width(Length::Fill)
-    .height(Length::Fill)
-    .style(theme::card)
-    .clip(true)
     .into()
 }
 

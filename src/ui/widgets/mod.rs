@@ -1,4 +1,6 @@
+use crate::DialogMessage;
 use crate::Message;
+use crate::dataloading::dataprovider::ItemSource;
 use crate::ui::theme;
 use iced::advanced::text::Shaping;
 use iced::widget::{Text, container, text, toggler};
@@ -118,13 +120,13 @@ pub fn panel_header<'a>(
 ) -> Element<'a, Message> {
     container(
         iced::widget::row![
-            material_symbol_sized(icon, false, 15.0).style(theme::text_style(|tk| tk.muted)),
+            icon_muted(icon, 15.0),
             heading(title, theme::sz::PANEL_TITLE, iced::font::Weight::Semibold)
                 .style(theme::text_style(|tk| tk.text)),
             text(subtitle)
                 .size(theme::sz::TINY)
                 .style(theme::text_style(|tk| tk.muted)),
-            container(tools).width(Length::Fill).align_x(Alignment::End),
+            push_right(tools),
         ]
         .spacing(9)
         .align_y(Alignment::Center),
@@ -132,6 +134,63 @@ pub fn panel_header<'a>(
     .padding(PANEL_HEADER_PAD)
     .width(Length::Fill)
     .into()
+}
+
+/// Ghost icon button with a bottom tooltip — the standard toolbar icon.
+pub fn icon_button_tooltip<'a>(
+    icon: &'static str,
+    size: impl Into<Pixels>,
+    message: Message,
+    tip: impl text::IntoFragment<'a>,
+) -> Element<'a, Message> {
+    crate::ui::with_tooltip(buttons::ghost_icon(icon, false, size, message), tip)
+}
+
+/// Ghost "delete" icon button for a playlist row or static, with tooltip.
+pub fn delete_button<'a>(
+    source: ItemSource,
+    tip: impl text::IntoFragment<'a>,
+) -> Element<'a, Message> {
+    icon_button_tooltip(
+        "delete",
+        14.0,
+        Message::Dialog(DialogMessage::RequestDelete(source)),
+        tip,
+    )
+}
+
+/// Right-aligns `content` across the full available width.
+pub fn push_right<'a, Message: 'a>(
+    content: impl Into<Element<'a, Message>>,
+) -> iced::widget::Container<'a, Message, Theme, Renderer> {
+    container(content)
+        .width(Length::Fill)
+        .align_x(Alignment::End)
+}
+
+/// Full-size card panel: fills the view and clips overflowing content.
+pub fn card_panel<'a, Message: 'a>(
+    content: impl Into<Element<'a, Message>>,
+) -> iced::widget::Container<'a, Message, Theme, Renderer> {
+    container(content)
+        .width(Length::Fill)
+        .height(Length::Fill)
+        .style(theme::card)
+        .clip(true)
+}
+
+/// Tiny semibold label in the muted-head color (table column heads, control
+/// captions, dialog section labels).
+pub fn eyebrow<'a>(label: impl text::IntoFragment<'a>) -> Text<'a, Theme, Renderer> {
+    text(label)
+        .size(theme::sz::MICRO)
+        .font(theme::body_font(iced::font::Weight::Semibold))
+        .style(theme::text_style(|tk| tk.muted_head))
+}
+
+/// Muted (low-emphasis) icon at an explicit size.
+pub fn icon_muted(icon: &'static str, size: impl Into<Pixels>) -> Text<'static, Theme, Renderer> {
+    material_symbol_sized(icon, false, size).style(theme::text_style(|tk| tk.muted))
 }
 
 /// Standard table row shell: a fixed-height stripe ([`ROW_HEIGHT`]) with the

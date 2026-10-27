@@ -8,10 +8,10 @@ use crate::ui::config_window::{ConfigWindow, DialogState};
 use crate::ui::theme::RowLook;
 use crate::ui::theme::{self, sz};
 use crate::ui::widgets::{
-    buttons, heading, material_symbol, material_symbol_sized, panel_header, row_shell,
+    buttons, card_panel, delete_button, heading, icon_button_tooltip, material_symbol,
+    material_symbol_sized, panel_header, row_shell,
 };
-use crate::ui::with_tooltip;
-use crate::{DanceInterpreter, DialogMessage, Message, StaticsMessage};
+use crate::{DanceInterpreter, Message, StaticsMessage};
 use iced::widget::{
     Column, Space, button, column as col, container, row, scrollable, text, text_input,
 };
@@ -60,13 +60,10 @@ pub fn build<'a>(
     };
 
     let tools = row![
-        with_tooltip(
-            buttons::ghost_icon(
-                "refresh",
-                false,
-                sz::ICON,
-                Message::Statics(StaticsMessage::Reload),
-            ),
+        icon_button_tooltip(
+            "refresh",
+            sz::ICON,
+            Message::Statics(StaticsMessage::Reload),
             "Reload statics",
         ),
         buttons::primary_small("Add static", Message::OpenDialog(DialogState::AddStatic),),
@@ -78,12 +75,7 @@ pub fn build<'a>(
 
     let panel = col![toolbar, list].width(Length::Fill).height(Length::Fill);
 
-    container(panel)
-        .width(Length::Fill)
-        .height(Length::Fill)
-        .style(theme::card)
-        .clip(true)
-        .into()
+    card_panel(panel).into()
 }
 
 const COL_FAV: f32 = 26.0;
@@ -167,17 +159,7 @@ fn build_static_row<'a>(
         name.clone(),
     )));
 
-    let delete = with_tooltip(
-        buttons::ghost_icon(
-            "delete",
-            false,
-            14.0,
-            Message::Dialog(DialogMessage::RequestDelete(ItemSource::Static(
-                name.clone(),
-            ))),
-        ),
-        "Delete static",
-    );
+    let delete = delete_button(ItemSource::Static(name.clone()), "Delete static");
 
     // How many playlist songs use this dance.
     let usage = dance_interpreter
@@ -211,11 +193,7 @@ fn build_static_row<'a>(
     .padding(theme::pad4(0.0, 19.0, 0.0, 14.0))
     .width(Length::Fill);
 
-    let look = RowLook {
-        zebra: idx % 2 == 1,
-        current: is_current,
-        matched: is_match && !is_current,
-    };
+    let look = RowLook::table(idx, is_current, is_match);
 
     // The current static's bar takes its dance color when it has one.
     let static_color = static_info.color;

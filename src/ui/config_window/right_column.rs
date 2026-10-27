@@ -7,7 +7,9 @@ use crate::ui::config_window::DialogState;
 use crate::ui::config_window::dj_panel::SidebarMessage;
 use crate::ui::config_window::source_tag_right;
 use crate::ui::theme::{self, pad4, sz};
-use crate::ui::widgets::{buttons, heading, kbd, material_symbol, material_symbol_sized};
+use crate::ui::widgets::{
+    buttons, heading, kbd, material_symbol, material_symbol_sized, push_right,
+};
 use crate::{DanceInterpreter, Message};
 use iced::widget::{button, column as col, container, row, scrollable, text, toggler};
 use iced::{Alignment, Color, Element, Length, Theme};
@@ -182,16 +184,7 @@ fn build_dj_card<'a>(dance_interpreter: &'a DanceInterpreter) -> Element<'a, Mes
     )
     .padding(9)
     .width(Length::Fill)
-    .style(|t: &Theme| {
-        let tk = theme::Tokens::of(t);
-        container::Style::default()
-            .background(tk.panel_deep)
-            .border(iced::Border {
-                color: tk.border,
-                width: 1.0,
-                radius: theme::r::MD.into(),
-            })
-    });
+    .style(|t: &Theme| theme::inset_card(t, theme::r::MD));
 
     let connection_row = row![
         container(crate::ui::widgets::dot(6.0, move |t| {
@@ -200,13 +193,11 @@ fn build_dj_card<'a>(dance_interpreter: &'a DanceInterpreter) -> Element<'a, Mes
         text(summary)
             .size(sz::SMALL)
             .style(theme::text_style(|tk| tk.text_soft)),
-        container(
+        push_right(
             text(address.as_str())
                 .size(sz::TINY)
-                .style(theme::text_style(|tk| tk.faint))
-        )
-        .width(Length::Fill)
-        .align_x(Alignment::End),
+                .style(theme::text_style(|tk| tk.faint)),
+        ),
     ]
     .spacing(5)
     .align_y(Alignment::Center);
@@ -248,7 +239,7 @@ fn build_dj_card<'a>(dance_interpreter: &'a DanceInterpreter) -> Element<'a, Mes
             })
             .size(sz::TINY)
             .style(theme::text_style(|tk| tk.muted)),
-            container(
+            push_right(
                 button(
                     row![
                         text("Configure").size(sz::TINY),
@@ -259,10 +250,8 @@ fn build_dj_card<'a>(dance_interpreter: &'a DanceInterpreter) -> Element<'a, Mes
                 )
                 .padding([4, 6])
                 .style(theme::btn_ghost)
-                .on_press(Message::Sidebar(SidebarMessage::Toggle))
-            )
-            .width(Length::Fill)
-            .align_x(Alignment::End),
+                .on_press(Message::Sidebar(SidebarMessage::Toggle)),
+            ),
         ]
         .align_y(Alignment::Center)
         .width(Length::Fill),

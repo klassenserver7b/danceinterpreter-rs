@@ -109,7 +109,7 @@ fn mix(a: Color, b: Color, t: f32) -> Color {
 }
 
 /// A copy of `color` with a different alpha (for hover / zebra overlays).
-fn with_alpha(color: Color, a: f32) -> Color {
+pub fn with_alpha(color: Color, a: f32) -> Color {
     Color { a, ..color }
 }
 
@@ -573,6 +573,19 @@ pub fn card(theme: &Theme) -> container::Style {
         })
 }
 
+/// Inset card: deep panel with a hairline border (search box shells, status
+/// cards, source rows).
+pub fn inset_card(theme: &Theme, radius: impl Into<Radius>) -> container::Style {
+    let t = Tokens::of(theme);
+    container::Style::default()
+        .background(t.panel_deep)
+        .border(Border {
+            color: t.border,
+            width: 1.0,
+            radius: radius.into(),
+        })
+}
+
 pub fn sidebar_bg(theme: &Theme) -> container::Style {
     let t = Tokens::of(theme);
     container::Style::default().background(t.bg).border(Border {
@@ -622,6 +635,18 @@ pub struct RowLook {
     pub zebra: bool,
     pub current: bool,
     pub matched: bool,
+}
+
+impl RowLook {
+    /// Standard table-row look: zebra striping, current highlight, and a
+    /// search-match wash for non-current rows.
+    pub fn table(idx: usize, is_current: bool, is_match: bool) -> Self {
+        Self {
+            zebra: idx % 2 == 1,
+            current: is_current,
+            matched: is_match && !is_current,
+        }
+    }
 }
 
 pub fn row(theme: &Theme, look: RowLook) -> container::Style {

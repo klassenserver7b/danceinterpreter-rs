@@ -3,7 +3,7 @@
 
 use crate::ui::config_window::{ConfigWindow, DialogState, View};
 use crate::ui::theme::{self, pad4, sz};
-use crate::ui::widgets::{kbd, material_symbol};
+use crate::ui::widgets::{kbd, material_symbol, push_right};
 use crate::{DanceInterpreter, Message};
 use iced::widget::{column as col, container, row, text};
 use iced::{Alignment, Color, Element, Length, Theme};
@@ -245,13 +245,11 @@ fn version_row() -> Element<'static, Message> {
             text("Danceinterpreter")
                 .size(sz::MICRO)
                 .style(theme::text_style(|tk| tk.faint)),
-            container(
+            push_right(
                 text(concat!("v", env!("CARGO_PKG_VERSION")))
                     .size(sz::MICRO)
-                    .style(theme::text_style(|tk| tk.faint))
-            )
-            .width(Length::Fill)
-            .align_x(Alignment::End),
+                    .style(theme::text_style(|tk| tk.faint)),
+            ),
         ]
         .spacing(7)
         .align_y(Alignment::Center),

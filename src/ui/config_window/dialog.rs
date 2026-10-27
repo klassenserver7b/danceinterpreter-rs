@@ -4,8 +4,7 @@
 use crate::dataloading::dataprovider::ItemSource;
 use crate::ui::config_window::ConfigWindow;
 use crate::ui::theme::{self, pad4, sz};
-use crate::ui::widgets::{buttons, heading, kbd};
-use crate::ui::with_tooltip;
+use crate::ui::widgets::{buttons, eyebrow, heading, icon_button_tooltip, kbd, push_right};
 use crate::{DanceInterpreter, DialogMessage, Message, SongWindowMessage, StaticsMessage};
 use iced::widget::{
     Button, Column, column as col, container, mouse_area, opaque, pick_list, row, space::Space,
@@ -106,7 +105,7 @@ pub fn build_dialog<'a>(
                 heading(title, sz::H2, iced::font::Weight::Medium)
                     .style(theme::text_style(|tk| tk.text)),
                 Space::new().width(Length::Fill),
-                with_tooltip(buttons::ghost_icon("close", false, 18.0, close), "Close"),
+                icon_button_tooltip("close", 18.0, close, "Close"),
             ]
             .align_y(Alignment::Center),
             body,
@@ -147,10 +146,7 @@ fn dialog_actions<'a>(
         .map(|btn| btn.padding([10, 18]).into())
         .collect();
 
-    container(row(items).spacing(10))
-        .width(Length::Fill)
-        .align_x(Alignment::End)
-        .into()
+    push_right(row(items).spacing(10)).into()
 }
 
 /// A labeled settings row with a bottom hairline.
@@ -174,14 +170,9 @@ fn setting_row<'a>(label: &'a str, control: Element<'a, Message>) -> Element<'a,
     .into()
 }
 fn section_label(label: &'static str) -> Element<'static, Message> {
-    container(
-        text(label)
-            .size(sz::MICRO)
-            .font(theme::body_font(iced::font::Weight::Semibold))
-            .style(theme::text_style(|tk| tk.muted)),
-    )
-    .padding(pad4(16.0, 0.0, 2.0, 0.0))
-    .into()
+    container(eyebrow(label).style(theme::text_style(|tk| tk.muted)))
+        .padding(pad4(16.0, 0.0, 2.0, 0.0))
+        .into()
 }
 
 /// Settings pick list entry: wraps an iced theme with a friendly label.

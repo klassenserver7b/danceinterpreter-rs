@@ -3,8 +3,7 @@
 use crate::Message;
 use crate::ui::config_window::{ConfigWindow, View};
 use crate::ui::theme::{self, pad4, sz};
-use crate::ui::widgets::buttons;
-use crate::ui::with_tooltip;
+use crate::ui::widgets::{buttons, icon_button_tooltip, push_right};
 use iced::widget::{Column, column as col, container, row, text};
 use iced::{Alignment, Element, Length, Theme};
 
@@ -14,17 +13,14 @@ pub fn build<'a>(config_window: &'a ConfigWindow) -> Element<'a, Message> {
         View::Statics => "Statics",
     };
 
-    let nav_toggle = with_tooltip(
-        buttons::ghost_icon(
-            if config_window.nav_open() {
-                "menu_open"
-            } else {
-                "menu"
-            },
-            false,
-            sz::ICON,
-            Message::ToggleNavSidebar,
-        ),
+    let nav_toggle = icon_button_tooltip(
+        if config_window.nav_open() {
+            "menu_open"
+        } else {
+            "menu"
+        },
+        sz::ICON,
+        Message::ToggleNavSidebar,
         "Toggle navigation sidebar (Ctrl+B)",
     );
 
@@ -45,17 +41,14 @@ pub fn build<'a>(config_window: &'a ConfigWindow) -> Element<'a, Message> {
 
     // The icon mirrors the nav toggle: a plain panel while collapsed, the
     // open-panel glyph while the rail is expanded.
-    let rail_toggle = with_tooltip(
-        buttons::ghost_icon(
-            if config_window.rail_open() {
-                "right_panel_open"
-            } else {
-                "view_sidebar"
-            },
-            false,
-            sz::ICON,
-            Message::ToggleInfoRail,
-        ),
+    let rail_toggle = icon_button_tooltip(
+        if config_window.rail_open() {
+            "right_panel_open"
+        } else {
+            "view_sidebar"
+        },
+        sz::ICON,
+        Message::ToggleInfoRail,
         "Toggle info column (Ctrl+J)",
     );
 
@@ -66,13 +59,11 @@ pub fn build<'a>(config_window: &'a ConfigWindow) -> Element<'a, Message> {
                     .spacing(10)
                     .align_y(Alignment::Center)
             ),
-            container(
+            push_right(
                 row![rail_toggle, open_playlist, open_song_window]
                     .spacing(10)
-                    .align_y(Alignment::Center)
-            )
-            .width(Length::Fill)
-            .align_x(Alignment::End),
+                    .align_y(Alignment::Center),
+            ),
         ]
         .width(Length::Fill)
         .align_y(Alignment::Center),
