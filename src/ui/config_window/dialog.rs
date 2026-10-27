@@ -1,5 +1,7 @@
 //! Modal dialogs: delete confirmation, static merge, settings, keyboard
-//! help and the "add static" form.
+//! help, the "add static" form and the flatpak playlist chooser.
+
+use std::path::{Path, PathBuf};
 
 use crate::dataloading::dataprovider::ItemSource;
 use crate::ui::config_window::ConfigWindow;
@@ -30,6 +32,9 @@ pub enum DialogState {
     Settings,
     Help,
     AddStatic,
+    /// Pick one of the playlists discovered inside the folder granted
+    /// through the flatpak portal (state lives on `ConfigWindow`).
+    PlaylistChooser,
 }
 
 pub fn build_dialog<'a>(
@@ -100,6 +105,7 @@ pub fn build_dialog<'a>(
         DialogState::Settings => build_settings(config_window, dance_interpreter),
         DialogState::Help => build_help(),
         DialogState::AddStatic => build_add_static(config_window),
+        DialogState::PlaylistChooser => build_playlist_chooser(config_window),
     };
 
     let card = container(
@@ -397,4 +403,83 @@ fn build_add_static<'a>(
     ]);
 
     ("Add static".to_string(), body, actions)
+}
+
+/// Playlist chooser entry: keeps the full path for loading and shows a
+/// short label (the location relative to the granted folder) in the list.
+#[derive(Debug, Clone, PartialEq)]
+struct PlaylistOption {
+    path: PathBuf,
+    label: String,
+}
+
+impl PlaylistOption {
+    fn new(path: &Path, granted_folder: &Path) -> Self {
+        let label = path
+            .strip_prefix(granted_folder)
+            .ok()
+            .and_then(|relative| relative.to_str())
+            .map(str::to_string)
+            .filter(|relative| !relative.is_empty())
+            .unwrap_or_else(|| {
+                path.file_name().map_or_else(
+                    || path.display().to_string(),
+                    |name| name.to_string_lossy().into_owned(),
+                )
+            });
+
+        Self {
+            path: path.to_path_buf(),
+            label,
+        }
+    }
+}
+
+impl std::fmt::Display for PlaylistOption {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(&self.label)
+    }
+}
+
+fn build_playlist_chooser<'a>(
+    config_window: &ConfigWindow,
+) -> (String, Column<'a, Message, Theme>, Element<'a, Message>) {
+    let options: Vec<PlaylistOption> = config_window
+        .playlist_candidates
+        .iter()
+        .map(|path| PlaylistOption::new(path, &config_window.playlist_granted_folder))
+        .collect();
+
+    let selected = config_window
+        .playlist_selected
+        .clone()
+        .or_else(|| config_window.playlist_candidates.first().cloned())
+        .map(|path| PlaylistOption::new(&path, &config_window.playlist_granted_folder));
+
+    let pick = pick_list(options, selected, |option| {
+        Message::Dialog(DialogMessage::SelectPlaylist(option.path))
+    })
+    .width(Length::Fill)
+    .text_size(sz::BASE)
+    .padding(theme::INPUT_PAD)
+    .style(theme::pick_list_style)
+    .menu_style(theme::pick_list_menu_style);
+
+    let body = col![
+        text("The sandbox access covers everything inside the chosen folder. Which playlist should be loaded?")
+            .size(sz::BASE)
+            .style(theme::text_style(|tk| tk.muted)),
+        pick,
+    ]
+    .spacing(12);
+
+    let actions = dialog_actions([
+        buttons::secondary("Cancel", Message::Dialog(DialogMessage::Close)),
+        buttons::primary(
+            "Load playlist",
+            Message::Dialog(DialogMessage::ConfirmPlaylist),
+        ),
+    ]);
+
+    ("Choose playlist".to_string(), body, actions)
 }

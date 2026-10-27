@@ -53,6 +53,37 @@ Uninstall via your distros software store or run
 flatpak uninstall io.github.klassenserver7b.danceinterpreter-rs
 ```
 
+### Folder access in the Flatpak sandbox
+
+The Flatpak build is sandboxed. Loading a playlist works like this:
+
+1. **Pick a folder** — the folder you pick in the *Open playlist* dialog is
+   granted to the app (including all subfolders).
+2. **Playlists are discovered inside it** — every `.m3u`/`.m3u8` in the
+   granted folder tree is found. A single playlist loads automatically,
+   several ones offer a small chooser dialog.
+3. **All paths stay inside the grant** — playlist entries (relative paths,
+   percent-encoded names and `file://` URIs) resolve against the playlist's
+   location inside the granted folder, so the audio files are readable even
+   though the rest of your home stays off limits.
+
+Notes:
+
+- Entries pointing *outside* the granted folder cannot be read by a
+  sandboxed app. The toast after loading tells you how many tracks were
+  skipped (`Loaded — 12/40 tracks, 28 not accessible`), and the skipped
+  entries are printed to the console.
+- The Flathub build grants read-only access to `~/Music`, `/media` and
+  `/run/media` (removable drives). Drag & drop and opening files from those
+  locations work without picking a folder first; from other places (e.g.
+  `~/Dokumente`) drag & drop cannot work in the sandbox — use the *Open
+  playlist* folder flow instead.
+- You can grant additional locations yourself with
+  [Flatseal](https://flathub.org/apps/com.github.tchx84.Flatseal)
+  (*Filesystem → Other files*, e.g. `~/Dokumente`). If a playlist lives
+  somewhere unusual and drag & drop fails with a sandbox hint, that is the
+  way to fix it.
+
 ## Cargo - all platforms
 
 ### Installation

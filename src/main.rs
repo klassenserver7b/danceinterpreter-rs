@@ -8,7 +8,7 @@ use crate::dataloading::dataprovider::{
     DataProvider, ItemChange, ItemSource, SongDataEdit, SubmitStaticResult,
 };
 use crate::dataloading::id3tagreader::read_song_info_from_filepath;
-use crate::dataloading::m3uloader::load_tag_data_from_m3u;
+use crate::dataloading::m3uloader::{PlaylistLoad, discover_playlists, load_tag_data_from_m3u};
 use crate::dataloading::songinfo::SongInfo;
 use crate::traktor_api::{ServerMessage, StateUpdate, TraktorMessage, TraktorSyncAction};
 use crate::ui::config_window::dj_panel::SidebarMessage;
@@ -118,6 +118,10 @@ pub enum DialogMessage {
     ConfirmDelete,
     UndoDelete,
     ChangeAddStaticName(String),
+    /// Chooser: the selected playlist was picked in the pick list.
+    SelectPlaylist(PathBuf),
+    /// Chooser: load the selected playlist and close the dialog.
+    ConfirmPlaylist,
 }
 
 #[derive(Debug, Clone)]
@@ -306,13 +310,81 @@ impl DanceInterpreter {
 
     /// Replaces the whole playlist with a freshly loaded m3u and settles the
     /// UI (the inline editor would point into stale rows otherwise).
-    fn load_playlist_file(&mut self, path: &Path, playlist: Vec<SongInfo>) -> Task<Message> {
+    fn load_playlist_file(&mut self, path: &Path, load: PlaylistLoad) -> Task<Message> {
         self.cancel_song_edit();
-        let count = playlist.len();
-        self.data_provider.set_vec(playlist);
+        let total = load.total();
+        let count = load.songs.len();
+        let skipped = load.skipped.len();
+        self.data_provider.set_vec(load.songs);
         self.config_window.playlist_file = Some(path.to_path_buf());
-        println!("Loaded playlist {path:?} with {count} songs");
-        toast::task("Playlist loaded")
+        println!("Loaded playlist {path:?} with {count} of {total} songs");
+        for skipped in &load.skipped {
+            println!(
+                "  skipped {} -> {}: {}",
+                skipped.entry,
+                skipped.path.display(),
+                skipped.reason.describe()
+            );
+        }
+
+        let mut summary = if skipped == 0 {
+            format!("Playlist loaded ({count} songs)")
+        } else {
+            format!("Playlist loaded \u{2014} {count}/{total} tracks, {skipped} not accessible")
+        };
+        // A playlist under the document portal fuse means the sandbox has no
+        // direct filesystem access here; skipped entries then live outside
+        // the folder granted in the folder pick.
+        if skipped > 0 && in_flatpak() && is_document_portal_path(path) {
+            summary.push_str(" \u{2014} entries outside the granted folder cannot be read");
+        }
+        toast::task(summary)
+    }
+
+    /// Loads an m3u and installs it as the current playlist.
+    fn load_playlist_from(&mut self, file: PathBuf) -> Task<Message> {
+        match load_tag_data_from_m3u(&file) {
+            Ok(load) => self.load_playlist_file(&file, load),
+            Err(err) => {
+                println!("Playlist load failed for {file:?}: {err}");
+                toast::task(format!("Could not read playlist file: {err}"))
+            }
+        }
+    }
+
+    /// Flatpak flow: pick a folder (the pick grants sandbox access to its
+    /// whole subtree through the document portal), discover the playlists
+    /// inside it and load the chosen one. All paths stay inside the grant,
+    /// so reads work regardless of whether the portal returned real paths
+    /// or fuse paths.
+    #[cfg(target_os = "linux")]
+    fn open_playlist_via_folder_grant(&mut self) -> Task<Message> {
+        let Some(folder) = FileDialog::new()
+            .set_title("Select folder containing m3u AND audio files (this grants sandbox access)")
+            .set_directory(default_browse_dir())
+            .pick_folders()
+            .and_then(|folders| folders.into_iter().next())
+        else {
+            return ().into();
+        };
+
+        match discover_playlists(&folder).as_slice() {
+            [] => {
+                println!("No playlist found in granted folder {folder:?}");
+                let name = folder.file_name().map_or_else(
+                    || folder.display().to_string(),
+                    |name| name.to_string_lossy().into_owned(),
+                );
+                toast::task(format!("No .m3u playlist found in \u{201C}{name}\u{201D}"))
+            }
+            [only] => self.load_playlist_from(only.clone()),
+            candidates => {
+                self.config_window.playlist_candidates = candidates.to_vec();
+                self.config_window.playlist_granted_folder = folder;
+                self.config_window.playlist_selected = None;
+                Task::done(Message::OpenDialog(DialogState::PlaylistChooser))
+            }
+        }
     }
 
     /// Writes a static's color, forcing the alpha to fully opaque (picked
@@ -492,37 +564,26 @@ impl DanceInterpreter {
             Message::OpenPlaylist => {
                 #[cfg(target_os = "linux")]
                 if var("container").is_ok() {
-                    // Request folder access first in flatpak environment
-                    let folder = FileDialog::new()
-                        .set_title(
-                            "Select folder containing m3u AND audio files (required in flatpak)",
-                        )
-                        .set_directory(default_browse_dir())
-                        .pick_folders();
-                    if folder.is_none() {
-                        return ().into();
-                    }
+                    // Flatpak: the folder pick doubles as the sandbox access
+                    // grant. Playlist discovery, entry resolution and tag
+                    // reads all stay inside the granted folder afterwards,
+                    // so they work through the document portal no matter
+                    // whether it hands out real paths or fuse paths.
+                    return self.open_playlist_via_folder_grant();
                 }
 
-                // Open playlist file
-                let file = FileDialog::new()
+                // Native: pick the playlist file directly.
+                let Some(file) = FileDialog::new()
                     .add_filter("Playlist", &["m3u", "m3u8"])
                     .add_filter("Any(*)", &["*"])
                     .set_title("Select playlist file")
                     .set_directory(default_browse_dir())
-                    .pick_file();
-
-                let Some(file) = file else {
+                    .pick_file()
+                else {
                     return ().into();
                 };
 
-                match load_tag_data_from_m3u(&file) {
-                    Ok(playlist) => self.load_playlist_file(&file, playlist),
-                    Err(err) => {
-                        println!("Playlist load failed for {file:?}: {err}");
-                        toast::task(format!("Could not read playlist file: {err}"))
-                    }
-                }
+                self.load_playlist_from(file)
             }
 
             Message::AddBlankEntry => {
@@ -705,6 +766,22 @@ impl DanceInterpreter {
 
             Message::Dialog(msg) => match msg {
                 DialogMessage::Close => self.close_active_dialog(),
+                DialogMessage::SelectPlaylist(path) => {
+                    self.config_window.playlist_selected = Some(path);
+                    ().into()
+                }
+                DialogMessage::ConfirmPlaylist => {
+                    let selected = self
+                        .config_window
+                        .playlist_selected
+                        .clone()
+                        .or_else(|| self.config_window.playlist_candidates.first().cloned());
+                    let close = self.close_active_dialog();
+                    match selected {
+                        Some(file) => Task::batch([close, self.load_playlist_from(file)]),
+                        None => close,
+                    }
+                }
                 DialogMessage::RequestDelete(item) => {
                     if self.modifiers.shift() {
                         return Task::done(Message::DeleteItem(item));
@@ -830,7 +907,16 @@ impl DanceInterpreter {
                             || path.display().to_string(),
                             |n| n.to_string_lossy().into_owned(),
                         );
-                        toast::task(format!("Could not read \u{201C}{name}\u{201D}: {err}"))
+                        let mut text = format!("Could not read \u{201C}{name}\u{201D}: {err}");
+                        // Drag & drop delivers real host paths; inside the
+                        // sandbox the file is only readable when its location
+                        // is covered by the app's filesystem grants.
+                        if in_flatpak() && !path.is_file() {
+                            text.push_str(
+                                " \u{2014} the sandbox cannot access it; use Open playlist and pick its folder",
+                            );
+                        }
+                        toast::task(text)
                     }
                 },
             },
@@ -1310,6 +1396,21 @@ const SETTINGS_DIR: &str = "danceinterpreter";
 /// to the home directory and then the working directory.
 fn default_browse_dir() -> PathBuf {
     dirs::audio_dir().unwrap_or_else(|| dirs::home_dir().unwrap_or_else(|| PathBuf::from(".")))
+}
+
+/// True when running inside a flatpak sandbox: flatpak sets the `container`
+/// environment variable to the app id.
+fn in_flatpak() -> bool {
+    var("container").is_ok()
+}
+
+/// True for document-portal fuse paths (`/run/user/<uid>/doc/...`): the
+/// sandbox has no direct filesystem access at that location and only the
+/// granted file or folder is reachable.
+fn is_document_portal_path(path: &Path) -> bool {
+    std::env::var_os("XDG_RUNTIME_DIR")
+        .map(PathBuf::from)
+        .is_some_and(|runtime| path.starts_with(runtime.join("doc")))
 }
 
 /// Directory that holds `settings.json`. The XDG config directory (via

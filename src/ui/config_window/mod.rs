@@ -150,6 +150,13 @@ pub struct ConfigWindow {
     pub add_static_name: String,
     pub toast: Option<Toast>,
     pub playlist_file: Option<PathBuf>,
+
+    /// Playlists discovered inside the folder granted through the flatpak
+    /// portal (labels render relative to `playlist_granted_folder`); the
+    /// chooser dialog loads `playlist_selected`.
+    pub playlist_candidates: Vec<PathBuf>,
+    pub playlist_granted_folder: PathBuf,
+    pub playlist_selected: Option<PathBuf>,
 }
 
 impl Window for ConfigWindow {
@@ -190,6 +197,10 @@ impl Window for ConfigWindow {
             add_static_name: String::new(),
             toast: None,
             playlist_file: None,
+
+            playlist_candidates: Vec::new(),
+            playlist_granted_folder: PathBuf::new(),
+            playlist_selected: None,
         }
     }
 
