@@ -5,13 +5,15 @@ use crate::dataloading::dataprovider::DataProvider;
 use crate::traktor_api::{
     TRAKTOR_SERVER_DEFAULT_ADDR, TraktorMessage, TraktorNextMode, TraktorSyncMode,
 };
+use crate::ui::config_window::SLIDE_DURATION;
+use crate::ui::config_window::led_color;
 use crate::ui::config_window::source_tag_right;
 use crate::ui::theme::{self, sz};
 use crate::ui::widgets::canvas::canvas_toggle::CanvasToggle;
 use crate::ui::widgets::canvas::{power_button, restart_button};
 use crate::ui::widgets::suggestion_text_input;
 use crate::ui::widgets::suggestion_text_input::SuggestionTextInput;
-use crate::ui::widgets::{buttons, eyebrow, heading, icon_muted, labeled_message_toggler};
+use crate::ui::widgets::{buttons, dot, eyebrow, heading, icon_muted, labeled_message_toggler};
 use crate::ui::with_tooltip;
 use crate::{DanceInterpreter, Message};
 use iced::alignment::Vertical;
@@ -55,7 +57,7 @@ impl Sidebar {
     pub fn new() -> Self {
         Self {
             state: Animation::new(false)
-                .duration(crate::ui::config_window::SLIDE_DURATION)
+                .duration(SLIDE_DURATION)
                 .easing(animation::Easing::EaseInOut),
             power_button_cache: canvas::Cache::default(),
             restart_button_cache: canvas::Cache::default(),
@@ -216,8 +218,7 @@ impl Sidebar {
             .traktor_provider
             .get_connection_state();
 
-        let led =
-            crate::ui::widgets::dot(8.0, move |t| theme::led_color(t, client_connection_state));
+        let led = dot(8.0, move |t| led_color(t, client_connection_state));
 
         let summary = client_connection_state.summary();
 

@@ -4,8 +4,11 @@
 //! icon fonts so they can animate (ripple press feedback) beyond what a
 //! static glyph offers.
 
+/// Canvas toggle hosting the power/restart icons (ripple press feedback).
 pub mod canvas_toggle;
+/// Power icon: broken circle with a vertical line through the top gap.
 pub mod power_button;
+/// Restart icon: 300° arc with an arrowhead at the top end.
 pub mod restart_button;
 
 use crate::ui::theme;

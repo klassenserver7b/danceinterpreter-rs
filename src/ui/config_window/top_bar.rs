@@ -3,7 +3,7 @@
 use crate::Message;
 use crate::ui::config_window::{ConfigWindow, View};
 use crate::ui::theme::{self, pad4, sz};
-use crate::ui::widgets::{buttons, icon_button_tooltip, push_right};
+use crate::ui::widgets::{buttons, divider, icon_button_tooltip, push_right};
 use iced::widget::{Column, column as col, container, row, text};
 use iced::{Alignment, Element, Length, Theme};
 
@@ -79,5 +79,5 @@ pub fn build<'a>(config_window: &'a ConfigWindow) -> Element<'a, Message> {
 pub fn bar_with_divider<'a>(
     bar: Element<'a, Message>,
 ) -> Column<'a, Message, Theme, iced::Renderer> {
-    col![bar, crate::ui::widgets::divider()]
+    col![bar, divider()]
 }

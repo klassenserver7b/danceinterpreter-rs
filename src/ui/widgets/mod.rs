@@ -2,13 +2,18 @@ use crate::DialogMessage;
 use crate::Message;
 use crate::dataloading::dataprovider::ItemSource;
 use crate::ui::theme;
+use crate::ui::with_tooltip;
 use iced::advanced::text::Shaping;
 use iced::widget::{Text, container, text, toggler};
 use iced::{Alignment, Color, Element, Font, Length, Pixels, Renderer, Theme};
 
+/// Button builders (primary, secondary, ghosts).
 pub mod buttons;
+/// Canvas-drawn animated controls.
 pub mod canvas;
+/// Small round color preview button.
 pub mod color_swatch;
+/// Vendored combo-box-style text input with a suggestion menu.
 pub mod suggestion_text_input;
 
 /// Accent bar width of table rows (the table head reserves a matching
@@ -35,6 +40,7 @@ pub fn labeled_message_toggler(
         .style(theme::toggler_style)
 }
 
+/// Outlined (or filled) Material Symbols glyph at an explicit size.
 pub fn material_symbol_sized(
     id: &'_ str,
     filled: bool,
@@ -43,6 +49,7 @@ pub fn material_symbol_sized(
     material_symbol(id, filled).size(size)
 }
 
+/// Outlined (or filled) Material Symbols glyph at the default icon size.
 pub fn material_symbol(id: &'_ str, filled: bool) -> Text<'_, Theme, Renderer> {
     let font_name = if filled {
         theme::FONT_ICON_FILLED
@@ -57,7 +64,7 @@ pub fn material_symbol(id: &'_ str, filled: bool) -> Text<'_, Theme, Renderer> {
 }
 
 /// Keyboard hint pill, e.g. `Space`, `Ctrl+F`. `style` picks the pill look —
-/// usually [`crate::ui::theme::kbd`], or a tinted variant on colored surfaces.
+/// usually [`crate::ui::theme::kbd_style`], or a tinted variant on colored surfaces.
 pub fn kbd<'a>(
     label: impl text::IntoFragment<'a>,
     style: fn(&Theme) -> iced::widget::container::Style,
@@ -143,7 +150,7 @@ pub fn icon_button_tooltip<'a>(
     message: Message,
     tip: impl text::IntoFragment<'a>,
 ) -> Element<'a, Message> {
-    crate::ui::with_tooltip(buttons::ghost_icon(icon, false, size, message), tip)
+    with_tooltip(buttons::ghost_icon(icon, false, size, message), tip)
 }
 
 /// Ghost "delete" icon button for a playlist row or static, with tooltip.

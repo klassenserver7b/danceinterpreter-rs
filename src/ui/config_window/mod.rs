@@ -17,8 +17,20 @@ pub mod top_bar;
 pub use dialog::DialogState;
 pub use playlist_view::PLAYLIST_SCROLLABLE_ID;
 
+/// LED dot color for the DJ connection state (right rail status, DJ panel).
+pub fn led_color(theme: &Theme, state: ConnectionState) -> Color {
+    let t = theme::Tokens::of(theme);
+    match state {
+        ConnectionState::Connected => t.led_connected,
+        ConnectionState::Traktor | ConnectionState::CoverLoader => t.led_partial,
+        ConnectionState::Disconnected => t.led_off,
+    }
+}
+
+use crate::traktor_api::ConnectionState;
 use crate::ui::config_window::dj_panel::Sidebar;
 use crate::ui::theme::{self, pad4};
+use crate::ui::widgets::text_micro;
 use crate::{DanceInterpreter, Message, Window};
 use iced::widget::{column as col, container, mouse_area, row, stack};
 use iced::{Alignment, Animation, Color, Element, Length, Size, Theme, animation, window};
@@ -183,11 +195,11 @@ impl Window for ConfigWindow {
 }
 
 impl ConfigWindow {
-    /// Expanded width of a window-proportional side panel: a fraction of the
-    /// window width, clamped between a readable floor and the panel's design
-    /// width (all in px).
-    fn expanded_width(window_width: f32, fraction: f32, min: f32, max: f32) -> f32 {
-        (window_width / fraction).clamp(min, max)
+    /// Expanded width of a window-proportional side panel: the window width
+    /// divided by `divisor`, clamped between a readable floor and the panel's
+    /// design width (all in px).
+    fn expanded_width(window_width: f32, divisor: f32, min: f32, max: f32) -> f32 {
+        (window_width / divisor).clamp(min, max)
     }
 
     pub fn view<'a>(&'a self, dance_interpreter: &'a DanceInterpreter) -> Element<'a, Message> {
@@ -305,7 +317,7 @@ impl ConfigWindow {
 
 /// Shared helper: a "source tag" chip like `PLAYLIST` / `QUEUED`.
 pub fn source_tag<'a>(text: &'a str) -> Element<'a, Message> {
-    container(crate::ui::widgets::text_micro(text).style(theme::text_style(|tk| tk.tag_text)))
+    container(text_micro(text).style(theme::text_style(|tk| tk.tag_text)))
         .padding([2, 5])
         .style(|t: &Theme| {
             let tk = theme::Tokens::of(t);

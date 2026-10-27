@@ -6,6 +6,7 @@ use std::f32::consts::PI;
 /// Half the power arc's top gap, in degrees.
 const GAP_HALF_DEG: f32 = 35.0;
 
+/// Draws the power icon; the base circle comes from [`draw_icon_base`].
 pub fn draw(theme: &Theme, frame: &mut Frame, enabled: bool) {
     let base @ IconBase { center, arc_r, .. } = draw_icon_base(theme, frame, enabled);
 

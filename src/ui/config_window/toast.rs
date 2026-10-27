@@ -2,6 +2,7 @@
 
 use crate::Message;
 use crate::ui::config_window::Toast;
+use crate::ui::config_window::show_bar::DOCK_CLEARANCE;
 use crate::ui::theme::{self, pad4, sz};
 use crate::ui::widgets::{material_symbol, material_symbol_sized};
 use iced::alignment::Vertical;
@@ -53,12 +54,7 @@ pub fn build(toast: &Option<Toast>) -> Option<Element<'_, Message>> {
             .height(Length::Fill)
             .align_x(Alignment::Center)
             .align_y(Vertical::Bottom)
-            .padding(pad4(
-                0.0,
-                0.0,
-                crate::ui::config_window::show_bar::DOCK_CLEARANCE,
-                0.0,
-            ))
+            .padding(pad4(0.0, 0.0, DOCK_CLEARANCE, 0.0))
             .into(),
     )
 }

@@ -6,6 +6,7 @@ use std::f32::consts::PI;
 /// The restart arc's top gap, in degrees.
 const GAP_DEG: f32 = 30.0;
 
+/// Draws the restart icon; the base circle comes from [`draw_icon_base`].
 pub fn draw(theme: &Theme, frame: &mut Frame, enabled: bool) {
     let base @ IconBase {
         center, dim, arc_r, ..

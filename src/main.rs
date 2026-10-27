@@ -333,7 +333,7 @@ impl DanceInterpreter {
     /// (light icon for light themes, dark icon for dark ones).
     fn theme_icon_task(&self) -> Task<Message> {
         let icon = from_file_data(
-            if crate::ui::theme::Tokens::of(&self.config_window.theme).is_light {
+            if theme::Tokens::of(&self.config_window.theme).is_light {
                 include_bytes!(res_file!("icon_light.png"))
             } else {
                 include_bytes!(res_file!("icon_dark.png"))

@@ -25,6 +25,7 @@ pub const PAGE_GUTTER: f32 = 31.0;
 /// Vertical/horizontal padding of boxed text inputs and pick lists.
 pub const INPUT_PAD: [f32; 2] = [5.0, 8.0];
 
+/// Body font (DM Sans) with the given weight.
 pub fn body_font(weight: Weight) -> Font {
     Font {
         family: Family::Name(FONT_BODY),
@@ -34,6 +35,7 @@ pub fn body_font(weight: Weight) -> Font {
     }
 }
 
+/// Heading font (Manrope) with the given weight.
 pub fn head_font(weight: Weight) -> Font {
     Font {
         family: Family::Name(FONT_HEAD),
@@ -48,6 +50,7 @@ pub fn head_font(weight: Weight) -> Font {
 pub mod sz {
     /// Body text, dialog copy.
     pub const BASE: f32 = 13.0;
+    /// Section and dialog titles.
     pub const H2: f32 = 19.0;
 
     /// Panel / card titles.
@@ -233,6 +236,7 @@ pub struct Tokens {
 }
 
 impl Tokens {
+    /// Reads the token set for the active iced theme.
     pub fn of(theme: &Theme) -> Self {
         match theme {
             Theme::Dark => Self::dark(),
@@ -241,6 +245,7 @@ impl Tokens {
         }
     }
 
+    /// The hand-tuned dark sage palette (`Theme::Dark`).
     pub fn dark() -> Self {
         Self {
             is_light: false,
@@ -329,6 +334,7 @@ impl Tokens {
         }
     }
 
+    /// The hand-tuned light sage palette (`Theme::Light`).
     pub fn light() -> Self {
         Self {
             is_light: true,
@@ -566,6 +572,7 @@ pub fn pad4(top: f32, right: f32, bottom: f32, left: f32) -> iced::Padding {
 // Container styles
 // ---------------------------------------------------------------------------
 
+/// Flat page background (window base).
 pub fn page_bg(theme: &Theme) -> container::Style {
     let t = Tokens::of(theme);
     container::Style::default().background(t.bg)
@@ -596,6 +603,7 @@ pub fn inset_card(theme: &Theme, radius: impl Into<Radius>) -> container::Style 
         })
 }
 
+/// Sidebar surface: page background with a hairline edge.
 pub fn sidebar_bg(theme: &Theme) -> container::Style {
     let t = Tokens::of(theme);
     container::Style::default().background(t.bg).border(Border {
@@ -628,6 +636,7 @@ pub fn table_head(theme: &Theme) -> container::Style {
     container::Style::default().background(t.panel_head)
 }
 
+/// Quick-show bar background (head panel above the rows).
 pub fn showbar_bg(theme: &Theme) -> container::Style {
     let t = Tokens::of(theme);
     container::Style::default()
@@ -659,6 +668,7 @@ impl RowLook {
     }
 }
 
+/// Playlist/statics stripe style for the given [`RowLook`].
 pub fn row(theme: &Theme, look: RowLook) -> container::Style {
     let t = Tokens::of(theme);
 
@@ -679,6 +689,7 @@ pub fn row(theme: &Theme, look: RowLook) -> container::Style {
     })
 }
 
+/// Modal dialog card: panel background with the modal border.
 pub fn modal_card(theme: &Theme) -> container::Style {
     let t = Tokens::of(theme);
     container::Style::default()
@@ -690,11 +701,13 @@ pub fn modal_card(theme: &Theme) -> container::Style {
         })
 }
 
+/// Dimmed page backdrop behind modal dialogs.
 pub fn backdrop(theme: &Theme) -> container::Style {
     let t = Tokens::of(theme);
     container::Style::default().background(t.backdrop)
 }
 
+/// Toast bubble card.
 pub fn toast_card(theme: &Theme) -> container::Style {
     let t = Tokens::of(theme);
     container::Style::default()
@@ -780,7 +793,7 @@ pub fn cover_placeholder(theme: &Theme) -> container::Style {
 }
 
 /// Keyboard hint pill.
-pub fn kbd(theme: &Theme) -> container::Style {
+pub fn kbd_style(theme: &Theme) -> container::Style {
     let t = Tokens::of(theme);
     container::Style {
         text_color: Some(t.kbd_text),
@@ -826,6 +839,7 @@ fn shift(status: button::Status, is_light: bool, base: Color, factor: f32) -> Op
     }
 }
 
+/// Filled sage-green primary button.
 pub fn btn_primary(theme: &Theme, status: button::Status) -> button::Style {
     let t = Tokens::of(theme);
     button::Style {
@@ -840,6 +854,7 @@ pub fn btn_primary(theme: &Theme, status: button::Status) -> button::Style {
     }
 }
 
+/// Soft secondary button (panel tint with border).
 pub fn btn_secondary(theme: &Theme, status: button::Status) -> button::Style {
     let t = Tokens::of(theme);
     button::Style {
@@ -891,6 +906,7 @@ pub fn btn_ghost(theme: &Theme, status: button::Status) -> button::Style {
     }
 }
 
+/// Filled red destructive button.
 pub fn btn_danger(theme: &Theme, status: button::Status) -> button::Style {
     let t = Tokens::of(theme);
     button::Style {
@@ -1007,6 +1023,7 @@ pub fn input_boxed(theme: &Theme, status: text_input::Status) -> text_input::Sty
 // Misc widget styles
 // ---------------------------------------------------------------------------
 
+/// Hairline track with a rounded soft thumb.
 pub fn scrollable_style(theme: &Theme, status: scrollable::Status) -> scrollable::Style {
     let t = Tokens::of(theme);
     let active = matches!(
@@ -1047,6 +1064,7 @@ pub fn scrollable_style(theme: &Theme, status: scrollable::Status) -> scrollable
     }
 }
 
+/// Boxed pick list, mirroring [`input_boxed`].
 pub fn pick_list_style(theme: &Theme, status: pick_list::Status) -> pick_list::Style {
     let t = Tokens::of(theme);
     let bg = match status {
@@ -1069,6 +1087,7 @@ pub fn pick_list_style(theme: &Theme, status: pick_list::Status) -> pick_list::S
     }
 }
 
+/// Dropdown menu shared by pick lists and suggestion inputs.
 pub fn pick_list_menu_style(theme: &Theme) -> iced::widget::overlay::menu::Style {
     let t = Tokens::of(theme);
     iced::widget::overlay::menu::Style {
@@ -1085,6 +1104,7 @@ pub fn pick_list_menu_style(theme: &Theme) -> iced::widget::overlay::menu::Style
     }
 }
 
+/// Toggler (switch) with the sage-green "on" state.
 pub fn toggler_style(theme: &Theme, status: toggler::Status) -> toggler::Style {
     let t = Tokens::of(theme);
     let active = match status {
@@ -1109,6 +1129,7 @@ pub fn toggler_style(theme: &Theme, status: toggler::Status) -> toggler::Style {
     }
 }
 
+/// Tooltip card: panel with border and drop shadow.
 pub fn tooltip_style(theme: &Theme) -> container::Style {
     let t = Tokens::of(theme);
     container::Style::default()
@@ -1123,15 +1144,4 @@ pub fn tooltip_style(theme: &Theme) -> container::Style {
             offset: iced::Vector::new(0.0, 3.0),
             blur_radius: 10.0,
         })
-}
-
-/// LED dot color for the DJ connection state.
-pub fn led_color(theme: &Theme, state: crate::traktor_api::ConnectionState) -> Color {
-    let t = Tokens::of(theme);
-    use crate::traktor_api::ConnectionState as S;
-    match state {
-        S::Connected => t.led_connected,
-        S::Traktor | S::CoverLoader => t.led_partial,
-        S::Disconnected => t.led_off,
-    }
 }

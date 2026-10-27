@@ -36,7 +36,7 @@ pub fn build<'a>(dance_interpreter: &'a DanceInterpreter) -> Element<'a, Message
     let blank = quick_button(
         Some("crop_free"),
         "Blank",
-        Some(kbd("End", theme::kbd).into()),
+        Some(kbd("End", theme::kbd_style).into()),
         matches!(&current, ItemSource::Blank),
         Message::ItemChanged(ItemChange::Blank),
     );

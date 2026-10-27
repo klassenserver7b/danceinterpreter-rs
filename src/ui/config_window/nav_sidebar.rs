@@ -56,7 +56,7 @@ pub fn build<'a>(
         nav_item(
             "help",
             "Help & shortcuts",
-            Some(kbd("?", theme::kbd).into()),
+            Some(kbd("?", theme::kbd_style).into()),
             false,
             Message::OpenDialog(DialogState::Help),
         ),

@@ -1,4 +1,4 @@
-use std::io::Result;
+use std::io;
 use std::path::{Path, PathBuf};
 
 use crate::dataloading::id3tagreader::read_song_info_from_filepath;
@@ -6,7 +6,7 @@ use crate::dataloading::songinfo::SongInfo;
 use percent_encoding::percent_decode_str;
 use url::Url;
 
-pub fn load_tag_data_from_m3u(path: &Path) -> Result<Vec<SongInfo>> {
+pub fn load_tag_data_from_m3u(path: &Path) -> io::Result<Vec<SongInfo>> {
     let files = load_m3u_content_from_path(path)?;
     let mut songtags: Vec<SongInfo> = Vec::new();
 
@@ -22,7 +22,7 @@ pub fn load_tag_data_from_m3u(path: &Path) -> Result<Vec<SongInfo>> {
     Ok(songtags)
 }
 
-fn load_m3u_content_from_path(path: &Path) -> Result<Vec<PathBuf>> {
+fn load_m3u_content_from_path(path: &Path) -> io::Result<Vec<PathBuf>> {
     let m3u_content = std::fs::read_to_string(path)?;
     // `parent()` is `None` for paths without a directory component; entries
     // then resolve relative to the working directory.
@@ -49,7 +49,6 @@ fn parse_encoded_file_name(file: &str) -> PathBuf {
 }
 
 #[cfg(test)]
-#[macro_use]
 mod tests {
     use std::path::Path;
 

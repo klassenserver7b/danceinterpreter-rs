@@ -4,7 +4,6 @@ use crate::dataloading::staticinfo::StaticInfo;
 use crate::traktor_api;
 use crate::traktor_api::TraktorDataProvider;
 use iced::Color;
-use std::cmp::PartialEq;
 use std::path::PathBuf;
 
 pub enum DeletedItem {

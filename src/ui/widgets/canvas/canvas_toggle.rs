@@ -1,6 +1,7 @@
 //! Canvas-drawn toggle for the DJ panel (power, restart).
 
 use crate::Message;
+use crate::ui::theme::Tokens;
 use iced::advanced::graphics::core::event::Event;
 use iced::mouse::Cursor;
 use iced::widget::canvas::{Cache, Frame, Geometry, Path};
@@ -14,6 +15,7 @@ type ToggleFunction<'a> = Rc<dyn Fn(bool) -> Message + 'a>;
 
 const ANIM_SECS: f32 = 0.28;
 
+/// A canvas-drawn toggle with an optional ripple press animation.
 #[derive(Clone)]
 pub struct CanvasToggle<'a> {
     is_checked: bool,
@@ -26,6 +28,7 @@ impl<'a> CanvasToggle<'a> {
     /// Canvas size (square) in px.
     const DEFAULT_SIZE: f32 = 75.0;
 
+    /// Creates a toggle showing `is_checked`, drawn through `cache`.
     pub fn new(is_checked: bool, cache: &'a Cache) -> Self {
         Self {
             is_checked,
@@ -35,6 +38,7 @@ impl<'a> CanvasToggle<'a> {
         }
     }
 
+    /// Sets the message builder invoked on press (`true` = checked).
     pub fn on_toggle<F>(mut self, f: F) -> Self
     where
         F: 'a + Fn(bool) -> Message,
@@ -43,6 +47,7 @@ impl<'a> CanvasToggle<'a> {
         self
     }
 
+    /// Sets the draw function: `(theme, frame, is_checked)`.
     pub fn on_draw<F>(mut self, f: F) -> Self
     where
         F: 'a + Fn(&Theme, &mut Frame, bool) + 'a,
@@ -141,7 +146,7 @@ impl<'a> canvas::Program<Message> for CanvasToggle<'a> {
             let r = max_r * progress;
             let alpha = (1.0 - progress) * 0.45;
 
-            let mut ripple_color = crate::ui::theme::Tokens::of(theme).accent_soft;
+            let mut ripple_color = Tokens::of(theme).accent_soft;
             ripple_color.a = alpha;
 
             let ripple = Path::new(|b| b.circle(Point::new(cx, cy), r));

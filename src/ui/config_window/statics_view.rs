@@ -8,8 +8,8 @@ use crate::ui::config_window::{ConfigWindow, DialogState};
 use crate::ui::theme::RowLook;
 use crate::ui::theme::{self, pad4, sz};
 use crate::ui::widgets::{
-    buttons, card_panel, delete_button, heading, icon_button_tooltip, material_symbol,
-    material_symbol_sized, panel_header, row_shell,
+    buttons, card_panel, color_swatch, delete_button, heading, icon_button_tooltip,
+    material_symbol, material_symbol_sized, panel_header, row_shell,
 };
 use crate::{DanceInterpreter, Message, StaticsMessage};
 use iced::widget::{
@@ -96,7 +96,7 @@ fn build_static_row<'a>(
     );
 
     let star_icon = if static_info.is_favorite {
-        material_symbol("star", true).color(theme::Tokens::of(&config_window.theme).star)
+        material_symbol("star", true).style(theme::text_style(|tk| tk.star))
     } else {
         material_symbol("star", false)
     };
@@ -112,7 +112,7 @@ fn build_static_row<'a>(
         .color
         .unwrap_or_else(|| theme::Tokens::dark().muted);
     let color_picker_open = config_window.color_picker_open.as_ref() == Some(&name);
-    let swatch = crate::ui::widgets::color_swatch::color_swatch(
+    let swatch = color_swatch::color_swatch(
         swatch_color,
         Message::Statics(StaticsMessage::ToggleColorPicker(name.clone())),
     );

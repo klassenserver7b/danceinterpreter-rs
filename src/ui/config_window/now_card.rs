@@ -5,7 +5,7 @@ use crate::dataloading::dataprovider::ItemSource;
 use crate::dataloading::displayable_data::DisplayableData;
 use crate::ui::config_window::source_tag;
 use crate::ui::theme::{self, pad4, sz};
-use crate::ui::widgets::{buttons, heading, kbd, material_symbol, material_symbol_sized};
+use crate::ui::widgets::{buttons, dot, heading, kbd, material_symbol, material_symbol_sized};
 use crate::{DanceInterpreter, Message};
 use iced::alignment::Vertical;
 use iced::widget::{column as col, container, image, row, text};
@@ -75,7 +75,7 @@ pub fn build<'a>(dance_interpreter: &'a DanceInterpreter) -> Element<'a, Message
     };
 
     let kicker = row![
-        crate::ui::widgets::dot(6.0, |t| theme::Tokens::of(t).dot_green),
+        dot(6.0, |t| theme::Tokens::of(t).dot_green),
         text("ON THE FLOOR")
             .size(sz::TINY)
             .style(theme::text_style(|tk| tk.muted)),

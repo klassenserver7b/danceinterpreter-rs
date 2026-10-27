@@ -5,10 +5,11 @@ use crate::dataloading::dataprovider::ItemChange;
 use crate::traktor_api::TraktorMessage;
 use crate::ui::config_window::DialogState;
 use crate::ui::config_window::dj_panel::SidebarMessage;
+use crate::ui::config_window::led_color;
 use crate::ui::config_window::source_tag_right;
 use crate::ui::theme::{self, pad4, sz};
 use crate::ui::widgets::{
-    buttons, heading, kbd, material_symbol, material_symbol_sized, push_right,
+    buttons, dot, heading, kbd, material_symbol, material_symbol_sized, push_right,
 };
 use crate::{DanceInterpreter, Message};
 use iced::widget::{button, column as col, container, row, scrollable, text, toggler};
@@ -188,9 +189,7 @@ fn build_dj_card<'a>(dance_interpreter: &'a DanceInterpreter) -> Element<'a, Mes
     .style(|t: &Theme| theme::inset_card(t, theme::r::MD));
 
     let connection_row = row![
-        container(crate::ui::widgets::dot(6.0, move |t| {
-            theme::led_color(t, connection)
-        })),
+        container(dot(6.0, move |t| led_color(t, connection))),
         text(summary)
             .size(sz::SMALL)
             .style(theme::text_style(|tk| tk.text_soft)),
@@ -280,7 +279,7 @@ fn build_tip() -> Element<'static, Message> {
                     text("Press")
                         .size(sz::SMALL)
                         .style(theme::text_style(|tk| tk.muted)),
-                    kbd("Space", theme::kbd),
+                    kbd("Space", theme::kbd_style),
                     text("to move to the next song.")
                         .size(sz::SMALL)
                         .style(theme::text_style(|tk| tk.muted)),

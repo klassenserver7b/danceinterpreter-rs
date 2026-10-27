@@ -48,6 +48,7 @@ pub fn secondary<'a>(label: impl IntoFragment<'a> + 'a, message: Message) -> But
     labelled(label, message, theme::btn_secondary)
 }
 
+/// Filled red destructive button.
 pub fn danger<'a>(label: impl IntoFragment<'a> + 'a, message: Message) -> Button<'a, Message> {
     labelled(label, message, theme::btn_danger)
 }

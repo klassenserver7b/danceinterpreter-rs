@@ -3,8 +3,11 @@
 
 use crate::dataloading::dataprovider::ItemSource;
 use crate::ui::config_window::ConfigWindow;
+use crate::ui::song_window::Backdrop;
 use crate::ui::theme::{self, pad4, sz};
-use crate::ui::widgets::{buttons, eyebrow, heading, icon_button_tooltip, kbd, push_right};
+use crate::ui::widgets::{
+    buttons, divider, eyebrow, heading, icon_button_tooltip, kbd, push_right,
+};
 use crate::{DanceInterpreter, DialogMessage, Message, SongWindowMessage, StaticsMessage};
 use iced::widget::{
     Button, Column, column as col, container, mouse_area, opaque, pick_list, row, space::Space,
@@ -164,7 +167,7 @@ fn setting_row<'a>(label: &'a str, control: Element<'a, Message>) -> Element<'a,
         .align_y(Alignment::Center)
         .spacing(20)
         .padding([13, 0]),
-        crate::ui::widgets::divider(),
+        divider(),
     ]
     .width(Length::Fill)
     .into()
@@ -270,7 +273,7 @@ fn build_settings<'a>(
     });
 
     let backdrop_pick = pick_list(
-        crate::ui::song_window::Backdrop::ALL,
+        Backdrop::ALL,
         Some(dance_interpreter.song_window.backdrop),
         |backdrop| Message::SongWindow(SongWindowMessage::SetBackdrop(backdrop)),
     )
@@ -354,7 +357,7 @@ fn build_help() -> (
                         .size(sz::BASE)
                         .style(theme::text_style(|tk| tk.text_soft))
                         .width(Length::Fill),
-                    kbd(*keys, theme::kbd),
+                    kbd(*keys, theme::kbd_style),
                 ]
                 .align_y(Alignment::Center),
             )
