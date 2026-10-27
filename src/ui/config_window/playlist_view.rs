@@ -64,26 +64,17 @@ fn build_toolbar<'a>(
     let count = dance_interpreter.data_provider.playlist().len();
 
     let title = row![
-        material_symbol_sized("format_list_bulleted", false, 15.0).style(|t: &Theme| {
-            iced::widget::text::Style {
-                color: Some(theme::Tokens::of(t).muted),
-            }
-        }),
+        material_symbol_sized("format_list_bulleted", false, 15.0)
+            .style(theme::text_style(|tk| tk.muted)),
         heading(
             "Evening playlist",
             sz::PANEL_TITLE,
             iced::font::Weight::Semibold
         )
-        .style(|t| {
-            iced::widget::text::Style {
-                color: Some(theme::Tokens::of(t).text),
-            }
-        }),
+        .style(theme::text_style(|tk| tk.text)),
         text(format!("{} songs", count))
             .size(sz::TINY)
-            .style(|t: &Theme| iced::widget::text::Style {
-                color: Some(theme::Tokens::of(t).muted),
-            }),
+            .style(theme::text_style(|tk| tk.muted)),
     ]
     .spacing(9)
     .align_y(Alignment::Center);
@@ -95,7 +86,7 @@ fn build_toolbar<'a>(
     }
 
     tools = tools.push(with_tooltip(
-        buttons::ghost_icon("upload_file", false, 16.0, Message::AddAudioFiles),
+        buttons::ghost_icon("upload_file", false, sz::ICON, Message::AddAudioFiles),
         "Add audio files",
     ));
 
@@ -103,7 +94,7 @@ fn build_toolbar<'a>(
         buttons::ghost_icon(
             "undo",
             false,
-            16.0,
+            sz::ICON,
             Message::Dialog(DialogMessage::UndoDelete),
         ),
         "Undo delete",
@@ -141,11 +132,7 @@ fn build_search<'a>(config_window: &'a ConfigWindow) -> Element<'a, Message> {
 
     container(
         row![
-            material_symbol_sized("search", false, 15.0).style(|t: &Theme| {
-                iced::widget::text::Style {
-                    color: Some(theme::Tokens::of(t).muted),
-                }
-            }),
+            material_symbol_sized("search", false, 15.0).style(theme::text_style(|tk| tk.muted)),
             input,
             close,
         ]
@@ -178,9 +165,7 @@ fn build_table_head() -> Element<'static, Message> {
             text(label)
                 .size(sz::MICRO)
                 .font(theme::body_font(iced::font::Weight::Semibold))
-                .style(|t: &Theme| iced::widget::text::Style {
-                    color: Some(theme::Tokens::of(t).muted_head),
-                }),
+                .style(theme::text_style(|tk| tk.muted_head)),
         )
         .width(width)
         .into()
@@ -251,15 +236,11 @@ fn build_song_row<'a>(
     // Number / state icon cell.
     let number: Element<'a, Message> = if is_traktor && !is_current {
         material_symbol_sized("agriculture", false, 15.0)
-            .style(|t: &Theme| iced::widget::text::Style {
-                color: Some(theme::Tokens::of(t).led_partial),
-            })
+            .style(theme::text_style(|tk| tk.led_partial))
             .into()
     } else if is_current {
-        material_symbol_sized("graphic_eq", false, 16.0)
-            .style(|t: &Theme| iced::widget::text::Style {
-                color: Some(theme::Tokens::of(t).accent_soft),
-            })
+        material_symbol_sized("graphic_eq", false, sz::ICON)
+            .style(theme::text_style(|tk| tk.accent_soft))
             .into()
     } else {
         text(format!("{:02}", idx + 1))
@@ -303,7 +284,7 @@ fn build_song_row<'a>(
     let artist_field: Element<'a, Message> = if editing_field == Some(EditField::Artist) {
         text_input("Artist", edit_draft)
             .id(edit_input_id(idx, EditField::Artist))
-            .size(sz::SMALL + 1.0)
+            .size(sz::BASE)
             .on_input(Message::EditDraftChanged)
             .on_submit(Message::EndSongEdit)
             .style(theme::input_plain_dim)
@@ -313,7 +294,7 @@ fn build_song_row<'a>(
         mouse_area(editable_text(
             &song.artist,
             "Artist",
-            sz::SMALL + 1.0,
+            sz::BASE,
             |t: &Theme| theme::Tokens::of(t).muted,
             |t: &Theme| theme::Tokens::of(t).faint,
         ))
@@ -339,9 +320,7 @@ fn build_song_row<'a>(
             crate::ui::config_window::nav_sidebar::dot(5.0, |t| theme::Tokens::of(t).accent_soft),
             text("On air")
                 .size(sz::SMALL)
-                .style(|t: &Theme| iced::widget::text::Style {
-                    color: Some(theme::Tokens::of(t).accent_soft),
-                }),
+                .style(theme::text_style(|tk| tk.accent_soft)),
         ]
         .spacing(6)
         .align_y(Alignment::Center)
@@ -351,9 +330,7 @@ fn build_song_row<'a>(
             material_symbol_sized("skip_next", false, 13.0),
             text("Up next")
                 .size(sz::SMALL)
-                .style(|t: &Theme| iced::widget::text::Style {
-                    color: Some(theme::Tokens::of(t).text_soft),
-                }),
+                .style(theme::text_style(|tk| tk.text_soft)),
         ]
         .spacing(4)
         .align_y(Alignment::Center)
@@ -361,18 +338,14 @@ fn build_song_row<'a>(
     } else if is_traktor {
         text("DJ live")
             .size(sz::SMALL)
-            .style(|t: &Theme| iced::widget::text::Style {
-                color: Some(theme::Tokens::of(t).led_partial),
-            })
+            .style(theme::text_style(|tk| tk.led_partial))
             .into()
     } else if is_played {
         row![
             material_symbol_sized("check", false, 13.0),
             text("Played")
                 .size(sz::SMALL)
-                .style(|t: &Theme| iced::widget::text::Style {
-                    color: Some(theme::Tokens::of(t).faint),
-                }),
+                .style(theme::text_style(|tk| tk.faint)),
         ]
         .spacing(4)
         .align_y(Alignment::Center)
@@ -380,9 +353,7 @@ fn build_song_row<'a>(
     } else {
         text("Ready")
             .size(sz::SMALL)
-            .style(|t: &Theme| iced::widget::text::Style {
-                color: Some(theme::Tokens::of(t).faint),
-            })
+            .style(theme::text_style(|tk| tk.faint))
             .into()
     };
 
@@ -448,7 +419,6 @@ fn build_song_row<'a>(
         zebra: idx % 2 == 1,
         current: is_current,
         matched: is_match && !is_current,
-        first: false,
     };
 
     // The inner row needs an explicit fixed height: iced's layout marks
@@ -481,7 +451,7 @@ fn build_dance_cell<'a>(
     let dance_field: Element<'a, Message> = if editing {
         text_input("Unassigned", edit_draft)
             .id(edit_input_id(idx, EditField::Dance))
-            .size(sz::SMALL + 1.0)
+            .size(sz::BASE)
             .on_input(Message::EditDraftChanged)
             .on_submit(Message::EndSongEdit)
             .style(move |t: &Theme, status: iced::widget::text_input::Status| {
@@ -498,7 +468,7 @@ fn build_dance_cell<'a>(
         mouse_area(editable_text(
             dance,
             "Unassigned",
-            sz::SMALL + 1.0,
+            sz::BASE,
             move |t: &Theme| {
                 color
                     .map(|c| theme::readable(c, t))
@@ -570,11 +540,7 @@ fn build_quick_add<'a>(config_window: &'a ConfigWindow) -> Element<'a, Message> 
     let submit = Message::QuickAdd(QuickAddMessage::Submit);
 
     let content = row![
-        material_symbol_sized("add", false, 16.0).style(|t: &Theme| {
-            iced::widget::text::Style {
-                color: Some(theme::Tokens::of(t).muted),
-            }
-        }),
+        material_symbol_sized("add", false, sz::ICON).style(theme::text_style(|tk| tk.muted)),
         text_input("Add a song title…", &config_window.quick_title)
             .size(sz::ROW)
             .on_input(|v| Message::QuickAdd(QuickAddMessage::UpdateTitle(v)))
@@ -627,15 +593,11 @@ fn build_footer(dance_interpreter: &DanceInterpreter) -> Element<'static, Messag
         row![
             text(format!("{} played · {} remaining", played, remaining))
                 .size(sz::TINY)
-                .style(|t: &Theme| iced::widget::text::Style {
-                    color: Some(theme::Tokens::of(t).muted),
-                }),
+                .style(theme::text_style(|tk| tk.muted)),
             container(
                 text("Double-click a field to edit")
                     .size(sz::TINY)
-                    .style(|t: &Theme| iced::widget::text::Style {
-                        color: Some(theme::Tokens::of(t).faint),
-                    })
+                    .style(theme::text_style(|tk| tk.faint))
             )
             .width(Length::Fill)
             .align_x(Alignment::End),
@@ -688,16 +650,11 @@ fn build_empty_playlist_view(dance_interpreter: &DanceInterpreter) -> Element<'s
     );
 
     let content = col![
-        heading("No playlist loaded.", 22.0, iced::font::Weight::Semibold).style(|t| {
-            iced::widget::text::Style {
-                color: Some(theme::Tokens::of(t).text),
-            }
-        }),
+        heading("No playlist loaded.", 22.0, iced::font::Weight::Semibold)
+            .style(theme::text_style(|tk| tk.text)),
         text("Drop an .m3u or audio file anywhere in this window, or start below.")
             .size(sz::SMALL)
-            .style(|t: &Theme| iced::widget::text::Style {
-                color: Some(theme::Tokens::of(t).muted),
-            }),
+            .style(theme::text_style(|tk| tk.muted)),
         // The three cards share the available width equally, capped at
         // 3 × 200 + spacing.
         container(
@@ -737,22 +694,16 @@ fn empty_state_card(
     let card = button(
         container(
             col![
-                material_symbol(icon, false).size(30.0).style(|t: &Theme| {
-                    iced::widget::text::Style {
-                        color: Some(theme::Tokens::of(t).accent_soft),
-                    }
-                }),
+                material_symbol(icon, false)
+                    .size(30.0)
+                    .style(theme::text_style(|tk| tk.accent_soft)),
                 text(title)
                     .size(sz::BASE)
                     .font(theme::body_font(iced::font::Weight::Medium))
-                    .style(|t: &Theme| iced::widget::text::Style {
-                        color: Some(theme::Tokens::of(t).text),
-                    }),
+                    .style(theme::text_style(|tk| tk.text)),
                 text(subtitle)
                     .size(sz::TINY)
-                    .style(|t: &Theme| iced::widget::text::Style {
-                        color: Some(theme::Tokens::of(t).muted),
-                    }),
+                    .style(theme::text_style(|tk| tk.muted)),
             ]
             .spacing(8)
             .align_x(Alignment::Center)

@@ -13,9 +13,7 @@ pub fn build(toast: &Option<Toast>) -> Option<Element<'_, Message>> {
     let toast = toast.as_ref()?;
 
     let close = button(
-        material_symbol_sized("close", false, 14.0).style(|t: &Theme| iced::widget::text::Style {
-            color: Some(theme::Tokens::of(t).toast_text),
-        }),
+        material_symbol_sized("close", false, 14.0).style(theme::text_style(|tk| tk.toast_text)),
     )
     .padding(2)
     .style(|t: &Theme, s: button::Status| {
@@ -29,15 +27,11 @@ pub fn build(toast: &Option<Toast>) -> Option<Element<'_, Message>> {
     let bubble = container(
         row![
             material_symbol("check_circle", false)
-                .size(16.0)
-                .style(|t: &Theme| iced::widget::text::Style {
-                    color: Some(theme::Tokens::of(t).toast_text),
-                }),
+                .size(sz::ICON)
+                .style(theme::text_style(|tk| tk.toast_text)),
             text(&toast.text)
-                .size(sz::SMALL + 0.5)
-                .style(|t: &Theme| iced::widget::text::Style {
-                    color: Some(theme::Tokens::of(t).toast_text),
-                }),
+                .size(sz::CAPTION)
+                .style(theme::text_style(|tk| tk.toast_text)),
             close,
         ]
         .spacing(10)

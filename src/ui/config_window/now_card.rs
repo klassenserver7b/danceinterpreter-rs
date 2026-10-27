@@ -83,9 +83,7 @@ pub fn build<'a>(
         crate::ui::config_window::nav_sidebar::dot(6.0, |t| theme::Tokens::of(t).dot_green),
         text("ON THE FLOOR")
             .size(sz::TINY)
-            .style(|t: &Theme| iced::widget::text::Style {
-                color: Some(theme::Tokens::of(t).muted),
-            }),
+            .style(theme::text_style(|tk| tk.muted)),
         source_tag(source_tag_text),
     ]
     .spacing(7)
@@ -100,44 +98,34 @@ pub fn build<'a>(
     line = line.push(
         heading(dance_name, 15.0, iced::font::Weight::Semibold)
             .line_height(lh)
-            .style(|t: &Theme| iced::widget::text::Style {
-                color: Some(theme::Tokens::of(t).dance_headline),
-            }),
+            .style(theme::text_style(|tk| tk.dance_headline)),
     );
     if !title.is_empty() {
         line = line.push(
             text("\u{B7}")
                 .size(sz::SMALL)
                 .line_height(lh)
-                .style(|t: &Theme| iced::widget::text::Style {
-                    color: Some(theme::Tokens::of(t).muted),
-                }),
+                .style(theme::text_style(|tk| tk.muted)),
         );
         line = line.push(
             text(title)
                 .size(sz::BASE)
                 .line_height(lh)
                 .font(theme::body_font(iced::font::Weight::Medium))
-                .style(|t: &Theme| iced::widget::text::Style {
-                    color: Some(theme::Tokens::of(t).text),
-                }),
+                .style(theme::text_style(|tk| tk.text)),
         );
         if !artist.is_empty() {
             line = line.push(
                 text("\u{B7}")
                     .size(sz::SMALL)
                     .line_height(lh)
-                    .style(|t: &Theme| iced::widget::text::Style {
-                        color: Some(theme::Tokens::of(t).muted),
-                    }),
+                    .style(theme::text_style(|tk| tk.muted)),
             );
             line = line.push(
                 text(artist)
                     .size(sz::SMALL)
                     .line_height(lh)
-                    .style(|t: &Theme| iced::widget::text::Style {
-                        color: Some(theme::Tokens::of(t).text_soft),
-                    }),
+                    .style(theme::text_style(|tk| tk.text_soft)),
             );
         }
     }
@@ -168,7 +156,7 @@ fn transport<'a>(is_blank: bool, position: String) -> Element<'a, Message> {
     let prev = buttons::ghost_icon(
         "skip_previous",
         false,
-        16.0,
+        sz::ICON,
         Message::ItemChanged(crate::dataloading::dataprovider::ItemChange::Previous),
     );
 

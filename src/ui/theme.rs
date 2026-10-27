@@ -7,7 +7,7 @@
 
 use iced::border::Radius;
 use iced::font::{Family, Style as FontStyle, Weight};
-use iced::widget::{button, checkbox, container, pick_list, scrollable, text_input, toggler};
+use iced::widget::{button, container, pick_list, scrollable, text_input, toggler};
 use iced::{Background, Border, Color, Font, Theme, color};
 
 /// Body font family (DM Sans statics are bundled).
@@ -37,44 +37,57 @@ pub fn head_font(weight: Weight) -> Font {
     }
 }
 
-#[allow(dead_code)] // design-system toolkit
-pub fn icon_font() -> Font {
-    Font {
-        family: Family::Name(FONT_ICON),
-        weight: Weight::Normal,
-        style: FontStyle::Normal,
-        stretch: iced::font::Stretch::Normal,
-    }
-}
-
-#[allow(dead_code)] // design-system toolkit
-pub fn icon_font_filled() -> Font {
-    Font {
-        family: Family::Name(FONT_ICON_FILLED),
-        weight: Weight::Normal,
-        style: FontStyle::Normal,
-        stretch: iced::font::Stretch::Normal,
-    }
-}
-
 /// Text sizes (design pixels). The smallest labels from the prototype were
 /// bumped by ~1px for projector-room legibility.
 pub mod sz {
+    /// Body text, dialog copy.
     pub const BASE: f32 = 13.0;
-    #[allow(dead_code)] // kept for parity with the prototype
-    pub const H1: f32 = 29.0;
     pub const H2: f32 = 19.0;
 
     /// Panel / card titles.
     pub const PANEL_TITLE: f32 = 13.0;
     /// Row primary text.
     pub const ROW: f32 = 14.0;
-    /// Row secondary text, captions, subtitles.
+    /// Row secondary text, subtitles.
     pub const SMALL: f32 = 12.0;
+    /// Captions a notch above [`SMALL`] (toast text, show-bar buttons).
+    pub const CAPTION: f32 = 12.5;
     /// Tags, eyebrows, kbd hints, footers.
     pub const TINY: f32 = 10.5;
     /// Micro labels (source tags, version).
     pub const MICRO: f32 = 9.5;
+    /// Default icon size.
+    pub const ICON: f32 = 16.0;
+}
+
+/// Corner radius scale (design pixels), mirroring the prototype.
+pub mod r {
+    /// Inline inputs, kbd hints.
+    pub const XS: f32 = 3.0;
+    /// Chips, boxed inputs, tooltips.
+    pub const SM: f32 = 4.0;
+    /// Buttons.
+    pub const MD: f32 = 5.0;
+    /// Toasts.
+    pub const LG: f32 = 6.0;
+    /// Cards.
+    pub const XL: f32 = 7.0;
+    /// Hero (now-playing) card.
+    pub const HERO: f32 = 8.0;
+    /// Modals.
+    pub const MODAL: f32 = 10.0;
+    /// Pill-shaped elements.
+    pub const PILL: f32 = 20.0;
+}
+
+/// Builds a [`iced::widget::text::Style`] closure from a token-derived color,
+/// e.g. `text(text).style(theme::text_style(|tk| tk.muted))`.
+pub fn text_style(
+    color: impl Fn(&Tokens) -> Color,
+) -> impl Fn(&Theme) -> iced::widget::text::Style {
+    move |theme: &Theme| iced::widget::text::Style {
+        color: Some(color(&Tokens::of(theme))),
+    }
 }
 
 fn rgb(r: u8, g: u8, b: u8) -> Color {
@@ -131,7 +144,6 @@ pub struct Tokens {
     pub accent_nav_bg: Color,
     pub accent_nav_text: Color,
     pub dance_headline: Color,
-    #[allow(dead_code)] // kept for parity with the prototype
     pub focus: Color,
 
     // Switch
@@ -144,9 +156,9 @@ pub struct Tokens {
     pub btn2_bg: Color,
     pub btn2_border: Color,
     pub btn2_text: Color,
-    #[allow(dead_code)] // kept for parity with the prototype
+    #[allow(dead_code)] // prototype parity toolkit (see ui::widgets::parity)
     pub btn3_bg: Color,
-    #[allow(dead_code)] // kept for parity with the prototype
+    #[allow(dead_code)] // prototype parity toolkit (see ui::widgets::parity)
     pub btn3_text: Color,
     pub active_bg: Color,
     pub active_border: Color,
@@ -156,15 +168,17 @@ pub struct Tokens {
     pub outline_text: Color,
     pub ghost_hover: Color,
     pub danger: Color,
+    /// Text on danger-filled surfaces.
+    pub danger_text: Color,
 
     // Rows
-    #[allow(dead_code)] // kept for parity with the prototype
-    pub row_hover: Color,
     pub row_zebra: Color,
     pub row_current_bg: Color,
     pub row_current_border: Color,
     pub match_bg: Color,
     pub match_border: Color,
+    /// Text selection highlight.
+    pub selection: Color,
 
     // Tags / chips
     pub tag_border: Color,
@@ -172,8 +186,6 @@ pub struct Tokens {
 
     // Status
     pub dot_green: Color,
-    #[allow(dead_code)] // kept for parity with the prototype
-    pub dot_off: Color,
     pub led_connected: Color,
     pub led_partial: Color,
     pub led_off: Color,
@@ -198,6 +210,17 @@ pub struct Tokens {
     pub now_grad_a: Color,
     pub now_grad_b: Color,
     pub now_grad_c: Color,
+
+    // Inputs
+    /// Wash behind focused inline inputs.
+    pub input_focus_bg: Color,
+
+    // Cover art placeholder
+    pub cover_grad_a: Color,
+    pub cover_grad_b: Color,
+
+    // Shadows
+    pub shadow: Color,
 }
 
 impl Tokens {
@@ -253,19 +276,22 @@ impl Tokens {
             outline_text: rgb(0xDF, 0xE5, 0xDF),
             ghost_hover: color!(0xFFFFFF, 0.05),
             danger: rgb(0xC2, 0x5E, 0x4C),
+            danger_text: Color::WHITE,
 
-            row_hover: color!(0xFFFFFF, 0.03),
             row_zebra: color!(0xFFFFFF, 0.004),
             row_current_bg: rgb(0x29, 0x36, 0x29),
             row_current_border: rgb(0x43, 0x54, 0x3D),
             match_bg: rgb(0x23, 0x2D, 0x23),
             match_border: rgb(0x86, 0xA2, 0x71),
+            selection: Color {
+                a: 0.3,
+                ..rgb(0xB9, 0xD1, 0xA7)
+            },
 
             tag_border: rgb(0x5A, 0x68, 0x53),
             tag_text: rgb(0xAC, 0xBA, 0xA2),
 
             dot_green: rgb(0xB2, 0xD2, 0xA1),
-            dot_off: rgb(0x79, 0x84, 0x7B),
             led_connected: rgb(0x7F, 0xB0, 0x69),
             led_partial: rgb(0xD4, 0xBD, 0x7E),
             led_off: rgb(0x58, 0x64, 0x5A),
@@ -286,6 +312,13 @@ impl Tokens {
             now_grad_a: rgb(0x26, 0x32, 0x24),
             now_grad_b: rgb(0x20, 0x2C, 0x22),
             now_grad_c: rgb(0x1A, 0x24, 0x1D),
+
+            input_focus_bg: color!(0xFFFFFF, 0.04),
+
+            cover_grad_a: rgb(0x2C, 0x38, 0x2B),
+            cover_grad_b: rgb(0x17, 0x21, 0x1C),
+
+            shadow: Color::from_rgba(0.0, 0.0, 0.0, 0.35),
         }
     }
 
@@ -333,19 +366,22 @@ impl Tokens {
             outline_text: rgb(0x36, 0x42, 0x39),
             ghost_hover: color!(0x1A211B, 0.06),
             danger: rgb(0xB0, 0x56, 0x3F),
+            danger_text: Color::WHITE,
 
-            row_hover: color!(0x1A211B, 0.03),
             row_zebra: color!(0x1A211B, 0.0),
             row_current_bg: rgb(0xE4, 0xEE, 0xD9),
             row_current_border: rgb(0xB2, 0xC7, 0x9E),
             match_bg: rgb(0xEE, 0xF4, 0xE6),
             match_border: rgb(0x86, 0xA2, 0x71),
+            selection: Color {
+                a: 0.3,
+                ..rgb(0xB9, 0xD1, 0xA7)
+            },
 
             tag_border: rgb(0xB2, 0xBF, 0xAF),
             tag_text: rgb(0x57, 0x67, 0x52),
 
             dot_green: rgb(0x6F, 0x9A, 0x5C),
-            dot_off: rgb(0x9A, 0xA5, 0x9A),
             led_connected: rgb(0x5C, 0x9A, 0x48),
             led_partial: rgb(0xC9, 0xA2, 0x3E),
             led_off: rgb(0xA6, 0xB0, 0xA6),
@@ -366,6 +402,13 @@ impl Tokens {
             now_grad_a: rgb(0xE9, 0xF0, 0xE0),
             now_grad_b: rgb(0xEE, 0xF2, 0xE9),
             now_grad_c: rgb(0xF4, 0xF6, 0xF1),
+
+            input_focus_bg: color!(0x242C26, 0.04),
+
+            cover_grad_a: rgb(0xDE, 0xE6, 0xD5),
+            cover_grad_b: rgb(0xC3, 0xD1, 0xBB),
+
+            shadow: Color::from_rgba(0.0, 0.0, 0.0, 0.25),
         }
     }
 
@@ -443,8 +486,8 @@ impl Tokens {
             outline_text: dim(0.08),
             ghost_hover: with_alpha(text, if is_light { 0.06 } else { 0.05 }),
             danger: palette.danger,
+            danger_text: Color::WHITE,
 
-            row_hover: with_alpha(text, 0.03),
             row_zebra: with_alpha(text, if is_light { 0.0 } else { 0.004 }),
             row_current_bg: mix(bg, accent, 0.2),
             row_current_border: mix(accent, bg, if is_light { 0.2 } else { 0.6 }),
@@ -454,12 +497,12 @@ impl Tokens {
             } else {
                 accent_deep(0.2)
             },
+            selection: with_alpha(accent, 0.3),
 
             tag_border: line(0.26),
             tag_text: dim(0.3),
 
             dot_green: palette.success,
-            dot_off: dim(0.45),
             led_connected: mix(palette.success, anchor, 0.15),
             led_partial: palette.warning,
             led_off: line(0.3),
@@ -483,6 +526,21 @@ impl Tokens {
             now_grad_a: mix(bg, accent, 0.15),
             now_grad_b: mix(bg, accent, 0.1),
             now_grad_c: mix(bg, accent, 0.05),
+
+            input_focus_bg: with_alpha(text, 0.04),
+
+            cover_grad_a: if is_light {
+                mix(bg, text, 0.12)
+            } else {
+                mix(bg, accent, 0.16)
+            },
+            cover_grad_b: if is_light {
+                mix(bg, text, 0.25)
+            } else {
+                mix(bg, Color::BLACK, 0.35)
+            },
+
+            shadow: with_alpha(Color::BLACK, if is_light { 0.25 } else { 0.35 }),
         }
     }
 }
@@ -518,7 +576,7 @@ pub fn card(theme: &Theme) -> container::Style {
         .border(Border {
             color: t.border,
             width: 1.0,
-            radius: Radius::from(7.0),
+            radius: Radius::from(r::XL),
         })
 }
 
@@ -544,7 +602,7 @@ pub fn now_card(theme: &Theme) -> container::Style {
         .border(Border {
             color: t.now_border,
             width: 1.0,
-            radius: Radius::from(8.0),
+            radius: Radius::from(r::HERO),
         })
 }
 
@@ -571,21 +629,10 @@ pub struct RowLook {
     pub zebra: bool,
     pub current: bool,
     pub matched: bool,
-    pub first: bool,
 }
 
 pub fn row(theme: &Theme, look: RowLook) -> container::Style {
     let t = Tokens::of(theme);
-    let radius = if look.first {
-        Radius {
-            top_left: 7.0,
-            top_right: 7.0,
-            bottom_right: 0.0,
-            bottom_left: 0.0,
-        }
-    } else {
-        Radius::from(0.0)
-    };
 
     let (bg, border_color) = if look.current {
         (t.row_current_bg, t.row_current_border)
@@ -600,7 +647,7 @@ pub fn row(theme: &Theme, look: RowLook) -> container::Style {
     container::Style::default().background(bg).border(Border {
         color: border_color,
         width: 1.0,
-        radius,
+        radius: Radius::from(0.0),
     })
 }
 
@@ -611,7 +658,7 @@ pub fn modal_card(theme: &Theme) -> container::Style {
         .border(Border {
             color: t.modal_border,
             width: 1.0,
-            radius: Radius::from(10.0),
+            radius: Radius::from(r::MODAL),
         })
 }
 
@@ -627,10 +674,10 @@ pub fn toast_card(theme: &Theme) -> container::Style {
         .border(Border {
             color: t.toast_border,
             width: 1.0,
-            radius: Radius::from(6.0),
+            radius: Radius::from(r::LG),
         })
         .shadow(iced::Shadow {
-            color: Color::from_rgba(0.0, 0.0, 0.0, 0.35),
+            color: t.shadow,
             offset: iced::Vector::new(0.0, 8.0),
             blur_radius: 35.0,
         })
@@ -648,7 +695,7 @@ pub fn chip() -> impl Fn(&Theme) -> container::Style {
             .border(Border {
                 color: with_alpha(t.text, 0.1),
                 width: 1.0,
-                radius: Radius::from(4.0),
+                radius: Radius::from(r::SM),
             })
     }
 }
@@ -674,21 +721,16 @@ pub fn readable(color: Color, theme: &Theme) -> Color {
 /// Placeholder cover art when a song has no embedded image.
 pub fn cover_placeholder(theme: &Theme) -> container::Style {
     let t = Tokens::of(theme);
-    let (a, b) = if t.is_light {
-        (rgb(0xDE, 0xE6, 0xD5), rgb(0xC3, 0xD1, 0xBB))
-    } else {
-        (rgb(0x2C, 0x38, 0x2B), rgb(0x17, 0x21, 0x1C))
-    };
     container::Style::default()
         .background(Background::Gradient(iced::Gradient::Linear(
             iced::gradient::Linear::new(1.2)
-                .add_stop(0.0, a)
-                .add_stop(1.0, b),
+                .add_stop(0.0, t.cover_grad_a)
+                .add_stop(1.0, t.cover_grad_b),
         )))
         .border(Border {
             color: t.border,
             width: 1.0,
-            radius: Radius::from(4.0),
+            radius: Radius::from(r::SM),
         })
 }
 
@@ -700,7 +742,7 @@ pub fn kbd(theme: &Theme) -> container::Style {
         .border(Border {
             color: t.kbd_border,
             width: 1.0,
-            radius: Radius::from(3.0),
+            radius: Radius::from(r::XS),
         })
 }
 
@@ -708,20 +750,29 @@ pub fn kbd(theme: &Theme) -> container::Style {
 // Button styles
 // ---------------------------------------------------------------------------
 
-fn hover(status: button::Status, base: Color, factor: f32) -> Option<Background> {
+/// Hover/press shift for a button background. Dark themes brighten the fill;
+/// light themes darken it (brightening washes out near-white fills there).
+/// `factor` is the brighten factor on dark themes (e.g. `1.06`).
+fn shift(status: button::Status, is_light: bool, base: Color, factor: f32) -> Option<Background> {
+    let tinted = if is_light {
+        let k = 2.0 - factor;
+        Color {
+            a: base.a,
+            r: base.r * k,
+            g: base.g * k,
+            b: base.b * k,
+        }
+    } else {
+        Color {
+            a: base.a,
+            r: (base.r * factor).min(1.0),
+            g: (base.g * factor).min(1.0),
+            b: (base.b * factor).min(1.0),
+        }
+    };
+
     match status {
-        button::Status::Hovered => Some(Background::Color(Color {
-            a: base.a,
-            r: (base.r * factor).min(1.0),
-            g: (base.g * factor).min(1.0),
-            b: (base.b * factor).min(1.0),
-        })),
-        button::Status::Pressed => Some(Background::Color(Color {
-            a: base.a,
-            r: (base.r * factor).min(1.0),
-            g: (base.g * factor).min(1.0),
-            b: (base.b * factor).min(1.0),
-        })),
+        button::Status::Hovered | button::Status::Pressed => Some(Background::Color(tinted)),
         button::Status::Disabled => Some(Background::Color(Color { a: 0.4, ..base })),
         _ => Some(Background::Color(base)),
     }
@@ -730,12 +781,12 @@ fn hover(status: button::Status, base: Color, factor: f32) -> Option<Background>
 pub fn btn_primary(theme: &Theme, status: button::Status) -> button::Style {
     let t = Tokens::of(theme);
     button::Style {
-        background: hover(status, t.accent, 1.06),
+        background: shift(status, t.is_light, t.accent, 1.06),
         text_color: t.accent_text,
         border: Border {
             color: t.accent_border,
             width: 1.0,
-            radius: Radius::from(5.0),
+            radius: Radius::from(r::MD),
         },
         ..button::Style::default()
     }
@@ -744,12 +795,12 @@ pub fn btn_primary(theme: &Theme, status: button::Status) -> button::Style {
 pub fn btn_secondary(theme: &Theme, status: button::Status) -> button::Style {
     let t = Tokens::of(theme);
     button::Style {
-        background: hover(status, t.btn2_bg, 1.08),
+        background: shift(status, t.is_light, t.btn2_bg, 1.08),
         text_color: t.btn2_text,
         border: Border {
             color: t.btn2_border,
             width: 1.0,
-            radius: Radius::from(5.0),
+            radius: Radius::from(r::MD),
         },
         ..button::Style::default()
     }
@@ -759,12 +810,12 @@ pub fn btn_secondary(theme: &Theme, status: button::Status) -> button::Style {
 pub fn btn_outline(theme: &Theme, status: button::Status) -> button::Style {
     let t = Tokens::of(theme);
     button::Style {
-        background: hover(status, t.outline_bg, 1.04),
+        background: shift(status, t.is_light, t.outline_bg, 1.04),
         text_color: t.outline_text,
         border: Border {
             color: t.outline_border,
             width: 1.0,
-            radius: Radius::from(5.0),
+            radius: Radius::from(r::MD),
         },
         ..button::Style::default()
     }
@@ -786,7 +837,7 @@ pub fn btn_ghost(theme: &Theme, status: button::Status) -> button::Style {
         border: Border {
             color: Color::TRANSPARENT,
             width: 0.0,
-            radius: Radius::from(5.0),
+            radius: Radius::from(r::MD),
         },
         ..button::Style::default()
     }
@@ -795,12 +846,12 @@ pub fn btn_ghost(theme: &Theme, status: button::Status) -> button::Style {
 pub fn btn_danger(theme: &Theme, status: button::Status) -> button::Style {
     let t = Tokens::of(theme);
     button::Style {
-        background: hover(status, t.danger, 1.08),
-        text_color: Color::WHITE,
+        background: shift(status, t.is_light, t.danger, 1.08),
+        text_color: t.danger_text,
         border: Border {
             color: t.danger,
             width: 1.0,
-            radius: Radius::from(5.0),
+            radius: Radius::from(r::MD),
         },
         ..button::Style::default()
     }
@@ -810,12 +861,12 @@ pub fn btn_danger(theme: &Theme, status: button::Status) -> button::Style {
 pub fn btn_active(theme: &Theme, status: button::Status) -> button::Style {
     let t = Tokens::of(theme);
     button::Style {
-        background: hover(status, t.active_bg, 1.06),
+        background: shift(status, t.is_light, t.active_bg, 1.06),
         text_color: t.active_text,
         border: Border {
             color: t.active_border,
             width: 1.0,
-            radius: Radius::from(5.0),
+            radius: Radius::from(r::MD),
         },
         ..button::Style::default()
     }
@@ -827,12 +878,12 @@ pub fn btn_nav(selected: bool) -> impl Fn(&Theme, button::Status) -> button::Sty
         let t = Tokens::of(theme);
         let base = if selected { t.accent_nav_bg } else { t.bg };
         button::Style {
-            background: hover(status, base, 1.08),
+            background: shift(status, t.is_light, base, 1.08),
             text_color: if selected { t.accent_nav_text } else { t.muted },
             border: Border {
                 color: Color::TRANSPARENT,
                 width: 0.0,
-                radius: Radius::from(5.0),
+                radius: Radius::from(r::MD),
             },
             ..button::Style::default()
         }
@@ -851,7 +902,7 @@ pub fn input_plain(theme: &Theme, status: text_input::Status) -> text_input::Sty
         border: Border {
             color: Color::TRANSPARENT,
             width: 0.0,
-            radius: Radius::from(3.0),
+            radius: Radius::from(r::XS),
         },
         icon: t.muted,
         placeholder: t.faint,
@@ -859,7 +910,7 @@ pub fn input_plain(theme: &Theme, status: text_input::Status) -> text_input::Sty
             text_input::Status::Focused { .. } => t.text,
             _ => t.text_soft,
         },
-        selection: Color { a: 0.3, ..t.accent },
+        selection: t.selection,
     }
 }
 
@@ -877,11 +928,7 @@ pub fn input_plain_dim(theme: &Theme, status: text_input::Status) -> text_input:
 fn input_plain_bg(theme: &Theme, status: text_input::Status) -> Background {
     let t = Tokens::of(theme);
     match status {
-        text_input::Status::Focused { .. } => Background::Color(if t.is_light {
-            color!(0x242C26, 0.04)
-        } else {
-            color!(0xFFFFFF, 0.04)
-        }),
+        text_input::Status::Focused { .. } => Background::Color(t.input_focus_bg),
         _ => Background::Color(Color::TRANSPARENT),
     }
 }
@@ -899,12 +946,12 @@ pub fn input_boxed(theme: &Theme, status: text_input::Status) -> text_input::Sty
         border: Border {
             color: border_color,
             width: 1.0,
-            radius: Radius::from(4.0),
+            radius: Radius::from(r::SM),
         },
         icon: t.muted,
         placeholder: t.faint,
         value: t.text,
-        selection: Color { a: 0.3, ..t.accent },
+        selection: t.selection,
     }
 }
 
@@ -923,14 +970,14 @@ pub fn scrollable_style(theme: &Theme, status: scrollable::Status) -> scrollable
         border: Border {
             color: Color::TRANSPARENT,
             width: 0.0,
-            radius: Radius::from(3.0),
+            radius: Radius::from(r::XS),
         },
         scroller: scrollable::Scroller {
             background: Background::Color(if active { t.accent_border } else { t.border }),
             border: Border {
                 color: Color::TRANSPARENT,
                 width: 0.0,
-                radius: Radius::from(3.0),
+                radius: Radius::from(r::XS),
             },
         },
     };
@@ -944,7 +991,7 @@ pub fn scrollable_style(theme: &Theme, status: scrollable::Status) -> scrollable
             border: Border {
                 color: t.border,
                 width: 1.0,
-                radius: Radius::from(20.0),
+                radius: Radius::from(r::PILL),
             },
             shadow: iced::Shadow::default(),
             icon: t.text,
@@ -969,7 +1016,7 @@ pub fn pick_list_style(theme: &Theme, status: pick_list::Status) -> pick_list::S
         border: Border {
             color: t.border,
             width: 1.0,
-            radius: Radius::from(4.0),
+            radius: Radius::from(r::SM),
         },
     }
 }
@@ -981,7 +1028,7 @@ pub fn pick_list_menu_style(theme: &Theme) -> iced::widget::overlay::menu::Style
         border: Border {
             color: t.border,
             width: 1.0,
-            radius: Radius::from(6.0),
+            radius: Radius::from(r::LG),
         },
         text_color: t.text_soft,
         selected_text_color: t.accent_nav_text,
@@ -1014,28 +1061,6 @@ pub fn toggler_style(theme: &Theme, status: toggler::Status) -> toggler::Style {
     }
 }
 
-#[allow(dead_code)] // design-system toolkit
-pub fn checkbox_style(theme: &Theme, status: checkbox::Status) -> checkbox::Style {
-    let t = Tokens::of(theme);
-    let (bg, border_color) = match status {
-        checkbox::Status::Disabled { .. } => (t.switch_off, t.border),
-        checkbox::Status::Hovered { is_checked } if is_checked => (t.switch_on, t.switch_on),
-        checkbox::Status::Hovered { .. } => (t.panel_deep, t.accent_border),
-        checkbox::Status::Active { is_checked } if is_checked => (t.switch_on, t.switch_on),
-        checkbox::Status::Active { .. } => (t.panel_deep, t.border),
-    };
-    checkbox::Style {
-        background: Background::Color(bg),
-        icon_color: t.switch_on_knob,
-        border: Border {
-            color: border_color,
-            width: 1.0,
-            radius: Radius::from(4.0),
-        },
-        text_color: Some(t.text_soft),
-    }
-}
-
 pub fn tooltip_style(theme: &Theme) -> container::Style {
     let t = Tokens::of(theme);
     container::Style::default()
@@ -1043,10 +1068,10 @@ pub fn tooltip_style(theme: &Theme) -> container::Style {
         .border(Border {
             color: t.border,
             width: 1.0,
-            radius: Radius::from(4.0),
+            radius: Radius::from(r::SM),
         })
         .shadow(iced::Shadow {
-            color: Color::from_rgba(0.0, 0.0, 0.0, 0.3),
+            color: t.shadow,
             offset: iced::Vector::new(0.0, 3.0),
             blur_radius: 10.0,
         })

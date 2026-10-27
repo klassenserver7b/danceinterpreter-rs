@@ -294,21 +294,17 @@ impl ConfigWindow {
 
 /// Shared helper: a "source tag" chip like `PLAYLIST` / `QUEUED`.
 pub fn source_tag<'a>(text: &'a str) -> Element<'a, Message> {
-    container(
-        crate::ui::widgets::text_micro(text).style(|t: &Theme| iced::widget::text::Style {
-            color: Some(theme::Tokens::of(t).tag_text),
-        }),
-    )
-    .padding([2, 5])
-    .style(|t: &Theme| {
-        let tk = theme::Tokens::of(t);
-        container::Style::default().border(iced::Border {
-            color: tk.tag_border,
-            width: 1.0,
-            radius: 3.0.into(),
+    container(crate::ui::widgets::text_micro(text).style(theme::text_style(|tk| tk.tag_text)))
+        .padding([2, 5])
+        .style(|t: &Theme| {
+            let tk = theme::Tokens::of(t);
+            container::Style::default().border(iced::Border {
+                color: tk.tag_border,
+                width: 1.0,
+                radius: 3.0.into(),
+            })
         })
-    })
-    .into()
+        .into()
 }
 
 pub mod search {

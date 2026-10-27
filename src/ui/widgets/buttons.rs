@@ -15,12 +15,21 @@ fn label_text<'a>(label: impl IntoFragment<'a>) -> iced::widget::Text<'a, Theme,
     text(label).size(sz::BASE).align_y(Vertical::Center)
 }
 
-/// Filled sage-green primary button.
-pub fn primary<'a>(label: impl IntoFragment<'a> + 'a, message: Message) -> Button<'a, Message> {
+/// Shared body of the labelled button builders.
+pub(crate) fn labelled<'a>(
+    label: impl IntoFragment<'a> + 'a,
+    message: Message,
+    style: fn(&Theme, button::Status) -> button::Style,
+) -> Button<'a, Message> {
     button(label_text(label))
         .padding([8, 13])
-        .style(theme::btn_primary)
+        .style(style)
         .on_press(message)
+}
+
+/// Filled sage-green primary button.
+pub fn primary<'a>(label: impl IntoFragment<'a> + 'a, message: Message) -> Button<'a, Message> {
+    labelled(label, message, theme::btn_primary)
 }
 
 /// Small filled primary button (table toolbars).
@@ -36,26 +45,11 @@ pub fn primary_small<'a>(
 
 /// Dark outlined secondary button.
 pub fn secondary<'a>(label: impl IntoFragment<'a> + 'a, message: Message) -> Button<'a, Message> {
-    button(label_text(label))
-        .padding([8, 13])
-        .style(theme::btn_secondary)
-        .on_press(message)
-}
-
-/// Outline button used in page headings.
-#[allow(dead_code)] // design-system toolkit
-pub fn outline<'a>(label: impl IntoFragment<'a> + 'a, message: Message) -> Button<'a, Message> {
-    button(label_text(label))
-        .padding([8, 13])
-        .style(theme::btn_outline)
-        .on_press(message)
+    labelled(label, message, theme::btn_secondary)
 }
 
 pub fn danger<'a>(label: impl IntoFragment<'a> + 'a, message: Message) -> Button<'a, Message> {
-    button(label_text(label))
-        .padding([8, 13])
-        .style(theme::btn_danger)
-        .on_press(message)
+    labelled(label, message, theme::btn_danger)
 }
 
 /// Icon-only button with the ghost style (transparent, hover wash).
@@ -70,24 +64,4 @@ pub fn ghost_icon<'a>(
         .style(theme::btn_ghost)
         .on_press(message)
         .width(Length::Shrink)
-}
-
-/// Ghost icon button that stays disabled (no message) when `message` is None.
-#[allow(dead_code)] // design-system toolkit
-pub fn ghost_icon_opt<'a>(
-    icon_id: &'a str,
-    filled: bool,
-    size: impl Into<Pixels>,
-    message: Option<Message>,
-) -> Button<'a, Message> {
-    let btn = button(material_symbol_sized(icon_id, filled, size))
-        .padding(5)
-        .style(theme::btn_ghost)
-        .width(Length::Shrink);
-
-    if let Some(message) = message {
-        btn.on_press(message)
-    } else {
-        btn
-    }
 }

@@ -69,22 +69,17 @@ impl Sidebar {
 
         let header = row![
             material_symbol("link", false)
-                .size(16.0)
-                .style(|t: &Theme| iced::widget::text::Style {
-                    color: Some(theme::Tokens::of(t).muted),
-                }),
-            heading("DJ integration", sz::H2, iced::font::Weight::Medium).style(|t| {
-                iced::widget::text::Style {
-                    color: Some(theme::Tokens::of(t).text),
-                }
-            }),
+                .size(sz::ICON)
+                .style(theme::text_style(|tk| tk.muted)),
+            heading("DJ integration", sz::H2, iced::font::Weight::Medium)
+                .style(theme::text_style(|tk| tk.text)),
             container(source_tag("TRAKTOR PRO"))
                 .width(Length::Fill)
                 .align_x(Alignment::End),
             buttons::ghost_icon(
                 "close",
                 false,
-                16.0,
+                sz::ICON,
                 Message::Sidebar(SidebarMessage::Toggle)
             ),
         ]
@@ -132,7 +127,7 @@ impl Sidebar {
                 |m| Message::Traktor(TraktorMessage::SetSyncMode(m))
             )
             .width(Length::Fill)
-            .text_size(sz::SMALL + 1.0)
+            .text_size(sz::BASE)
             .padding([5, 8])
             .style(theme::pick_list_style)
             .menu_style(theme::pick_list_menu_style),
@@ -145,7 +140,7 @@ impl Sidebar {
                 Message::Traktor(TraktorMessage::SetNextMode(m))
             })
             .width(Length::Fill)
-            .text_size(sz::SMALL + 1.0)
+            .text_size(sz::BASE)
             .padding([5, 8])
             .style(theme::pick_list_style)
             .menu_style(theme::pick_list_menu_style),
@@ -158,7 +153,7 @@ impl Sidebar {
                 Message::Traktor(TraktorMessage::SetNextModeFallback(m))
             })
             .width(Length::Fill)
-            .text_size(sz::SMALL + 1.0)
+            .text_size(sz::BASE)
             .padding([5, 8])
             .style(theme::pick_list_style)
             .menu_style(theme::pick_list_menu_style),
@@ -186,9 +181,7 @@ impl Sidebar {
                 col![
                     text("Traktor connects to this address through the QML API plugin bundled in traktor-api/. The cover-loader sidecar delivers cover art.")
                         .size(sz::MICRO)
-                        .style(|t: &Theme| iced::widget::text::Style {
-                            color: Some(theme::Tokens::of(t).faint),
-                        }),
+                        .style(theme::text_style(|tk| tk.faint)),
                 ]
             ]
             .spacing(14)
@@ -235,7 +228,7 @@ impl Sidebar {
         .on_option_hovered(|s| Message::Traktor(TraktorMessage::ChangeAddress(s)))
         .on_input(|s| Message::Traktor(TraktorMessage::ChangeAddress(s)))
         .on_close(Message::Traktor(TraktorMessage::SubmitAddress))
-        .size(sz::SMALL + 1.0)
+        .size(sz::BASE)
         .padding([7, 9])
         .input_style(theme::input_boxed)
         .menu_style(theme::pick_list_menu_style)
@@ -270,9 +263,7 @@ impl Sidebar {
                 led,
                 text(summary)
                     .size(sz::SMALL)
-                    .style(|t: &Theme| iced::widget::text::Style {
-                        color: Some(theme::Tokens::of(t).text_soft),
-                    })
+                    .style(theme::text_style(|tk| tk.text_soft))
             ]
             .spacing(8)
             .align_y(Alignment::Center),
@@ -287,11 +278,11 @@ impl Sidebar {
             .map(|addr| addr.ip().to_string());
 
         if let Some(label) = label {
-            column = column.push(text(label).size(sz::MICRO).style(|t: &Theme| {
-                iced::widget::text::Style {
-                    color: Some(theme::Tokens::of(t).faint),
-                }
-            }));
+            column = column.push(
+                text(label)
+                    .size(sz::MICRO)
+                    .style(theme::text_style(|tk| tk.faint)),
+            );
         }
 
         container(column)
@@ -315,9 +306,7 @@ fn control_caption(label: &'static str) -> Element<'static, Message> {
     text(label)
         .size(sz::MICRO)
         .font(theme::body_font(iced::font::Weight::Semibold))
-        .style(|t: &Theme| iced::widget::text::Style {
-            color: Some(theme::Tokens::of(t).muted_head),
-        })
+        .style(theme::text_style(|tk| tk.muted_head))
         .into()
 }
 

@@ -129,9 +129,7 @@ fn session_card<'a>(config_window: &'a ConfigWindow) -> Element<'a, Message> {
     let icon_box = container(
         material_symbol("graphic_eq", false)
             .size(15.0)
-            .style(|t: &Theme| iced::widget::text::Style {
-                color: Some(theme::Tokens::of(t).accent_nav_text),
-            }),
+            .style(theme::text_style(|tk| tk.accent_nav_text)),
     )
     .width(Length::Fixed(30.0))
     .height(Length::Fixed(32.0))
@@ -155,14 +153,10 @@ fn session_card<'a>(config_window: &'a ConfigWindow) -> Element<'a, Message> {
                 text(title)
                     .size(sz::SMALL)
                     .font(theme::body_font(iced::font::Weight::Semibold))
-                    .style(|t: &Theme| iced::widget::text::Style {
-                        color: Some(theme::Tokens::of(t).text),
-                    }),
+                    .style(theme::text_style(|tk| tk.text)),
                 text(subtitle)
                     .size(sz::MICRO)
-                    .style(|t: &Theme| iced::widget::text::Style {
-                        color: Some(theme::Tokens::of(t).muted),
-                    }),
+                    .style(theme::text_style(|tk| tk.muted)),
             ]
             .spacing(3),
         ]
@@ -183,11 +177,11 @@ fn session_card<'a>(config_window: &'a ConfigWindow) -> Element<'a, Message> {
 }
 
 fn count_badge(count: usize) -> Element<'static, Message> {
-    container(text(count.to_string()).size(sz::MICRO).style(|t: &Theme| {
-        iced::widget::text::Style {
-            color: Some(theme::Tokens::of(t).muted),
-        }
-    }))
+    container(
+        text(count.to_string())
+            .size(sz::MICRO)
+            .style(theme::text_style(|tk| tk.muted)),
+    )
     .padding([1, 6])
     .style(|t: &Theme| {
         let tk = theme::Tokens::of(t);
@@ -290,22 +284,16 @@ fn version_row() -> Element<'static, Message> {
     container(
         row![
             text("di")
-                .size(16.0)
+                .size(sz::ICON)
                 .font(theme::body_font(iced::font::Weight::Bold))
-                .style(|t: &Theme| iced::widget::text::Style {
-                    color: Some(theme::Tokens::of(t).accent_soft),
-                }),
+                .style(theme::text_style(|tk| tk.accent_soft)),
             text("Danceinterpreter")
                 .size(sz::MICRO)
-                .style(|t: &Theme| iced::widget::text::Style {
-                    color: Some(theme::Tokens::of(t).faint),
-                }),
+                .style(theme::text_style(|tk| tk.faint)),
             container(
                 text(concat!("v", env!("CARGO_PKG_VERSION")))
                     .size(sz::MICRO)
-                    .style(|t: &Theme| iced::widget::text::Style {
-                        color: Some(theme::Tokens::of(t).faint),
-                    })
+                    .style(theme::text_style(|tk| tk.faint))
             )
             .width(Length::Fill)
             .align_x(Alignment::End),

@@ -38,16 +38,11 @@ pub fn build<'a>(
     let list: Element<'_, Message> = if dance_interpreter.data_provider.statics().is_empty() {
         col![
             Space::new().height(Length::Fill),
-            heading("No statics yet.", 18.0, iced::font::Weight::Semibold).style(|t| {
-                iced::widget::text::Style {
-                    color: Some(theme::Tokens::of(t).text),
-                }
-            }),
+            heading("No statics yet.", 18.0, iced::font::Weight::Semibold)
+                .style(theme::text_style(|tk| tk.text)),
             text("Statics appear automatically from playlist dances. Add one below.")
                 .size(sz::SMALL)
-                .style(|t: &Theme| iced::widget::text::Style {
-                    color: Some(theme::Tokens::of(t).muted),
-                }),
+                .style(theme::text_style(|tk| tk.muted)),
             buttons::primary_small(
                 "Add static",
                 Message::OpenDialog(crate::ui::config_window::DialogState::AddStatic),
@@ -70,19 +65,14 @@ pub fn build<'a>(
     let toolbar = container(
         row![
             row![
-                material_symbol_sized("grid_view", false, 15.0).style(|t: &Theme| {
-                    iced::widget::text::Style {
-                        color: Some(theme::Tokens::of(t).muted),
-                    }
-                }),
+                material_symbol_sized("grid_view", false, 15.0)
+                    .style(theme::text_style(|tk| tk.muted)),
                 heading(
                     "Dances & announcements",
                     sz::PANEL_TITLE,
                     iced::font::Weight::Semibold
                 )
-                .style(|t| iced::widget::text::Style {
-                    color: Some(theme::Tokens::of(t).text),
-                }),
+                .style(theme::text_style(|tk| tk.text)),
             ]
             .spacing(9)
             .align_y(Alignment::Center),
@@ -92,7 +82,7 @@ pub fn build<'a>(
                         buttons::ghost_icon(
                             "refresh",
                             false,
-                            16.0,
+                            sz::ICON,
                             Message::Statics(StaticsMessage::Reload),
                         ),
                         "Reload statics",
@@ -244,11 +234,11 @@ fn build_static_row<'a>(
         container(star).width(Length::Fixed(COL_FAV)),
         container(color_element).width(Length::Fixed(COL_COLOR)),
         container(name_input).width(Length::Fill).clip(true),
-        container(text(usage_label).size(sz::TINY).style(|t: &Theme| {
-            iced::widget::text::Style {
-                color: Some(theme::Tokens::of(t).faint),
-            }
-        }))
+        container(
+            text(usage_label)
+                .size(sz::TINY)
+                .style(theme::text_style(|tk| tk.faint))
+        )
         .width(Length::Fixed(COL_CAPTION))
         .align_x(Alignment::End),
         show_now,
@@ -278,7 +268,6 @@ fn build_static_row<'a>(
         zebra: idx % 2 == 1,
         current: is_current,
         matched: is_match && !is_current,
-        first: false,
     };
 
     // Same fixed-height pattern as the playlist rows: without it the accent

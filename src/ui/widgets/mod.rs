@@ -1,25 +1,12 @@
 use crate::Message;
 use crate::ui::theme;
 use iced::advanced::text::Shaping;
-use iced::widget::{Text, checkbox, radio, text, toggler};
+use iced::widget::{Text, text, toggler};
 use iced::{Color, Font, Length, Pixels, Renderer, Theme};
 
 pub mod buttons;
 pub mod color_swatch;
-
-/// Small labeled checkbox styled with the design tokens.
-#[allow(dead_code)] // design-system toolkit
-pub fn labeled_message_checkbox(
-    label: &'_ str,
-    checked: bool,
-    message: fn(bool) -> Message,
-) -> checkbox::Checkbox<'_, Message> {
-    checkbox(checked)
-        .label(label)
-        .on_toggle(message)
-        .width(Length::Fill)
-        .style(theme::checkbox_style)
-}
+pub mod parity;
 
 /// Small labeled toggler (switch) styled with the design tokens.
 pub fn labeled_message_toggler(
@@ -33,16 +20,6 @@ pub fn labeled_message_toggler(
         .width(Length::Fill)
         .text_size(theme::sz::SMALL)
         .style(theme::toggler_style)
-}
-
-#[allow(dead_code)]
-pub fn labeled_message_radio<T: Copy + Eq>(
-    label: &'_ str,
-    value: T,
-    selection: T,
-    message: fn(T) -> Message,
-) -> radio::Radio<'_, Message> {
-    radio(label, value, Some(selection), message).width(Length::Fill)
 }
 
 pub fn material_symbol_colored(
@@ -59,16 +36,6 @@ pub fn material_symbol_sized(
     size: impl Into<Pixels>,
 ) -> Text<'_, Theme, Renderer> {
     material_symbol(id, filled).size(size)
-}
-
-#[allow(dead_code)] // design-system toolkit
-pub fn material_symbol_sized_colored(
-    id: &'_ str,
-    filled: bool,
-    size: impl Into<Pixels>,
-    color: impl Into<Color>,
-) -> Text<'_, Theme, Renderer> {
-    material_symbol(id, filled).size(size).color(color)
 }
 
 pub fn material_symbol(id: &'_ str, filled: bool) -> Text<'_, Theme, Renderer> {
@@ -88,30 +55,18 @@ pub fn material_symbol(id: &'_ str, filled: bool) -> Text<'_, Theme, Renderer> {
 pub fn kbd<'a>(
     label: impl text::IntoFragment<'a>,
 ) -> iced::widget::Container<'a, Message, Theme, Renderer> {
-    iced::widget::container(text(label).size(theme::sz::MICRO).style(|t: &Theme| {
-        iced::widget::text::Style {
-            color: Some(theme::Tokens::of(t).kbd_text),
-        }
-    }))
+    iced::widget::container(
+        text(label)
+            .size(theme::sz::MICRO)
+            .style(theme::text_style(|tk| tk.kbd_text)),
+    )
     .padding([1, 5])
     .style(theme::kbd)
-}
-
-/// Body text at the small caption size.
-#[allow(dead_code)] // design-system toolkit
-pub fn text_small<'a>(label: impl text::IntoFragment<'a>) -> Text<'a, Theme, Renderer> {
-    text(label).size(theme::sz::SMALL)
 }
 
 /// Body text at the micro size (tags, eyebrows, hints).
 pub fn text_micro<'a>(label: impl text::IntoFragment<'a>) -> Text<'a, Theme, Renderer> {
     text(label).size(theme::sz::MICRO)
-}
-
-/// Body text at the base size.
-#[allow(dead_code)] // design-system toolkit
-pub fn text_base<'a>(label: impl text::IntoFragment<'a>) -> Text<'a, Theme, Renderer> {
-    text(label).size(theme::sz::BASE)
 }
 
 /// Manrope heading text.

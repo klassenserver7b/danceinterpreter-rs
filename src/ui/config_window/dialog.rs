@@ -58,10 +58,8 @@ pub fn build_dialog<'a>(
                     target_name,
                     if is_static { "statics" } else { "playlist" }
                 ))
-                .size(sz::SMALL + 1.0)
-                .style(|t: &Theme| iced::widget::text::Style {
-                    color: Some(theme::Tokens::of(t).muted),
-                })],
+                .size(sz::BASE)
+                .style(theme::text_style(|tk| tk.muted))],
                 dialog_actions([
                     buttons::secondary("Cancel", Message::Dialog(DialogMessage::Close)),
                     buttons::danger(
@@ -77,10 +75,8 @@ pub fn build_dialog<'a>(
                 "A static named \u{201C}{}\u{201D} already exists.\nMerge \u{201C}{}\u{201D} into it? All playlist songs will be re-tagged.",
                 new_name, old_name
             ))
-            .size(sz::SMALL + 1.0)
-            .style(|t: &Theme| iced::widget::text::Style {
-                color: Some(theme::Tokens::of(t).muted),
-            })],
+            .size(sz::BASE)
+            .style(theme::text_style(|tk| tk.muted))],
             dialog_actions([
                 buttons::secondary("Cancel", Message::Dialog(DialogMessage::Cancel)),
                 buttons::primary(
@@ -100,11 +96,8 @@ pub fn build_dialog<'a>(
     let card = container(
         col![
             row![
-                heading(title, sz::H2, iced::font::Weight::Medium).style(|t| {
-                    iced::widget::text::Style {
-                        color: Some(theme::Tokens::of(t).text),
-                    }
-                }),
+                heading(title, sz::H2, iced::font::Weight::Medium)
+                    .style(theme::text_style(|tk| tk.text)),
                 Space::new().width(Length::Fill),
                 with_tooltip(buttons::ghost_icon("close", false, 18.0, close), "Close"),
             ]
@@ -158,10 +151,8 @@ fn setting_row<'a>(label: &'a str, control: Element<'a, Message>) -> Element<'a,
     container(
         row![
             text(label)
-                .size(sz::SMALL + 1.0)
-                .style(|t: &Theme| iced::widget::text::Style {
-                    color: Some(theme::Tokens::of(t).text_soft),
-                })
+                .size(sz::BASE)
+                .style(theme::text_style(|tk| tk.text_soft))
                 .width(Length::Fill),
             control,
         ]
@@ -186,9 +177,7 @@ fn section_label(label: &'static str) -> Element<'static, Message> {
         text(label)
             .size(sz::MICRO)
             .font(theme::body_font(iced::font::Weight::Semibold))
-            .style(|t: &Theme| iced::widget::text::Style {
-                color: Some(theme::Tokens::of(t).muted),
-            }),
+            .style(theme::text_style(|tk| tk.muted)),
     )
     .padding(crate::ui::theme::pad4(16.0, 0.0, 2.0, 0.0))
     .into()
@@ -270,7 +259,7 @@ fn build_settings<'a>(
         |option| Message::SetConfigTheme(option.0),
     )
     .width(Length::Fixed(160.0))
-    .text_size(sz::SMALL + 1.0)
+    .text_size(sz::BASE)
     .padding([5, 8])
     .style(theme::pick_list_style)
     .menu_style(theme::pick_list_menu_style);
@@ -294,7 +283,7 @@ fn build_settings<'a>(
         |backdrop| Message::SongWindow(crate::SongWindowMessage::SetBackdrop(backdrop)),
     )
     .width(Length::Fixed(160.0))
-    .text_size(sz::SMALL + 1.0)
+    .text_size(sz::BASE)
     .padding([5, 8])
     .style(theme::pick_list_style)
     .menu_style(theme::pick_list_menu_style);
@@ -334,9 +323,7 @@ fn build_settings<'a>(
         ),
         text("The backdrop fills the audience window behind the song info.")
             .size(sz::TINY)
-            .style(|t: &Theme| iced::widget::text::Style {
-                color: Some(theme::Tokens::of(t).faint),
-            }),
+            .style(theme::text_style(|tk| tk.faint)),
     ]
     .spacing(0);
 
@@ -376,10 +363,8 @@ fn build_help() -> (
             container(
                 row![
                     text(*action)
-                        .size(sz::SMALL + 1.0)
-                        .style(|t: &Theme| iced::widget::text::Style {
-                            color: Some(theme::Tokens::of(t).text_soft),
-                        })
+                        .size(sz::BASE)
+                        .style(theme::text_style(|tk| tk.text_soft))
                         .width(Length::Fill),
                     kbd(*keys),
                 ]
@@ -401,7 +386,7 @@ fn build_add_static<'a>(
     config_window: &'a ConfigWindow,
 ) -> (String, Column<'a, Message, Theme>, Element<'a, Message>) {
     let name_input = text_input("Static name", &config_window.add_static_name)
-        .size(sz::SMALL + 1.0)
+        .size(sz::BASE)
         .on_input(|v| Message::Dialog(DialogMessage::ChangeAddStaticName(v)))
         .on_submit(Message::Statics(StaticsMessage::AddNamed(
             config_window.add_static_name.clone(),
@@ -411,10 +396,8 @@ fn build_add_static<'a>(
 
     let body = col![
         text("A static is shown alone on the audience display \u{2014} a dance label or an announcement like \u{201C}Break\u{201D}.")
-            .size(sz::SMALL + 1.0)
-            .style(|t: &Theme| iced::widget::text::Style {
-                color: Some(theme::Tokens::of(t).muted),
-            }),
+            .size(sz::BASE)
+            .style(theme::text_style(|tk| tk.muted)),
         name_input,
     ]
     .spacing(12);

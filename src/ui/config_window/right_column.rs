@@ -78,16 +78,10 @@ fn build_up_next<'a>(dance_interpreter: &'a DanceInterpreter) -> Element<'a, Mes
     let dance_color = provider.get_dance_color(&dance);
 
     let kicker = row![
-        material_symbol_sized("skip_next", false, 13.0).style(|t: &Theme| {
-            iced::widget::text::Style {
-                color: Some(theme::Tokens::of(t).muted),
-            }
-        }),
+        material_symbol_sized("skip_next", false, 13.0).style(theme::text_style(|tk| tk.muted)),
         text("COMING UP NEXT")
             .size(sz::TINY)
-            .style(|t: &Theme| iced::widget::text::Style {
-                color: Some(theme::Tokens::of(t).muted),
-            }),
+            .style(theme::text_style(|tk| tk.muted)),
         container(source_tag(tag))
             .width(Length::Fill)
             .align_x(Alignment::End),
@@ -118,14 +112,10 @@ fn build_up_next<'a>(dance_interpreter: &'a DanceInterpreter) -> Element<'a, Mes
             text(title)
                 .size(sz::BASE)
                 .font(theme::body_font(iced::font::Weight::Medium))
-                .style(|t: &Theme| iced::widget::text::Style {
-                    color: Some(theme::Tokens::of(t).text),
-                }),
+                .style(theme::text_style(|tk| tk.text)),
             text(artist)
-                .size(sz::SMALL + 0.5)
-                .style(|t: &Theme| iced::widget::text::Style {
-                    color: Some(theme::Tokens::of(t).muted),
-                }),
+                .size(sz::CAPTION)
+                .style(theme::text_style(|tk| tk.muted)),
             container(show_now).padding(crate::ui::theme::pad4(4.0, 0.0, 0.0, 0.0)),
         ]
         .spacing(6),
@@ -164,21 +154,13 @@ fn build_dj_card<'a>(
     };
 
     let heading_row = row![
-        material_symbol_sized("link", false, 15.0).style(|t: &Theme| {
-            iced::widget::text::Style {
-                color: Some(theme::Tokens::of(t).muted),
-            }
-        }),
+        material_symbol_sized("link", false, 15.0).style(theme::text_style(|tk| tk.muted)),
         heading(
             "DJ integration",
             sz::PANEL_TITLE,
             iced::font::Weight::Semibold
         )
-        .style(|t| {
-            iced::widget::text::Style {
-                color: Some(theme::Tokens::of(t).text),
-            }
-        }),
+        .style(theme::text_style(|tk| tk.text)),
         container(source_tag(state_tag))
             .width(Length::Fill)
             .align_x(Alignment::End),
@@ -207,27 +189,23 @@ fn build_dj_card<'a>(
             symbol_box,
             col![
                 text("Traktor Pro")
-                    .size(sz::SMALL + 0.5)
+                    .size(sz::CAPTION)
                     .font(theme::body_font(iced::font::Weight::Medium))
-                    .style(|t: &Theme| iced::widget::text::Style {
-                        color: Some(theme::Tokens::of(t).text),
-                    }),
+                    .style(theme::text_style(|tk| tk.text)),
                 text(if enabled {
                     "Source enabled"
                 } else {
                     "Source disabled"
                 })
                 .size(sz::TINY)
-                .style(|t: &Theme| iced::widget::text::Style {
-                    color: Some(theme::Tokens::of(t).muted),
-                }),
+                .style(theme::text_style(|tk| tk.muted)),
             ]
             .spacing(2)
             .width(Length::Fill),
             crate::ui::widgets::buttons::ghost_icon(
                 "expand_more",
                 false,
-                16.0,
+                sz::ICON,
                 Message::Sidebar(SidebarMessage::Toggle),
             ),
         ]
@@ -253,14 +231,12 @@ fn build_dj_card<'a>(
         })),
         text(summary)
             .size(sz::SMALL)
-            .style(|t: &Theme| iced::widget::text::Style {
-                color: Some(theme::Tokens::of(t).text_soft),
-            }),
-        container(text(address.as_str()).size(sz::TINY).style(|t: &Theme| {
-            iced::widget::text::Style {
-                color: Some(theme::Tokens::of(t).faint),
-            }
-        }))
+            .style(theme::text_style(|tk| tk.text_soft)),
+        container(
+            text(address.as_str())
+                .size(sz::TINY)
+                .style(theme::text_style(|tk| tk.faint))
+        )
         .width(Length::Fill)
         .align_x(Alignment::End),
     ]
@@ -270,16 +246,12 @@ fn build_dj_card<'a>(
     let sync_row = row![
         col![
             text("Follow DJ playback")
-                .size(sz::SMALL + 0.5)
+                .size(sz::CAPTION)
                 .font(theme::body_font(iced::font::Weight::Medium))
-                .style(|t: &Theme| iced::widget::text::Style {
-                    color: Some(theme::Tokens::of(t).text),
-                }),
+                .style(theme::text_style(|tk| tk.text)),
             text("Automatically update the display")
                 .size(sz::TINY)
-                .style(|t: &Theme| iced::widget::text::Style {
-                    color: Some(theme::Tokens::of(t).muted),
-                }),
+                .style(theme::text_style(|tk| tk.muted)),
         ]
         .spacing(3)
         .width(Length::Fill),
@@ -307,9 +279,7 @@ fn build_dj_card<'a>(
                 "Manual control active"
             })
             .size(sz::TINY)
-            .style(|t: &Theme| iced::widget::text::Style {
-                color: Some(theme::Tokens::of(t).muted),
-            }),
+            .style(theme::text_style(|tk| tk.muted)),
             container(
                 button(
                     row![
@@ -347,21 +317,15 @@ fn build_tip() -> Element<'static, Message> {
             row![
                 material_symbol("help", false)
                     .size(15.0)
-                    .style(|t: &Theme| iced::widget::text::Style {
-                        color: Some(theme::Tokens::of(t).accent_soft),
-                    }),
+                    .style(theme::text_style(|tk| tk.accent_soft)),
                 row![
                     text("Press")
                         .size(sz::SMALL)
-                        .style(|t: &Theme| iced::widget::text::Style {
-                            color: Some(theme::Tokens::of(t).muted),
-                        }),
+                        .style(theme::text_style(|tk| tk.muted)),
                     kbd("Space"),
                     text("to move to the next song.")
                         .size(sz::SMALL)
-                        .style(|t: &Theme| iced::widget::text::Style {
-                            color: Some(theme::Tokens::of(t).muted),
-                        }),
+                        .style(theme::text_style(|tk| tk.muted)),
                 ]
                 .spacing(4)
                 .align_y(Alignment::Center),

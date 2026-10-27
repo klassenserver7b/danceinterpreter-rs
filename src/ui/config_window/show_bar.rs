@@ -20,15 +20,11 @@ pub fn build<'a>(
     let label = row![
         material_symbol("graphic_eq", false)
             .size(17.0)
-            .style(|t: &Theme| iced::widget::text::Style {
-                color: Some(theme::Tokens::of(t).accent_soft),
-            }),
+            .style(theme::text_style(|tk| tk.accent_soft)),
         text("Quick show")
-            .size(sz::SMALL + 0.5)
+            .size(sz::CAPTION)
             .font(theme::body_font(iced::font::Weight::Medium))
-            .style(|t: &Theme| iced::widget::text::Style {
-                color: Some(theme::Tokens::of(t).text),
-            }),
+            .style(theme::text_style(|tk| tk.text)),
     ]
     .spacing(10)
     .align_y(Alignment::Center);
@@ -113,11 +109,8 @@ pub fn build<'a>(
     let manage = with_tooltip(
         button(
             container(
-                material_symbol_sized("add", false, 16.0).style(|t: &Theme| {
-                    iced::widget::text::Style {
-                        color: Some(theme::Tokens::of(t).muted),
-                    }
-                }),
+                material_symbol_sized("add", false, sz::ICON)
+                    .style(theme::text_style(|tk| tk.muted)),
             )
             .height(Length::Fill)
             .align_y(Alignment::Center),

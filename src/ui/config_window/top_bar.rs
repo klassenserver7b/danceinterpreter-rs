@@ -25,7 +25,7 @@ pub fn build<'a>(
                 "menu"
             },
             false,
-            16.0,
+            sz::ICON,
             Message::ToggleNavSidebar,
         ),
         "Toggle navigation sidebar (Ctrl+B)",
@@ -34,13 +34,11 @@ pub fn build<'a>(
     let breadcrumb = text(view_name)
         .size(sz::SMALL)
         .font(theme::body_font(iced::font::Weight::Medium))
-        .style(|t: &Theme| iced::widget::text::Style {
-            color: Some(theme::Tokens::of(t).text_soft),
-        });
+        .style(theme::text_style(|tk| tk.text_soft));
 
     let open_playlist = button(
         row![
-            material_symbol_sized("folder", false, 16.0),
+            material_symbol_sized("folder", false, sz::ICON),
             text("Open playlist").size(sz::SMALL),
         ]
         .spacing(8)
@@ -52,7 +50,7 @@ pub fn build<'a>(
 
     let open_song_window = button(
         row![
-            material_symbol_sized("desktop_windows", false, 16.0),
+            material_symbol_sized("desktop_windows", false, sz::ICON),
             text("Open song window").size(sz::SMALL),
             material_symbol_sized("open_in_new", false, 13.0),
         ]
@@ -64,7 +62,7 @@ pub fn build<'a>(
     .on_press(Message::FocusSongWindow);
 
     let rail_toggle = with_tooltip(
-        buttons::ghost_icon("view_sidebar", false, 16.0, Message::ToggleInfoRail),
+        buttons::ghost_icon("view_sidebar", false, sz::ICON, Message::ToggleInfoRail),
         "Toggle info column (Ctrl+J)",
     );
 
