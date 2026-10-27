@@ -259,9 +259,7 @@ impl TraktorDataProvider {
 
         match self.sync_mode {
             TraktorSyncMode::AbsoluteByNumber => {
-                let current_index = playlist
-                    .iter()
-                    .position(|item| content.number == item.song.track_number);
+                let current_index = Self::find_by_number(playlist, content.number);
 
                 self.cached_sync_action = match current_index {
                     None => TraktorSyncAction::Relative(0),
@@ -269,9 +267,7 @@ impl TraktorDataProvider {
                 };
             }
             TraktorSyncMode::AbsoluteByName => {
-                let current_index = playlist
-                    .iter()
-                    .position(|item| Self::songs_name_match(&current_song_info, &item.song));
+                let current_index = Self::find_by_name(playlist, &current_song_info);
 
                 self.cached_sync_action = match current_index {
                     None => TraktorSyncAction::Relative(0),
@@ -333,16 +329,12 @@ impl TraktorDataProvider {
                 deck.map(|d| self.copy_song_info_from_deck(&d.content, playlist))
             }
             TraktorNextMode::PlaylistByNumber => {
-                let current_index = playlist
-                    .iter()
-                    .position(|item| current_song_info.track_number == item.song.track_number);
+                let current_index = Self::find_by_number(playlist, current_song_info.track_number);
 
                 current_index.and_then(|ci| playlist.get(ci + 1).map(|item| item.song.clone()))
             }
             TraktorNextMode::PlaylistByName => {
-                let current_index = playlist
-                    .iter()
-                    .position(|item| Self::songs_name_match(current_song_info, &item.song));
+                let current_index = Self::find_by_name(playlist, current_song_info);
 
                 current_index.and_then(|ci| playlist.get(ci + 1).map(|item| item.song.clone()))
             }
@@ -363,13 +355,26 @@ impl TraktorDataProvider {
         );
 
         if song_info.album_art.is_none() {
-            song_info.album_art = playlist
-                .iter()
-                .find(|item| Self::songs_name_match(&song_info, &item.song))
+            song_info.album_art = Self::find_by_name(playlist, &song_info)
+                .and_then(|ci| playlist.get(ci))
                 .and_then(|item| item.song.album_art.clone());
         }
 
         song_info
+    }
+
+    /// Index of the first playlist row carrying `number`, if any.
+    fn find_by_number(playlist: &[PlaylistItem], number: u32) -> Option<usize> {
+        playlist
+            .iter()
+            .position(|item| number == item.song.track_number)
+    }
+
+    /// Index of the first playlist row matching `song` by artist + title.
+    fn find_by_name(playlist: &[PlaylistItem], song: &SongInfo) -> Option<usize> {
+        playlist
+            .iter()
+            .position(|item| Self::songs_name_match(song, &item.song))
     }
 
     pub fn songs_name_match(a: &SongInfo, b: &SongInfo) -> bool {
@@ -472,13 +477,8 @@ impl TraktorDataProvider {
     }
 
     pub fn get_current_index(&self, playlist: &[PlaylistItem]) -> Option<usize> {
-        let traktor_song = self.get_song_info()?;
-
-        playlist
-            .iter()
-            .enumerate()
-            .find(|(_i, item)| TraktorDataProvider::songs_name_match(&item.song, traktor_song))
-            .map(|(i, _s)| i)
+        self.get_song_info()
+            .and_then(|traktor_song| Self::find_by_name(playlist, traktor_song))
     }
 
     fn send_message(&mut self, message: AppMessage) {

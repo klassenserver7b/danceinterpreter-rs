@@ -1,17 +1,11 @@
 use crate::ui::widgets::canvas::{IconBase, draw_icon_base, stroke_icon};
-use iced::mouse::Cursor;
 use iced::widget::canvas::{self, Frame, Path};
-use iced::{Point, Radians, Rectangle, Theme};
+use iced::{Point, Radians, Theme};
 use std::f32::consts::PI;
 
-pub fn draw(theme: &Theme, frame: &mut Frame, _bounds: Rectangle, _cursor: Cursor, enabled: bool) {
+pub fn draw(theme: &Theme, frame: &mut Frame, enabled: bool) {
     let base @ IconBase {
-        cx,
-        cy,
-        center,
-        dim,
-        arc_r,
-        ..
+        center, dim, arc_r, ..
     } = draw_icon_base(theme, frame, enabled);
 
     // Restart arc
@@ -41,8 +35,8 @@ pub fn draw(theme: &Theme, frame: &mut Frame, _bounds: Rectangle, _cursor: Curso
     stroke_icon(frame, &arc, &base, 1.0);
 
     // The 16.0 factor is arc/arrow geometry (rad→px nudge), not a font size.
-    let end_x = cx - gap * 16.0;
-    let end_y = cy - arc_r;
+    let end_x = center.x - gap * 16.0;
+    let end_y = center.y - arc_r;
 
     // Two wings ±45° from the back direction
     let (s, c) = 45.0_f32.to_radians().sin_cos();

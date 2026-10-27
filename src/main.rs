@@ -12,6 +12,7 @@ use crate::dataloading::m3uloader::load_tag_data_from_m3u;
 use crate::dataloading::songinfo::SongInfo;
 use crate::traktor_api::{ServerMessage, StateUpdate, TraktorMessage, TraktorSyncAction};
 use crate::ui::config_window::dj_panel::SidebarMessage;
+use crate::ui::config_window::toast;
 use crate::ui::config_window::{
     ConfigWindow, DialogState, EditField, EditSnapshot, PLAYLIST_SCROLLABLE_ID, Toast, View,
     edit_input_id,
@@ -305,7 +306,7 @@ impl DanceInterpreter {
         self.data_provider.set_vec(playlist);
         self.config_window.playlist_file = Some(path.to_path_buf());
         println!("Loaded playlist {path:?} with {count} songs");
-        Task::done(Message::Toast("Playlist loaded".to_string()))
+        toast::task("Playlist loaded")
     }
 
     /// Writes a static's color, forcing the alpha to fully opaque (picked
@@ -511,9 +512,7 @@ impl DanceInterpreter {
                     Ok(playlist) => self.load_playlist_file(&file, playlist),
                     Err(err) => {
                         println!("Playlist load failed for {file:?}: {err}");
-                        Task::done(Message::Toast(format!(
-                            "Could not read playlist file: {err}"
-                        )))
+                        toast::task(format!("Could not read playlist file: {err}"))
                     }
                 }
             }
@@ -529,7 +528,7 @@ impl DanceInterpreter {
             Message::Statics(msg) => match msg {
                 StaticsMessage::Reload => {
                     self.data_provider.load_statics();
-                    Task::done(Message::Toast("Statics reloaded".to_string()))
+                    toast::task("Statics reloaded")
                 }
                 StaticsMessage::ToggleFavorite(name) => {
                     self.data_provider.toggle_static_favorite(&name);
@@ -549,11 +548,9 @@ impl DanceInterpreter {
                                 ))
                             })
                         }
-                        SubmitStaticResult::Success => {
-                            Task::done(Message::Toast("Static renamed".to_string()))
-                        }
+                        SubmitStaticResult::Success => toast::task("Static renamed"),
                         SubmitStaticResult::Failed(message) => {
-                            Task::done(Message::Toast(format!("Rename failed: {message}")))
+                            toast::task(format!("Rename failed: {message}"))
                         }
                         SubmitStaticResult::Unchanged | SubmitStaticResult::NotFound => ().into(),
                     }
@@ -596,10 +593,7 @@ impl DanceInterpreter {
                     self.data_provider.add_named_static(&name);
                     self.config_window.add_static_name.clear();
                     self.config_window.active_dialog = None;
-                    Task::done(Message::Toast(format!(
-                        "Static \u{201C}{}\u{201D} added",
-                        name.trim()
-                    )))
+                    toast::task(format!("Static \u{201C}{}\u{201D} added", name.trim()))
                 }
                 StaticsMessage::RequestMerge(old_name, new_name) => {
                     self.config_window.active_dialog =
@@ -609,11 +603,8 @@ impl DanceInterpreter {
                 StaticsMessage::ConfirmMerge(old_name, new_name) => {
                     self.config_window.active_dialog = None;
                     match self.data_provider.merge_statics(&old_name, &new_name) {
-                        Ok(()) => Task::done(Message::Toast(format!(
-                            "Merged into \u{201C}{}\u{201D}",
-                            new_name
-                        ))),
-                        Err(err) => Task::done(Message::Toast(format!("Merge failed: {err}"))),
+                        Ok(()) => toast::task(format!("Merged into \u{201C}{}\u{201D}", new_name)),
+                        Err(err) => toast::task(format!("Merge failed: {err}")),
                     }
                 }
             },
@@ -649,7 +640,7 @@ impl DanceInterpreter {
                     self.config_window.quick_title.clear();
                     self.config_window.quick_artist.clear();
                     self.config_window.quick_dance.clear();
-                    Task::done(Message::Toast("Song added to playlist".to_string()))
+                    toast::task("Song added to playlist")
                 }
             },
 
@@ -699,10 +690,10 @@ impl DanceInterpreter {
 
                         self.cancel_song_edit();
                         self.data_provider.delete_item(item);
-                        Task::done(Message::Toast(format!(
+                        toast::task(format!(
                             "Deleted \u{201C}{}\u{201D} \u{00B7} Ctrl+Z to undo",
                             name
-                        )))
+                        ))
                     } else {
                         ().into()
                     }
@@ -710,7 +701,7 @@ impl DanceInterpreter {
                 DialogMessage::UndoDelete => {
                     self.cancel_song_edit();
                     self.data_provider.undo_delete();
-                    Task::done(Message::Toast("Delete undone".to_string()))
+                    toast::task("Delete undone")
                 }
                 DialogMessage::ChangeAddStaticName(name) => {
                     self.config_window.add_static_name = name;
@@ -729,15 +720,13 @@ impl DanceInterpreter {
                         self.append_song_and_finalize(song.clone());
                         Task::batch([
                             Task::done(Message::SnapTo(RelativeOffset::END)),
-                            Task::done(Message::Toast("Traktor track added".to_string())),
+                            toast::task("Traktor track added"),
                         ])
                     } else {
-                        Task::done(Message::Toast(
-                            "Track is already in the playlist".to_string(),
-                        ))
+                        toast::task("Track is already in the playlist")
                     }
                 } else {
-                    Task::done(Message::Toast("No track loaded in Traktor".to_string()))
+                    toast::task("No track loaded in Traktor")
                 }
             }
 
@@ -776,15 +765,13 @@ impl DanceInterpreter {
                 if added > 0 {
                     Task::batch([
                         Task::done(Message::SnapTo(RelativeOffset::END)),
-                        Task::done(Message::Toast(format!(
+                        toast::task(format!(
                             "{added} song{} added",
                             if added == 1 { "" } else { "s" }
-                        ))),
+                        )),
                     ])
                 } else {
-                    Task::done(Message::Toast(
-                        "No readable audio files selected".to_string(),
-                    ))
+                    toast::task("No readable audio files selected")
                 }
             }
 
@@ -794,7 +781,7 @@ impl DanceInterpreter {
                     Ok(song_info) => {
                         println!("Loaded song {path:?}");
                         self.append_song_and_finalize(song_info);
-                        Task::done(Message::Toast("Song added to playlist".to_string()))
+                        toast::task("Song added to playlist")
                     }
                     Err(err) => {
                         // Surface the real cause (sandbox denial, unsupported
@@ -804,9 +791,7 @@ impl DanceInterpreter {
                             || path.display().to_string(),
                             |n| n.to_string_lossy().into_owned(),
                         );
-                        Task::done(Message::Toast(format!(
-                            "Could not read \u{201C}{name}\u{201D}: {err}"
-                        )))
+                        toast::task(format!("Could not read \u{201C}{name}\u{201D}: {err}"))
                     }
                 },
             },

@@ -1,4 +1,4 @@
-// canvas_toggle.rs
+//! Canvas-drawn toggle for the DJ panel (power, restart).
 
 use crate::Message;
 use iced::advanced::graphics::core::event::Event;
@@ -9,7 +9,7 @@ use iced::{Element, Length, Point, Rectangle, Renderer, Theme, mouse, window};
 use std::rc::Rc;
 use std::time::Instant;
 
-type DrawFunction<'a> = Rc<dyn Fn(&Theme, &mut Frame, Rectangle, Cursor, bool) + 'a>;
+type DrawFunction<'a> = Rc<dyn Fn(&Theme, &mut Frame, bool) + 'a>;
 type ToggleFunction<'a> = Rc<dyn Fn(bool) -> Message + 'a>;
 
 const ANIM_SECS: f32 = 0.28;
@@ -45,7 +45,7 @@ impl<'a> CanvasToggle<'a> {
 
     pub fn on_draw<F>(mut self, f: F) -> Self
     where
-        F: 'a + Fn(&Theme, &mut Frame, Rectangle, Cursor, bool) + 'a,
+        F: 'a + Fn(&Theme, &mut Frame, bool) + 'a,
     {
         self.on_draw = Some(Rc::new(f));
         self
@@ -109,7 +109,7 @@ impl<'a> canvas::Program<Message> for CanvasToggle<'a> {
         renderer: &Renderer,
         theme: &Theme,
         bounds: Rectangle,
-        cursor: Cursor,
+        _cursor: Cursor,
     ) -> Vec<Geometry<Renderer>> {
         let Some(on_draw) = &self.on_draw else {
             return Vec::new();
@@ -119,14 +119,14 @@ impl<'a> canvas::Program<Message> for CanvasToggle<'a> {
         // the canvas is only redrawn when the parent invalidates it.
         if state.is_none() {
             let geo = self.cache.draw(renderer, bounds.size(), |frame| {
-                on_draw(theme, frame, bounds, cursor, self.is_checked);
+                on_draw(theme, frame, self.is_checked);
             });
             return vec![geo];
         }
 
         // --- animated frame: draw base + ripple overlay on a fresh Frame ---
         let mut frame = Frame::new(renderer, bounds.size());
-        on_draw(theme, &mut frame, bounds, cursor, self.is_checked);
+        on_draw(theme, &mut frame, self.is_checked);
 
         if let Some(started) = state {
             let progress = (started.elapsed().as_secs_f32() / ANIM_SECS).clamp(0.0, 1.0);

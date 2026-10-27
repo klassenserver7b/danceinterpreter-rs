@@ -212,22 +212,7 @@ fn build_song_row<'a>(
     let dance_color = dance_interpreter.data_provider.get_dance_color(&song.dance);
 
     // Number / state icon cell.
-    let number: Element<'a, Message> = if is_traktor && !is_current {
-        material_symbol_sized("agriculture", false, 15.0)
-            .style(theme::text_style(|tk| tk.led_partial))
-            .into()
-    } else if is_current {
-        material_symbol_sized("graphic_eq", false, sz::ICON)
-            .style(theme::text_style(|tk| tk.accent_soft))
-            .into()
-    } else {
-        text(format!("{:02}", idx + 1))
-            .size(sz::TINY)
-            .style(theme::text_style(move |tk| {
-                if is_played { tk.faint } else { tk.muted }
-            }))
-            .into()
-    };
+    let number = build_number_cell(idx, is_traktor, is_current, is_played);
 
     // Song title + artist: plain text that enters inline editing on
     // double-click (a single click is deliberately ignored). Placeholders
@@ -235,14 +220,15 @@ fn build_song_row<'a>(
     let editing_field = editing.filter(|(i, _)| *i == idx).map(|(_, field)| field);
 
     let title_field: Element<'a, Message> = if editing_field == Some(EditField::Title) {
-        text_input("Title", edit_draft)
-            .id(edit_input_id(idx, EditField::Title))
-            .size(sz::ROW)
-            .on_input(Message::EditDraftChanged)
-            .on_submit(Message::EndSongEdit)
-            .style(theme::input_plain)
-            .padding(0)
-            .into()
+        edit_field_input(
+            idx,
+            EditField::Title,
+            "Title",
+            edit_draft,
+            sz::ROW,
+            theme::input_plain,
+        )
+        .into()
     } else {
         mouse_area(editable_text(
             &song.title,
@@ -256,14 +242,15 @@ fn build_song_row<'a>(
     };
 
     let artist_field: Element<'a, Message> = if editing_field == Some(EditField::Artist) {
-        text_input("Artist", edit_draft)
-            .id(edit_input_id(idx, EditField::Artist))
-            .size(sz::BASE)
-            .on_input(Message::EditDraftChanged)
-            .on_submit(Message::EndSongEdit)
-            .style(theme::input_plain_dim)
-            .padding(0)
-            .into()
+        edit_field_input(
+            idx,
+            EditField::Artist,
+            "Artist",
+            edit_draft,
+            sz::BASE,
+            theme::input_plain_dim,
+        )
+        .into()
     } else {
         mouse_area(editable_text(
             &song.artist,
@@ -289,9 +276,79 @@ fn build_song_row<'a>(
         editing_field == Some(EditField::Dance),
     );
 
-    let status: Element<'a, Message> = if is_current {
+    let status = build_status(is_current, is_next, is_traktor, is_played);
+
+    let actions = row![
+        icon_button_tooltip(
+            "play_arrow",
+            14.0,
+            Message::ItemChanged(ItemChange::PlaylistAbsolute(idx)),
+            "Show now"
+        ),
+        icon_button_tooltip(
+            "skip_next",
+            14.0,
+            Message::SetNextItem(ItemSource::Playlist(idx)),
+            "Queue as next"
+        ),
+        delete_button(ItemSource::Playlist(idx), "Delete song"),
+    ]
+    .spacing(2)
+    .align_y(Alignment::Center);
+
+    let content = row![
+        container(number).width(Length::Fixed(COL_NUMBER)),
+        song_cell,
+        container(chip).width(Length::Fixed(COL_DANCE)),
+        container(status).width(Length::Fixed(COL_STATUS)),
+        container(actions).width(Length::Fixed(COL_ACTIONS)),
+    ]
+    .spacing(7)
+    .align_y(Alignment::Center)
+    .padding([0, 10])
+    .width(Length::Fill);
+
+    let look = RowLook::table(idx, is_current, is_match);
+
+    row_shell(content, look, |t| theme::Tokens::of(t).accent_bar)
+}
+
+/// The number/state icon cell: deck icon for live Traktor rows, equalizer
+/// for the current row, plain zero-padded number otherwise.
+fn build_number_cell(
+    idx: usize,
+    is_traktor: bool,
+    is_current: bool,
+    is_played: bool,
+) -> Element<'static, Message> {
+    if is_traktor && !is_current {
+        material_symbol_sized("agriculture", false, 15.0)
+            .style(theme::text_style(|tk| tk.led_partial))
+            .into()
+    } else if is_current {
+        material_symbol_sized("graphic_eq", false, sz::ICON)
+            .style(theme::text_style(|tk| tk.accent_soft))
+            .into()
+    } else {
+        text(format!("{:02}", idx + 1))
+            .size(sz::TINY)
+            .style(theme::text_style(move |tk| {
+                if is_played { tk.faint } else { tk.muted }
+            }))
+            .into()
+    }
+}
+
+/// The status cell: on-air / up-next / DJ-live / played / ready indicator.
+fn build_status(
+    is_current: bool,
+    is_next: bool,
+    is_traktor: bool,
+    is_played: bool,
+) -> Element<'static, Message> {
+    if is_current {
         row![
-            crate::ui::widgets::dot(5.0, |t| theme::Tokens::of(t).accent_soft),
+            dot(5.0, |t| theme::Tokens::of(t).accent_soft),
             text("On air")
                 .size(sz::SMALL)
                 .style(theme::text_style(|tk| tk.accent_soft)),
@@ -329,41 +386,26 @@ fn build_song_row<'a>(
             .size(sz::SMALL)
             .style(theme::text_style(|tk| tk.faint))
             .into()
-    };
+    }
+}
 
-    let actions = row![
-        icon_button_tooltip(
-            "play_arrow",
-            14.0,
-            Message::ItemChanged(ItemChange::PlaylistAbsolute(idx)),
-            "Show now"
-        ),
-        icon_button_tooltip(
-            "skip_next",
-            14.0,
-            Message::SetNextItem(ItemSource::Playlist(idx)),
-            "Queue as next"
-        ),
-        delete_button(ItemSource::Playlist(idx), "Delete song"),
-    ]
-    .spacing(2)
-    .align_y(Alignment::Center);
-
-    let content = row![
-        container(number).width(Length::Fixed(COL_NUMBER)),
-        song_cell,
-        container(chip).width(Length::Fixed(COL_DANCE)),
-        container(status).width(Length::Fixed(COL_STATUS)),
-        container(actions).width(Length::Fixed(COL_ACTIONS)),
-    ]
-    .spacing(7)
-    .align_y(Alignment::Center)
-    .padding([0, 10])
-    .width(Length::Fill);
-
-    let look = RowLook::table(idx, is_current, is_match);
-
-    row_shell(content, look, |t| theme::Tokens::of(t).accent_bar)
+/// The shared inline edit input for a row field (title, artist, dance):
+/// borderless, fixed to the row layout, submits on Enter.
+fn edit_field_input<'a>(
+    idx: usize,
+    field: EditField,
+    placeholder: &'static str,
+    draft: &'a str,
+    size: f32,
+    style: impl Fn(&Theme, text_input::Status) -> text_input::Style + 'a,
+) -> text_input::TextInput<'a, Message> {
+    text_input(placeholder, draft)
+        .id(edit_input_id(idx, field))
+        .size(size)
+        .on_input(Message::EditDraftChanged)
+        .on_submit(Message::EndSongEdit)
+        .style(style)
+        .padding(0)
 }
 
 // Dance cell: compact chip with an inline editable dance name. Submitting
@@ -377,12 +419,13 @@ fn build_dance_cell<'a>(
     editing: bool,
 ) -> Element<'a, Message> {
     let dance_field: Element<'a, Message> = if editing {
-        text_input("Unassigned", edit_draft)
-            .id(edit_input_id(idx, EditField::Dance))
-            .size(sz::BASE)
-            .on_input(Message::EditDraftChanged)
-            .on_submit(Message::EndSongEdit)
-            .style(move |t: &Theme, status: iced::widget::text_input::Status| {
+        edit_field_input(
+            idx,
+            EditField::Dance,
+            "Unassigned",
+            edit_draft,
+            sz::BASE,
+            move |t, status| {
                 let mut style = theme::input_plain(t, status);
                 style.value = match color {
                     Some(color) if !edit_draft.is_empty() => {
@@ -391,9 +434,9 @@ fn build_dance_cell<'a>(
                     _ => theme::Tokens::of(t).muted,
                 };
                 style
-            })
-            .padding(0)
-            .into()
+            },
+        )
+        .into()
     } else {
         mouse_area(editable_text(
             dance,
@@ -462,28 +505,35 @@ fn editable_text<'a>(
 fn build_quick_add<'a>(config_window: &'a ConfigWindow) -> Element<'a, Message> {
     let submit = Message::QuickAdd(QuickAddMessage::Submit);
 
+    let quick_input =
+        |placeholder: &'static str, value: &String, on_input: fn(String) -> QuickAddMessage| {
+            text_input(placeholder, value)
+                .size(sz::ROW)
+                .on_input(move |v| Message::QuickAdd(on_input(v)))
+                .on_submit(submit.clone())
+                .style(theme::input_boxed)
+                .padding([5, 8])
+        };
+
     let content = row![
         icon_muted("add", sz::ICON),
-        text_input("Add a song title…", &config_window.quick_title)
-            .size(sz::ROW)
-            .on_input(|v| Message::QuickAdd(QuickAddMessage::UpdateTitle(v)))
-            .on_submit(submit.clone())
-            .style(theme::input_boxed)
-            .padding([5, 8]),
-        text_input("Artist", &config_window.quick_artist)
-            .size(sz::ROW)
-            .width(Length::Fixed(COL_DANCE))
-            .on_input(|v| Message::QuickAdd(QuickAddMessage::UpdateArtist(v)))
-            .on_submit(submit.clone())
-            .style(theme::input_boxed)
-            .padding([5, 8]),
-        text_input("Dance", &config_window.quick_dance)
-            .size(sz::ROW)
-            .width(Length::Fixed(COL_QUICK_DANCE))
-            .on_input(|v| Message::QuickAdd(QuickAddMessage::UpdateDance(v)))
-            .on_submit(submit.clone())
-            .style(theme::input_boxed)
-            .padding([5, 8]),
+        quick_input(
+            "Add a song title…",
+            &config_window.quick_title,
+            QuickAddMessage::UpdateTitle,
+        ),
+        quick_input(
+            "Artist",
+            &config_window.quick_artist,
+            QuickAddMessage::UpdateArtist
+        )
+        .width(Length::Fixed(COL_DANCE)),
+        quick_input(
+            "Dance",
+            &config_window.quick_dance,
+            QuickAddMessage::UpdateDance
+        )
+        .width(Length::Fixed(COL_QUICK_DANCE)),
         buttons::primary_small("Add song", submit),
     ]
     .spacing(8)

@@ -1,17 +1,10 @@
 use crate::ui::widgets::canvas::{IconBase, draw_icon_base, stroke_icon};
-use iced::mouse::Cursor;
 use iced::widget::canvas::{self, Frame, Path};
-use iced::{Point, Radians, Rectangle, Theme};
+use iced::{Point, Radians, Theme};
 use std::f32::consts::PI;
 
-pub fn draw(theme: &Theme, frame: &mut Frame, _bounds: Rectangle, _cursor: Cursor, enabled: bool) {
-    let base @ IconBase {
-        cx,
-        cy,
-        center,
-        arc_r,
-        ..
-    } = draw_icon_base(theme, frame, enabled);
+pub fn draw(theme: &Theme, frame: &mut Frame, enabled: bool) {
+    let base @ IconBase { center, arc_r, .. } = draw_icon_base(theme, frame, enabled);
 
     // Power arc
     // Gap of 70° centered at the top (-π/2 in screen coords).
@@ -34,8 +27,8 @@ pub fn draw(theme: &Theme, frame: &mut Frame, _bounds: Rectangle, _cursor: Curso
     // Power line (vertical, through the gap)
     // Runs from ~20% inside the radius up to the circumference.
     let line = Path::new(|b| {
-        b.move_to(Point::new(cx, cy - arc_r * 0.18));
-        b.line_to(Point::new(cx, cy - arc_r));
+        b.move_to(Point::new(center.x, center.y - arc_r * 0.18));
+        b.line_to(Point::new(center.x, center.y - arc_r));
     });
     stroke_icon(frame, &line, &base, 1.0);
 }

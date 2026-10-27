@@ -6,7 +6,7 @@
 //! blank display (`ItemSource::Blank`) shows the same backdrop color.
 
 use crate::Window;
-use crate::ui::theme::pad4;
+use crate::ui::theme::{body_font, head_font, pad4};
 use crate::{DanceInterpreter, Message};
 use iced::advanced::text::Shaping;
 use iced::alignment::{Horizontal, Vertical};
@@ -46,7 +46,8 @@ pub enum Backdrop {
 }
 
 impl Backdrop {
-    /// Options for the settings pick list, in display order.
+    /// Options for the settings pick list, in display order. Must stay in
+    /// sync with [`TABLE`], which carries the per-preset data.
     pub const ALL: &'static [Backdrop] = &[
         Backdrop::Black,
         Backdrop::DarkGray,
@@ -61,36 +62,70 @@ impl Backdrop {
     ];
 
     pub fn color(self) -> iced::Color {
-        match self {
-            Backdrop::Black => iced::Color::BLACK,
-            // Neutral grays (equal channels, no green cast).
-            Backdrop::DarkGray => iced::color!(0x1F, 0x1F, 0x1F),
-            Backdrop::Gray => iced::color!(0x3D, 0x3D, 0x3D),
-            Backdrop::DarkRed => iced::color!(0x3A, 0x15, 0x12),
-            Backdrop::DarkOrange => iced::color!(0x3A, 0x24, 0x10),
-            Backdrop::DarkMagenta => iced::color!(0x32, 0x10, 0x2B),
-            Backdrop::DarkPurple => iced::color!(0x23, 0x15, 0x33),
-            Backdrop::DarkBlue => iced::color!(0x10, 0x1A, 0x2E),
-            Backdrop::DarkCyan => iced::color!(0x0C, 0x28, 0x2A),
-            Backdrop::DarkGreen => iced::color!(0x0F, 0x2A, 0x1A),
-        }
+        self.entry().1
+    }
+
+    /// The preset's label and color, looked up in [`TABLE`].
+    fn entry(self) -> (&'static str, iced::Color) {
+        TABLE
+            .iter()
+            .find(|(variant, _, _)| variant == &self)
+            .map(|(_, label, color)| (*label, *color))
+            .expect("every Backdrop variant has a TABLE entry")
     }
 }
 
+/// Every backdrop preset: `(variant, label, color)`, in display order — the
+/// single source for both the settings label and the painted color.
+const TABLE: [(Backdrop, &str, iced::Color); 10] = [
+    (Backdrop::Black, "Black", iced::Color::BLACK),
+    // Neutral grays (equal channels, no green cast).
+    (
+        Backdrop::DarkGray,
+        "Dark gray",
+        iced::color!(0x1F, 0x1F, 0x1F),
+    ),
+    (Backdrop::Gray, "Gray", iced::color!(0x3D, 0x3D, 0x3D)),
+    (
+        Backdrop::DarkRed,
+        "Dark red",
+        iced::color!(0x3A, 0x15, 0x12),
+    ),
+    (
+        Backdrop::DarkOrange,
+        "Dark orange",
+        iced::color!(0x3A, 0x24, 0x10),
+    ),
+    (
+        Backdrop::DarkMagenta,
+        "Dark magenta",
+        iced::color!(0x32, 0x10, 0x2B),
+    ),
+    (
+        Backdrop::DarkPurple,
+        "Dark purple",
+        iced::color!(0x23, 0x15, 0x33),
+    ),
+    (
+        Backdrop::DarkBlue,
+        "Dark blue",
+        iced::color!(0x10, 0x1A, 0x2E),
+    ),
+    (
+        Backdrop::DarkCyan,
+        "Dark cyan",
+        iced::color!(0x0C, 0x28, 0x2A),
+    ),
+    (
+        Backdrop::DarkGreen,
+        "Dark green",
+        iced::color!(0x0F, 0x2A, 0x1A),
+    ),
+];
+
 impl std::fmt::Display for Backdrop {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str(match self {
-            Backdrop::Black => "Black",
-            Backdrop::DarkGray => "Dark gray",
-            Backdrop::Gray => "Gray",
-            Backdrop::DarkRed => "Dark red",
-            Backdrop::DarkOrange => "Dark orange",
-            Backdrop::DarkMagenta => "Dark magenta",
-            Backdrop::DarkPurple => "Dark purple",
-            Backdrop::DarkBlue => "Dark blue",
-            Backdrop::DarkCyan => "Dark cyan",
-            Backdrop::DarkGreen => "Dark green",
-        })
+        f.write_str(self.entry().0)
     }
 }
 
@@ -168,7 +203,7 @@ impl SongWindow {
         // Huge dance headline.
         let dance_text = Text::new(displayable_data.headline)
             .size(dance_size)
-            .font(crate::ui::theme::head_font(Weight::Medium))
+            .font(head_font(Weight::Medium))
             .line_height(LineHeight::Relative(1.15))
             .color(colors::TEXT)
             .width(Length::Fill)
@@ -187,12 +222,12 @@ impl SongWindow {
             let text_block = col![
                 Text::new(displayable_data.subline_upper)
                     .size(title_size)
-                    .font(crate::ui::theme::head_font(Weight::Medium))
+                    .font(head_font(Weight::Medium))
                     .color(colors::TEXT)
                     .shaping(Shaping::Advanced),
                 Text::new(displayable_data.subline_lower)
                     .size(artist_size)
-                    .font(crate::ui::theme::body_font(Weight::Normal))
+                    .font(body_font(Weight::Normal))
                     .color(colors::ARTIST)
                     .shaping(Shaping::Advanced),
             ]
@@ -240,11 +275,11 @@ impl SongWindow {
             let next_block = col![
                 Text::new("UP NEXT")
                     .size(next_label_size)
-                    .font(crate::ui::theme::head_font(Weight::Semibold))
+                    .font(head_font(Weight::Semibold))
                     .color(colors::MUTED),
                 Text::new(next_displayable_data.headline)
                     .size(next_dance_size)
-                    .font(crate::ui::theme::head_font(Weight::Medium))
+                    .font(head_font(Weight::Medium))
                     .color(colors::NEXT)
                     .line_height(LineHeight::Relative(1.3))
                     .shaping(Shaping::Advanced),

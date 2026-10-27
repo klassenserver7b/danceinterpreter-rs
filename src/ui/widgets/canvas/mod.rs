@@ -19,10 +19,6 @@ pub const ARC_RADIUS: f32 = 0.30;
 
 /// Geometry and colors the icon on top of the shared base needs.
 pub struct IconBase {
-    /// Center x.
-    pub cx: f32,
-    /// Center y.
-    pub cy: f32,
     /// Center point.
     pub center: Point,
     /// Smaller canvas dimension (for scaling other icon parts).
@@ -40,9 +36,7 @@ pub struct IconBase {
 pub fn draw_icon_base(theme: &Theme, frame: &mut Frame, enabled: bool) -> IconBase {
     let size = frame.size();
     let dim = size.width.min(size.height);
-    let cx = size.width / 2.0;
-    let cy = size.height / 2.0;
-    let center = Point::new(cx, cy);
+    let center = Point::new(size.width / 2.0, size.height / 2.0);
     let arc_r = dim * ARC_RADIUS;
     let stroke_w = dim * 0.07;
 
@@ -59,8 +53,6 @@ pub fn draw_icon_base(theme: &Theme, frame: &mut Frame, enabled: bool) -> IconBa
     );
 
     IconBase {
-        cx,
-        cy,
         center,
         dim,
         arc_r,

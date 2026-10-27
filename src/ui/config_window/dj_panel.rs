@@ -11,17 +11,32 @@ use crate::ui::widgets::canvas::canvas_toggle::CanvasToggle;
 use crate::ui::widgets::canvas::{power_button, restart_button};
 use crate::ui::widgets::suggestion_text_input;
 use crate::ui::widgets::suggestion_text_input::SuggestionTextInput;
-use crate::ui::widgets::{buttons, heading, icon_muted, labeled_message_toggler};
+use crate::ui::widgets::{buttons, eyebrow, heading, icon_muted, labeled_message_toggler};
 use crate::ui::with_tooltip;
 use crate::{DanceInterpreter, Message};
 use iced::alignment::Vertical;
-use iced::widget::{Space, canvas, column as col, container, pick_list, row, text};
+use iced::widget::{Column, Space, canvas, column as col, container, pick_list, row, text};
 use iced::{Alignment, Animation, Element, Length, Theme, animation};
 use network_interface::Addr::V4;
 use network_interface::{NetworkInterface, NetworkInterfaceConfig};
 
 /// Full width of the slide-in DJ integration panel when expanded.
 pub const PANEL_WIDTH: f32 = 400.0;
+
+/// Sync modes offered in the DJ panel.
+const SYNC_MODES: [TraktorSyncMode; 3] = [
+    TraktorSyncMode::Relative,
+    TraktorSyncMode::AbsoluteByNumber,
+    TraktorSyncMode::AbsoluteByName,
+];
+
+/// Next-song modes offered in the DJ panel.
+const NEXT_MODES: [TraktorNextMode; 4] = [
+    TraktorNextMode::DeckByPosition,
+    TraktorNextMode::DeckByNumber,
+    TraktorNextMode::PlaylistByNumber,
+    TraktorNextMode::PlaylistByName,
+];
 
 pub struct Sidebar {
     pub state: Animation<bool>,
@@ -53,19 +68,6 @@ impl Sidebar {
         dance_interpreter: &'a DanceInterpreter,
         width: f32,
     ) -> Element<'a, Message> {
-        let sync_options = vec![
-            TraktorSyncMode::Relative,
-            TraktorSyncMode::AbsoluteByNumber,
-            TraktorSyncMode::AbsoluteByName,
-        ];
-
-        let next_options = vec![
-            TraktorNextMode::DeckByPosition,
-            TraktorNextMode::DeckByNumber,
-            TraktorNextMode::PlaylistByNumber,
-            TraktorNextMode::PlaylistByName,
-        ];
-
         let provider = &dance_interpreter.data_provider.traktor_provider;
 
         let header = row![
@@ -109,27 +111,23 @@ impl Sidebar {
         ]
         .spacing(24);
 
-        let address = col![
-            control_caption("Server Address"),
+        let address = captioned_control(
+            "Server Address",
             self.build_network_interface_combo_box(dance_interpreter),
-        ]
-        .spacing(6)
+        )
         .width(Length::Fill);
 
-        let sync_mode = mode_pick_list("Sync Mode", sync_options, provider.sync_mode, |m| {
+        let sync_mode = mode_pick_list("Sync Mode", &SYNC_MODES, provider.sync_mode, |m| {
             Message::Traktor(TraktorMessage::SetSyncMode(m))
         });
 
-        let next_mode = mode_pick_list(
-            "Next Song Mode",
-            next_options.clone(),
-            provider.next_mode,
-            |m| Message::Traktor(TraktorMessage::SetNextMode(m)),
-        );
+        let next_mode = mode_pick_list("Next Song Mode", &NEXT_MODES, provider.next_mode, |m| {
+            Message::Traktor(TraktorMessage::SetNextMode(m))
+        });
 
         let next_mode_fallback = mode_pick_list(
             "Next Song Mode (Fallback)",
-            next_options,
+            &NEXT_MODES,
             provider.next_mode_fallback,
             |m| Message::Traktor(TraktorMessage::SetNextModeFallback(m)),
         );
@@ -171,10 +169,7 @@ impl Sidebar {
     }
 
     pub fn update_network_interface_selection(&mut self, data_provider: &DataProvider) {
-        let mut detected_interfaces: Vec<String> = get_formatted_network_interfaces(data_provider)
-            .into_iter()
-            .map(|(_, _, formatted)| formatted)
-            .collect();
+        let mut detected_interfaces: Vec<String> = get_formatted_network_interfaces(data_provider);
         detected_interfaces.push(TRAKTOR_SERVER_DEFAULT_ADDR.to_owned());
         detected_interfaces.sort();
 
@@ -262,33 +257,36 @@ impl Sidebar {
 }
 
 fn control_caption(label: &'static str) -> Element<'static, Message> {
-    text(label)
-        .size(sz::MICRO)
-        .font(theme::body_font(iced::font::Weight::Semibold))
-        .style(theme::text_style(|tk| tk.muted_head))
-        .into()
+    eyebrow(label).into()
+}
+
+/// A control with its micro caption stacked above it.
+fn captioned_control<'a>(
+    caption: &'static str,
+    control: impl Into<Element<'a, Message>>,
+) -> Column<'a, Message> {
+    col![control_caption(caption), control.into()].spacing(6)
 }
 
 /// Captioned mode pick list (sync mode, next-song mode and its fallback).
 fn mode_pick_list<'a, T>(
     caption: &'static str,
-    options: Vec<T>,
+    options: &'a [T],
     selected: T,
     on_selected: fn(T) -> Message,
 ) -> Element<'a, Message>
 where
     T: ToString + PartialEq + Clone + 'a,
 {
-    col![
-        control_caption(caption),
+    captioned_control(
+        caption,
         pick_list(options, Some(selected), on_selected)
             .width(Length::Fill)
             .text_size(sz::BASE)
             .padding([5, 8])
             .style(theme::pick_list_style)
             .menu_style(theme::pick_list_menu_style),
-    ]
-    .spacing(6)
+    )
     .into()
 }
 
@@ -325,19 +323,15 @@ fn get_network_interfaces() -> Vec<(String, String)> {
     interfaces
 }
 
-fn get_formatted_network_interfaces(
-    data_provider: &'_ DataProvider,
-) -> Vec<(String, String, String)> {
-    let interfaces = get_network_interfaces();
-
+fn get_formatted_network_interfaces(data_provider: &DataProvider) -> Vec<String> {
     let original_addr = data_provider
         .traktor_provider
         .get_socket_addr()
         .unwrap_or(TRAKTOR_SERVER_DEFAULT_ADDR.parse().unwrap());
     let original_port = original_addr.port();
 
-    interfaces
+    get_network_interfaces()
         .into_iter()
-        .map(|(name, addr)| (name, addr.clone(), format!("{}:{}", addr, original_port)))
+        .map(|(_, addr)| format!("{}:{}", addr, original_port))
         .collect()
 }
