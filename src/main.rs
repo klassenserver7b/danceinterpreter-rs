@@ -28,12 +28,12 @@ use iced::widget::operation::{focus, scroll_by, snap_to};
 use iced::widget::scrollable::{AbsoluteOffset, RelativeOffset};
 use iced::widget::space::horizontal;
 use iced::window::icon::from_file_data;
-use iced::{Element, Size, Subscription, Task, Theme, event, exit, keyboard, time, window};
+use iced::{Color, Element, Size, Subscription, Task, Theme, event, exit, keyboard, time, window};
 use iced_aw::ICED_AW_FONT_BYTES;
 use rfd::FileDialog;
 use serde::{Deserialize, Serialize};
 use std::env::var;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::time::{Duration, Instant};
 
 fn main() -> iced::Result {
@@ -107,7 +107,6 @@ pub enum QuickAddMessage {
 
 #[derive(Debug, Clone)]
 pub enum DialogMessage {
-    Cancel,
     Close,
     RequestDelete(ItemSource),
     ConfirmDelete,
@@ -138,7 +137,6 @@ pub enum Message {
     QuickAdd(QuickAddMessage),
     Dialog(DialogMessage),
     OpenDialog(DialogState),
-    CloseDialog,
 
     Toast(String),
     DismissToast,
@@ -214,47 +212,32 @@ impl DanceInterpreter {
         }
         tasks.push(state.theme_icon_task());
 
-        tasks.push(
-            iced::font::load(include_bytes!(res_file!("material-symbols.ttf")))
-                .map(|_| Message::Noop),
-        );
-        tasks.push(
-            iced::font::load(include_bytes!(res_file!("material-icons.ttf")))
-                .map(|_| Message::Noop),
-        );
+        // Loads each bundled font binary. `include_bytes!` needs literals, so
+        // the list is expanded by a tiny macro instead of a runtime loop.
+        macro_rules! load_fonts {
+            ($($file:literal),* $(,)?) => {
+                $(
+                    tasks.push(
+                        iced::font::load(include_bytes!(res_file!($file)))
+                            .map(|_| Message::Noop),
+                    );
+                )*
+            };
+        }
 
-        // Bundled design fonts: DM Sans (body) + Manrope (headings).
-        tasks.push(
-            iced::font::load(include_bytes!(res_file!("fonts/DMSans-Regular.ttf")))
-                .map(|_| Message::Noop),
-        );
-        tasks.push(
-            iced::font::load(include_bytes!(res_file!("fonts/DMSans-Medium.ttf")))
-                .map(|_| Message::Noop),
-        );
-        tasks.push(
-            iced::font::load(include_bytes!(res_file!("fonts/DMSans-SemiBold.ttf")))
-                .map(|_| Message::Noop),
-        );
-        tasks.push(
-            iced::font::load(include_bytes!(res_file!("fonts/DMSans-Bold.ttf")))
-                .map(|_| Message::Noop),
-        );
-        tasks.push(
-            iced::font::load(include_bytes!(res_file!("fonts/Manrope-Medium.ttf")))
-                .map(|_| Message::Noop),
-        );
-        tasks.push(
-            iced::font::load(include_bytes!(res_file!("fonts/Manrope-SemiBold.ttf")))
-                .map(|_| Message::Noop),
-        );
-        tasks.push(
-            iced::font::load(include_bytes!(res_file!("fonts/Manrope-Bold.ttf")))
-                .map(|_| Message::Noop),
-        );
-        tasks.push(
-            iced::font::load(include_bytes!(res_file!("fonts/Manrope-ExtraBold.ttf")))
-                .map(|_| Message::Noop),
+        // Bundled design fonts: Material Symbols/Icons for UI icons, DM Sans
+        // (body) and Manrope (headings) as static instances.
+        load_fonts!(
+            "material-symbols.ttf",
+            "material-icons.ttf",
+            "fonts/DMSans-Regular.ttf",
+            "fonts/DMSans-Medium.ttf",
+            "fonts/DMSans-SemiBold.ttf",
+            "fonts/DMSans-Bold.ttf",
+            "fonts/Manrope-Medium.ttf",
+            "fonts/Manrope-SemiBold.ttf",
+            "fonts/Manrope-Bold.ttf",
+            "fonts/Manrope-ExtraBold.ttf",
         );
 
         tasks.push(Task::done(Message::Statics(StaticsMessage::Reload)));
@@ -305,6 +288,46 @@ impl DanceInterpreter {
         self.config_window.editing = None;
         self.config_window.edit_draft.clear();
         self.config_window.edit_snapshot = None;
+    }
+
+    /// Appends a song and settles the UI around the mutation: the inline
+    /// editor cannot survive a playlist change, and newly seen dances must
+    /// become statics. Every playlist append goes through this so the arms
+    /// cannot drift apart.
+    fn append_song_and_finalize(&mut self, song: SongInfo) {
+        self.cancel_song_edit();
+        self.data_provider.append_song(song);
+        self.data_provider.ensure_statics_for_playlist();
+    }
+
+    /// Replaces the whole playlist with a freshly loaded m3u and settles the
+    /// UI (the inline editor would point into stale rows otherwise).
+    fn load_playlist_file(&mut self, path: &Path, playlist: Vec<SongInfo>) -> Task<Message> {
+        self.cancel_song_edit();
+        let count = playlist.len();
+        self.data_provider.set_vec(playlist);
+        self.config_window.playlist_file = Some(path.to_path_buf());
+        println!("Loaded playlist {path:?} with {count} songs");
+        Task::done(Message::Toast("Playlist loaded".to_string()))
+    }
+
+    /// Writes a static's color, forcing the alpha to fully opaque (picked
+    /// colors often arrive translucent).
+    fn set_static_color(&mut self, name: &str, mut color: Color) {
+        color.a = 1.0;
+        let _ = self
+            .data_provider
+            .update_static_color(name, Some(color), false);
+    }
+
+    /// Scrolls the playlist proportionally to `index` (0-based row).
+    fn snap_to_index(&self, index: usize) -> Task<Message> {
+        let offset_y =
+            index as f32 / std::cmp::max(1, self.data_provider.playlist().len() - 1) as f32;
+        Task::done(Message::SnapTo(RelativeOffset {
+            x: 0.0,
+            y: offset_y,
+        }))
     }
 
     /// Sets the window icons to the variant matching the current theme
@@ -459,8 +482,6 @@ impl DanceInterpreter {
                 self.config_window.active_dialog = Some(state);
                 ().into()
             }
-            Message::CloseDialog => self.close_active_dialog(),
-
             Message::OpenPlaylist => {
                 #[cfg(target_os = "linux")]
                 if var("container").is_ok() {
@@ -469,10 +490,7 @@ impl DanceInterpreter {
                         .set_title(
                             "Select folder containing m3u AND audio files (required in flatpak)",
                         )
-                        .set_directory(
-                            dirs::audio_dir()
-                                .unwrap_or(dirs::home_dir().unwrap_or(PathBuf::from("."))),
-                        )
+                        .set_directory(default_browse_dir())
                         .pick_folders();
                     if folder.is_none() {
                         return ().into();
@@ -484,22 +502,15 @@ impl DanceInterpreter {
                     .add_filter("Playlist", &["m3u", "m3u8"])
                     .add_filter("Any(*)", &["*"])
                     .set_title("Select playlist file")
-                    .set_directory(
-                        dirs::audio_dir().unwrap_or(dirs::home_dir().unwrap_or(PathBuf::from("."))),
-                    )
+                    .set_directory(default_browse_dir())
                     .pick_file();
 
                 let Some(file) = file else {
                     return ().into();
                 };
-                println!("Selected file: {:?}", file);
 
                 match load_tag_data_from_m3u(&file) {
-                    Ok(playlist) => {
-                        self.data_provider.set_vec(playlist);
-                        self.config_window.playlist_file = Some(file.clone());
-                        Task::done(Message::Toast("Playlist loaded".to_string()))
-                    }
+                    Ok(playlist) => self.load_playlist_file(&file, playlist),
                     Err(err) => {
                         println!("Playlist load failed for {file:?}: {err}");
                         Task::done(Message::Toast(format!(
@@ -533,7 +544,7 @@ impl DanceInterpreter {
                 StaticsMessage::SubmitName(old_name) => {
                     match self.data_provider.process_static_name_submit(&old_name) {
                         SubmitStaticResult::NeedsMerge { old_name, new_name } => {
-                            Task::perform(async move { new_name }, move |new_name| {
+                            Task::done(new_name).map(move |new_name| {
                                 Message::Statics(StaticsMessage::RequestMerge(
                                     old_name.clone(),
                                     new_name,
@@ -546,20 +557,14 @@ impl DanceInterpreter {
                         SubmitStaticResult::Unchanged | SubmitStaticResult::NotFound => ().into(),
                     }
                 }
-                StaticsMessage::UpdateColor(name, mut color) => {
-                    color.a = 1.0;
-                    let _ = self
-                        .data_provider
-                        .update_static_color(&name, Some(color), false);
+                StaticsMessage::UpdateColor(name, color) => {
+                    self.set_static_color(&name, color);
                     self.config_window.color_picker_open = None;
                     self.config_window.color_picker_old_color = None;
                     ().into()
                 }
-                StaticsMessage::PreviewColor(name, mut color) => {
-                    color.a = 1.0;
-                    let _ = self
-                        .data_provider
-                        .update_static_color(&name, Some(color), false);
+                StaticsMessage::PreviewColor(name, color) => {
+                    self.set_static_color(&name, color);
                     ().into()
                 }
                 StaticsMessage::ToggleColorPicker(name) => {
@@ -637,12 +642,10 @@ impl DanceInterpreter {
                         dance: self.config_window.quick_dance.clone(),
                         ..Default::default()
                     };
-                    self.data_provider.append_song(song);
-                    self.cancel_song_edit();
+                    self.append_song_and_finalize(song);
                     self.config_window.quick_title.clear();
                     self.config_window.quick_artist.clear();
                     self.config_window.quick_dance.clear();
-                    self.data_provider.ensure_statics_for_playlist();
                     Task::done(Message::Toast("Song added to playlist".to_string()))
                 }
             },
@@ -668,7 +671,7 @@ impl DanceInterpreter {
             },
 
             Message::Dialog(msg) => match msg {
-                DialogMessage::Cancel | DialogMessage::Close => self.close_active_dialog(),
+                DialogMessage::Close => self.close_active_dialog(),
                 DialogMessage::RequestDelete(item) => {
                     if self.modifiers.shift() {
                         return Task::done(Message::DeleteItem(item));
@@ -722,10 +725,9 @@ impl DanceInterpreter {
                         item.song.title == song.title && item.song.artist == song.artist
                     });
                     if !in_playlist {
-                        let song = song.clone();
-                        self.cancel_song_edit();
-                        self.data_provider.append_song(song);
-                        self.data_provider.ensure_statics_for_playlist();
+                        // `song` borrows the provider, which the append below
+                        // mutates — hence the clone.
+                        self.append_song_and_finalize(song.clone());
                         Task::batch([
                             Task::done(Message::SnapTo(RelativeOffset::END)),
                             Task::done(Message::Toast("Traktor track added".to_string())),
@@ -754,9 +756,7 @@ impl DanceInterpreter {
                     )
                     .add_filter("Any(*)", &["*"])
                     .set_title("Select audio files")
-                    .set_directory(
-                        dirs::audio_dir().unwrap_or(dirs::home_dir().unwrap_or(PathBuf::from("."))),
-                    )
+                    .set_directory(default_browse_dir())
                     .pick_files()
                 else {
                     return ().into();
@@ -766,7 +766,8 @@ impl DanceInterpreter {
                 for file in &files {
                     match read_song_info_from_filepath(file) {
                         Ok(song) => {
-                            self.data_provider.append_song(song);
+                            println!("Loaded song {file:?}");
+                            self.append_song_and_finalize(song);
                             added += 1;
                         }
                         Err(err) => println!("Could not read audio file {file:?}: {err}"),
@@ -774,8 +775,6 @@ impl DanceInterpreter {
                 }
 
                 if added > 0 {
-                    self.cancel_song_edit();
-                    self.data_provider.ensure_statics_for_playlist();
                     Task::batch([
                         Task::done(Message::SnapTo(RelativeOffset::END)),
                         Task::done(Message::Toast(format!(
@@ -791,17 +790,11 @@ impl DanceInterpreter {
             }
 
             Message::FileDropped(path) => match load_tag_data_from_m3u(&path) {
-                Ok(playlist) => {
-                    self.cancel_song_edit();
-                    self.data_provider.set_vec(playlist);
-                    self.config_window.playlist_file = Some(path.clone());
-                    Task::done(Message::Toast("Playlist loaded".to_string()))
-                }
+                Ok(playlist) => self.load_playlist_file(&path, playlist),
                 Err(_) => match read_song_info_from_filepath(&path) {
                     Ok(song_info) => {
-                        self.cancel_song_edit();
-                        self.data_provider.append_song(song_info);
-                        self.data_provider.ensure_statics_for_playlist();
+                        println!("Loaded song {path:?}");
+                        self.append_song_and_finalize(song_info);
                         Task::done(Message::Toast("Song added to playlist".to_string()))
                     }
                     Err(err) => {
@@ -889,8 +882,7 @@ impl DanceInterpreter {
             }
 
             Message::AddSong(song) => {
-                self.cancel_song_edit();
-                self.data_provider.append_song(song);
+                self.append_song_and_finalize(song);
                 ().into()
             }
 
@@ -1002,9 +994,9 @@ impl DanceInterpreter {
                 }
 
                 TraktorMessage::ChangeAndSubmitAddress(addr) => {
-                    self.data_provider.traktor_provider.address = addr;
-                    self.data_provider.traktor_provider.submitted_address =
-                        self.data_provider.traktor_provider.address.clone();
+                    let provider = &mut self.data_provider.traktor_provider;
+                    provider.address = addr.clone();
+                    provider.submitted_address = addr;
                     ().into()
                 }
 
@@ -1099,13 +1091,7 @@ impl DanceInterpreter {
             });
 
         if let Some((index, _)) = first_match {
-            let offset_y =
-                index as f32 / std::cmp::max(1, self.data_provider.playlist().len() - 1) as f32;
-
-            Task::done(Message::SnapTo(RelativeOffset {
-                x: 0.0,
-                y: offset_y,
-            }))
+            self.snap_to_index(index)
         } else {
             ().into()
         }
@@ -1137,13 +1123,7 @@ impl DanceInterpreter {
 
     fn try_scroll_to_song(&mut self) -> Task<Message> {
         if let Some(index) = self.data_provider.take_scroll_index() {
-            let offset_y =
-                index as f32 / std::cmp::max(1, self.data_provider.playlist().len() - 1) as f32;
-
-            Task::done(Message::SnapTo(RelativeOffset {
-                x: 0.0,
-                y: offset_y,
-            }))
+            self.snap_to_index(index)
         } else {
             ().into()
         }
@@ -1169,23 +1149,44 @@ impl DanceInterpreter {
                 if let keyboard::Event::ModifiersChanged(modifiers) = event {
                     return Some(Message::ModifiersChanged(modifiers));
                 }
-                let keyboard::Event::KeyPressed { key, .. } = event else {
+                let keyboard::Event::KeyPressed {
+                    key,
+                    modified_key,
+                    modifiers,
+                    ..
+                } = event
+                else {
                     return None;
                 };
 
-                match key {
-                    Key::Named(Named::ArrowRight) | Key::Named(Named::Space) => {
-                        Some(Message::ItemChanged(ItemChange::Next))
-                    }
-                    Key::Named(Named::ArrowLeft) => {
-                        Some(Message::ItemChanged(ItemChange::Previous))
-                    }
-                    Key::Named(Named::End) => Some(Message::ItemChanged(ItemChange::Blank)),
-                    Key::Named(Named::F11) => Some(Message::ToggleFullscreen),
-                    Key::Named(Named::F5) => Some(Message::Statics(StaticsMessage::Reload)),
-                    Key::Named(Named::PageUp) => Some(Message::ScrollBy(-10.0)),
-                    Key::Named(Named::PageDown) => Some(Message::ScrollBy(10.0)),
-                    _ => None,
+                // Solo shortcuts (no Ctrl/Alt). `modified_key` follows the
+                // keyboard layout with shift applied — e.g. "?" on Shift+"/" —
+                // so character shortcuts match what the user actually typed.
+                if modifiers.control() || modifiers.alt() {
+                    return None;
+                }
+                let pressed = match modified_key.as_ref() {
+                    Key::Character(_) => modified_key.as_ref(),
+                    _ => key.as_ref(),
+                };
+
+                match pressed {
+                    Key::Named(Named::Escape) => Some(Message::EscapePressed),
+                    Key::Character("?") => Some(Message::OpenDialog(DialogState::Help)),
+                    _ => match key {
+                        Key::Named(Named::ArrowRight) | Key::Named(Named::Space) => {
+                            Some(Message::ItemChanged(ItemChange::Next))
+                        }
+                        Key::Named(Named::ArrowLeft) => {
+                            Some(Message::ItemChanged(ItemChange::Previous))
+                        }
+                        Key::Named(Named::End) => Some(Message::ItemChanged(ItemChange::Blank)),
+                        Key::Named(Named::F11) => Some(Message::ToggleFullscreen),
+                        Key::Named(Named::F5) => Some(Message::Statics(StaticsMessage::Reload)),
+                        Key::Named(Named::PageUp) => Some(Message::ScrollBy(-10.0)),
+                        Key::Named(Named::PageDown) => Some(Message::ScrollBy(10.0)),
+                        _ => None,
+                    },
                 }
             }),
             keyboard::listen().filter_map(|event| {
@@ -1199,20 +1200,18 @@ impl DanceInterpreter {
                     return None;
                 };
 
-                // Shortcuts follow the keyboard layout: `modified_key` is the
-                // key as it would be typed on the current layout (shift
-                // applied — e.g. "?" on Shift+"/"), so character shortcuts
-                // match what the user actually pressed. When the platform
-                // reports no typed character (e.g. Alt combos on X11), fall
-                // back to the layout key without modifiers.
+                // Modifier shortcuts (Ctrl/Alt). When the platform reports no
+                // typed character for the combo (e.g. Alt on X11), fall back
+                // to the layout key without modifiers.
+                if !modifiers.control() && !modifiers.alt() {
+                    return None;
+                }
                 let pressed = match modified_key.as_ref() {
                     Key::Character(_) => modified_key.as_ref(),
                     _ => key.as_ref(),
                 };
 
                 match (pressed, modifiers) {
-                    (Key::Named(Named::Escape), _) => Some(Message::EscapePressed),
-                    (Key::Character("?"), _) => Some(Message::OpenDialog(DialogState::Help)),
                     (Key::Character("n"), Modifiers::CTRL) => Some(Message::AddBlankEntry),
                     (Key::Character("z"), Modifiers::CTRL) => {
                         Some(Message::Dialog(DialogMessage::UndoDelete))
@@ -1288,6 +1287,12 @@ struct PersistedSettings {
 
 /// Name of the settings directory inside a config directory.
 const SETTINGS_DIR: &str = "danceinterpreter";
+
+/// Directory the file dialogs start in: the user's audio folder, falling back
+/// to the home directory and then the working directory.
+fn default_browse_dir() -> PathBuf {
+    dirs::audio_dir().unwrap_or_else(|| dirs::home_dir().unwrap_or_else(|| PathBuf::from(".")))
+}
 
 /// Directory that holds `settings.json`. The XDG config directory (via
 /// `dirs::config_dir`, which also covers the platform equivalents on

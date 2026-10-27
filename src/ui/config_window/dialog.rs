@@ -61,7 +61,7 @@ pub fn build_dialog<'a>(
                 .size(sz::BASE)
                 .style(theme::text_style(|tk| tk.muted))],
                 dialog_actions([
-                    buttons::secondary("Cancel", Message::Dialog(DialogMessage::Close)),
+                    buttons::secondary("Cancel", Message::Dialog(DialogMessage::CancelDelete)),
                     buttons::danger(
                         format!("Delete {}", kind),
                         Message::Dialog(DialogMessage::ConfirmDelete),
@@ -78,7 +78,7 @@ pub fn build_dialog<'a>(
             .size(sz::BASE)
             .style(theme::text_style(|tk| tk.muted))],
             dialog_actions([
-                buttons::secondary("Cancel", Message::Dialog(DialogMessage::Cancel)),
+                buttons::secondary("Cancel", Message::Dialog(DialogMessage::Close)),
                 buttons::primary(
                     "Merge",
                     Message::Statics(StaticsMessage::ConfirmMerge(
