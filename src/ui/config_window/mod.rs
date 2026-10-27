@@ -21,7 +21,7 @@ use crate::ui::config_window::dj_panel::Sidebar;
 use crate::ui::theme;
 use crate::{DanceInterpreter, Message, Window};
 use iced::widget::{column as col, container, mouse_area, row, stack};
-use iced::{Animation, Color, Element, Length, Size, Theme, animation, window};
+use iced::{Alignment, Animation, Color, Element, Length, Size, Theme, animation, window};
 use std::path::PathBuf;
 use std::time::{Duration, Instant};
 
@@ -85,6 +85,9 @@ impl Toast {
     }
 }
 
+/// Slide/expand duration shared by the nav sidebar, info rail and DJ panel.
+pub const SLIDE_DURATION: Duration = Duration::from_millis(140);
+
 pub struct ConfigWindow {
     pub id: window::Id,
     pub closed: bool,
@@ -139,10 +142,10 @@ impl Window for ConfigWindow {
             theme: Theme::Dracula,
 
             nav_anim: Animation::new(true)
-                .duration(Duration::from_millis(140))
+                .duration(SLIDE_DURATION)
                 .easing(animation::Easing::EaseInOut),
             rail_anim: Animation::new(true)
-                .duration(Duration::from_millis(140))
+                .duration(SLIDE_DURATION)
                 .easing(animation::Easing::EaseInOut),
 
             search_visible: false,
@@ -186,7 +189,7 @@ impl ConfigWindow {
         // Primary content column: hero card and the active panel.
         let primary = container(
             col![
-                now_card::build(self, dance_interpreter),
+                now_card::build(dance_interpreter),
                 match self.view {
                     View::Playlist => playlist_view::build(self, dance_interpreter),
                     View::Statics => statics_view::build(self, dance_interpreter),
@@ -220,7 +223,6 @@ impl ConfigWindow {
         );
 
         let rail = right_column::build(
-            self,
             dance_interpreter,
             self.rail_anim.interpolate(
                 0.0,
@@ -237,9 +239,9 @@ impl ConfigWindow {
         let main = row![
             nav,
             col![
-                top_bar::bar_with_divider(top_bar::build(self, dance_interpreter)),
+                top_bar::bar_with_divider(top_bar::build(self)),
                 content,
-                show_bar::build(self, dance_interpreter),
+                show_bar::build(dance_interpreter),
             ]
             .width(Length::Fill)
             .height(Length::Fill),
@@ -301,9 +303,17 @@ pub fn source_tag<'a>(text: &'a str) -> Element<'a, Message> {
             container::Style::default().border(iced::Border {
                 color: tk.tag_border,
                 width: 1.0,
-                radius: 3.0.into(),
+                radius: theme::r::XS.into(),
             })
         })
+        .into()
+}
+
+/// [`source_tag`] pushed to the right edge of the row it lives in.
+pub fn source_tag_right<'a>(text: &'a str) -> Element<'a, Message> {
+    container(source_tag(text))
+        .width(Length::Fill)
+        .align_x(Alignment::End)
         .into()
 }
 

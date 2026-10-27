@@ -3,9 +3,9 @@
 
 use crate::dataloading::dataprovider::DataProvider;
 use crate::traktor_api::{
-    ConnectionState, TRAKTOR_SERVER_DEFAULT_ADDR, TraktorMessage, TraktorNextMode, TraktorSyncMode,
+    TRAKTOR_SERVER_DEFAULT_ADDR, TraktorMessage, TraktorNextMode, TraktorSyncMode,
 };
-use crate::ui::config_window::source_tag;
+use crate::ui::config_window::source_tag_right;
 use crate::ui::theme::{self, sz};
 use crate::ui::widgets::canvas::canvas_toggle::CanvasToggle;
 use crate::ui::widgets::canvas::{power_button, restart_button};
@@ -16,17 +16,15 @@ use crate::ui::with_tooltip;
 use crate::{DanceInterpreter, Message};
 use iced::alignment::Vertical;
 use iced::widget::{Space, canvas, column as col, container, pick_list, row, text};
-use iced::{Alignment, Animation, Element, Length, Theme, animation, border, color};
+use iced::{Alignment, Animation, Element, Length, Theme, animation};
 use network_interface::Addr::V4;
 use network_interface::{NetworkInterface, NetworkInterfaceConfig};
-use std::time::Duration;
 
 pub struct Sidebar {
     pub state: Animation<bool>,
     pub power_button_cache: canvas::Cache,
     pub restart_button_cache: canvas::Cache,
     server_address_presets: suggestion_text_input::State<String>,
-    pub server_address_text: String,
 }
 
 #[derive(Debug, Clone)]
@@ -39,12 +37,11 @@ impl Sidebar {
     pub fn new() -> Self {
         Self {
             state: Animation::new(false)
-                .duration(Duration::from_millis(100))
+                .duration(crate::ui::config_window::SLIDE_DURATION)
                 .easing(animation::Easing::EaseInOut),
             power_button_cache: canvas::Cache::default(),
             restart_button_cache: canvas::Cache::default(),
             server_address_presets: suggestion_text_input::State::default(),
-            server_address_text: String::new(),
         }
     }
 
@@ -74,9 +71,7 @@ impl Sidebar {
                 .style(theme::text_style(|tk| tk.muted)),
             heading("DJ integration", sz::H2, iced::font::Weight::Medium)
                 .style(theme::text_style(|tk| tk.text)),
-            container(source_tag("TRAKTOR PRO"))
-                .width(Length::Fill)
-                .align_x(Alignment::End),
+            source_tag_right("TRAKTOR PRO"),
             buttons::ghost_icon(
                 "close",
                 false,
@@ -120,46 +115,23 @@ impl Sidebar {
         .spacing(6)
         .width(Length::Fill);
 
-        let sync_mode = col![
-            control_caption("Sync Mode"),
-            pick_list(
-                sync_options,
-                Some(provider.sync_mode),
-                |m| Message::Traktor(TraktorMessage::SetSyncMode(m))
-            )
-            .width(Length::Fill)
-            .text_size(sz::BASE)
-            .padding([5, 8])
-            .style(theme::pick_list_style)
-            .menu_style(theme::pick_list_menu_style),
-        ]
-        .spacing(6);
+        let sync_mode = mode_pick_list("Sync Mode", sync_options, provider.sync_mode, |m| {
+            Message::Traktor(TraktorMessage::SetSyncMode(m))
+        });
 
-        let next_mode = col![
-            control_caption("Next Song Mode"),
-            pick_list(next_options.clone(), Some(provider.next_mode), |m| {
-                Message::Traktor(TraktorMessage::SetNextMode(m))
-            })
-            .width(Length::Fill)
-            .text_size(sz::BASE)
-            .padding([5, 8])
-            .style(theme::pick_list_style)
-            .menu_style(theme::pick_list_menu_style),
-        ]
-        .spacing(6);
+        let next_mode = mode_pick_list(
+            "Next Song Mode",
+            next_options.clone(),
+            provider.next_mode,
+            |m| Message::Traktor(TraktorMessage::SetNextMode(m)),
+        );
 
-        let next_mode_fallback = col![
-            control_caption("Next Song Mode (Fallback)"),
-            pick_list(next_options, Some(provider.next_mode_fallback), |m| {
-                Message::Traktor(TraktorMessage::SetNextModeFallback(m))
-            })
-            .width(Length::Fill)
-            .text_size(sz::BASE)
-            .padding([5, 8])
-            .style(theme::pick_list_style)
-            .menu_style(theme::pick_list_menu_style),
-        ]
-        .spacing(6);
+        let next_mode_fallback = mode_pick_list(
+            "Next Song Mode (Fallback)",
+            next_options,
+            provider.next_mode_fallback,
+            |m| Message::Traktor(TraktorMessage::SetNextModeFallback(m)),
+        );
 
         container(
             col![
@@ -215,13 +187,18 @@ impl Sidebar {
         &'_ self,
         dance_interpreter: &DanceInterpreter,
     ) -> SuggestionTextInput<'_, String, Message> {
+        // Always show the provider's configured address (the default until
+        // something was submitted).
+        let configured = &dance_interpreter.data_provider.traktor_provider.address;
+        let value = if configured.is_empty() {
+            TRAKTOR_SERVER_DEFAULT_ADDR
+        } else {
+            configured.as_str()
+        };
+
         SuggestionTextInput::new(
             &self.server_address_presets,
-            if !self.server_address_text.is_empty() {
-                self.server_address_text.as_ref()
-            } else {
-                TRAKTOR_SERVER_DEFAULT_ADDR
-            },
+            value,
             Some(&dance_interpreter.data_provider.traktor_provider.address),
             |s| Message::Traktor(TraktorMessage::ChangeAndSubmitAddress(s)),
         )
@@ -243,21 +220,10 @@ impl Sidebar {
             .traktor_provider
             .get_connection_state();
 
-        let led = container(Space::new())
-            .width(Length::Fixed(8.0))
-            .height(Length::Fixed(8.0))
-            .style(move |t: &iced::Theme| container::Style {
-                background: Some(theme::led_color(t, client_connection_state).into()),
-                border: border::rounded(4.0),
-                ..container::Style::default()
-            });
+        let led =
+            crate::ui::widgets::dot(8.0, move |t| theme::led_color(t, client_connection_state));
 
-        let summary = match client_connection_state {
-            ConnectionState::Connected => "Traktor & Cover Loader connected",
-            ConnectionState::Traktor => "Traktor connected",
-            ConnectionState::CoverLoader => "Cover Loader connected",
-            ConnectionState::Disconnected => "No client connected",
-        };
+        let summary = client_connection_state.summary();
 
         let mut column = col![
             row![
@@ -311,25 +277,42 @@ fn control_caption(label: &'static str) -> Element<'static, Message> {
         .into()
 }
 
-/// Rounded panel like the info rail. While the panel is collapsed (animated
-/// width ~0) paint nothing, so no border hairline survives at the window edge.
+/// Captioned mode pick list (sync mode, next-song mode and its fallback).
+fn mode_pick_list<'a, T>(
+    caption: &'static str,
+    options: Vec<T>,
+    selected: T,
+    on_selected: fn(T) -> Message,
+) -> Element<'a, Message>
+where
+    T: ToString + PartialEq + Clone + 'a,
+{
+    col![
+        control_caption(caption),
+        pick_list(options, Some(selected), on_selected)
+            .width(Length::Fill)
+            .text_size(sz::BASE)
+            .padding([5, 8])
+            .style(theme::pick_list_style)
+            .menu_style(theme::pick_list_menu_style),
+    ]
+    .spacing(6)
+    .into()
+}
+
+/// Rounded panel like the info rail, plus a drop shadow; while the panel is
+/// collapsed (animated width ~0) paint nothing, so no border hairline
+/// survives at the window edge.
 fn dj_panel_style(t: &iced::Theme, width: f32) -> container::Style {
-    if width < 1.0 {
-        return container::Style::default();
-    }
-    let tk = theme::Tokens::of(t);
-    container::Style::default()
-        .background(tk.panel)
-        .border(iced::Border {
-            color: tk.border,
-            width: 1.0,
-            radius: 10.0.into(),
-        })
-        .shadow(iced::Shadow {
-            color: color!(0x000000, 0.25),
+    let mut style = theme::panel_collapsible(t, width);
+    if width >= 1.0 {
+        style.shadow = iced::Shadow {
+            color: theme::Tokens::of(t).shadow,
             offset: iced::Vector::new(-4.0, 0.0),
             blur_radius: 18.0,
-        })
+        };
+    }
+    style
 }
 
 fn get_network_interfaces() -> Vec<(String, String)> {

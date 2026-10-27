@@ -1,17 +1,14 @@
 //! Top bar: sidebar toggles, breadcrumb and the "open song window" action.
 
+use crate::Message;
 use crate::ui::config_window::{ConfigWindow, View};
 use crate::ui::theme::{self, sz};
-use crate::ui::widgets::{buttons, material_symbol_sized};
+use crate::ui::widgets::buttons;
 use crate::ui::with_tooltip;
-use crate::{DanceInterpreter, Message};
-use iced::widget::{Column, button, column as col, container, row, text};
+use iced::widget::{Column, column as col, container, row, text};
 use iced::{Alignment, Element, Length, Theme};
 
-pub fn build<'a>(
-    config_window: &'a ConfigWindow,
-    _dance_interpreter: &'a DanceInterpreter,
-) -> Element<'a, Message> {
+pub fn build<'a>(config_window: &'a ConfigWindow) -> Element<'a, Message> {
     let view_name = match config_window.view {
         View::Playlist => "Playlist",
         View::Statics => "Statics",
@@ -36,33 +33,29 @@ pub fn build<'a>(
         .font(theme::body_font(iced::font::Weight::Medium))
         .style(theme::text_style(|tk| tk.text_soft));
 
-    let open_playlist = button(
-        row![
-            material_symbol_sized("folder", false, sz::ICON),
-            text("Open playlist").size(sz::SMALL),
-        ]
-        .spacing(8)
-        .align_y(Alignment::Center),
-    )
-    .padding([6, 8])
-    .style(theme::btn_ghost)
-    .on_press(Message::OpenPlaylist);
+    let open_playlist =
+        buttons::ghost_labelled("folder", "Open playlist", None, Message::OpenPlaylist);
 
-    let open_song_window = button(
-        row![
-            material_symbol_sized("desktop_windows", false, sz::ICON),
-            text("Open song window").size(sz::SMALL),
-            material_symbol_sized("open_in_new", false, 13.0),
-        ]
-        .spacing(8)
-        .align_y(Alignment::Center),
-    )
-    .padding([6, 8])
-    .style(theme::btn_ghost)
-    .on_press(Message::FocusSongWindow);
+    let open_song_window = buttons::ghost_labelled(
+        "desktop_windows",
+        "Open song window",
+        Some("open_in_new"),
+        Message::FocusSongWindow,
+    );
 
+    // The icon mirrors the nav toggle: a plain panel while collapsed, the
+    // open-panel glyph while the rail is expanded.
     let rail_toggle = with_tooltip(
-        buttons::ghost_icon("view_sidebar", false, sz::ICON, Message::ToggleInfoRail),
+        buttons::ghost_icon(
+            if config_window.rail_open() {
+                "right_panel_open"
+            } else {
+                "view_sidebar"
+            },
+            false,
+            sz::ICON,
+            Message::ToggleInfoRail,
+        ),
         "Toggle info column (Ctrl+J)",
     );
 
@@ -84,26 +77,16 @@ pub fn build<'a>(
         .width(Length::Fill)
         .align_y(Alignment::Center),
     )
-    .padding([0, 31])
-    .height(Length::Fixed(65.0))
+    .padding([18, 31])
     .width(Length::Fill)
     .align_y(Alignment::Center)
     .style(theme::page_bg)
     .into()
 }
 
-/// A 1px horizontal divider spanning the full width.
-pub fn divider() -> Element<'static, Message> {
-    container(iced::widget::Space::new())
-        .width(Length::Fill)
-        .height(Length::Fixed(1.0))
-        .style(|t: &Theme| container::Style::default().background(theme::Tokens::of(t).border))
-        .into()
-}
-
 /// Vertical stack helper used by the shell (bar + hairline).
 pub fn bar_with_divider<'a>(
     bar: Element<'a, Message>,
 ) -> Column<'a, Message, Theme, iced::Renderer> {
-    col![bar, divider()]
+    col![bar, crate::ui::widgets::divider()]
 }

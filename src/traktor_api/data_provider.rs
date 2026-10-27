@@ -74,6 +74,19 @@ pub enum ConnectionState {
     Connected,
 }
 
+impl ConnectionState {
+    /// Human-readable summary of which clients are currently connected,
+    /// shared by the DJ panel status line and the right rail's DJ card.
+    pub fn summary(&self) -> &'static str {
+        match self {
+            ConnectionState::Connected => "Traktor & Cover Loader",
+            ConnectionState::Traktor => "Traktor connected",
+            ConnectionState::CoverLoader => "Cover Loader connected",
+            ConnectionState::Disconnected => "No client connected",
+        }
+    }
+}
+
 pub struct TraktorDataProvider {
     pub address: String,
     pub submitted_address: String,

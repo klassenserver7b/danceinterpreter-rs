@@ -4,7 +4,7 @@
 use crate::dataloading::dataprovider::ItemChange;
 use crate::traktor_api::TraktorMessage;
 use crate::ui::config_window::dj_panel::SidebarMessage;
-use crate::ui::config_window::{ConfigWindow, source_tag};
+use crate::ui::config_window::source_tag_right;
 use crate::ui::theme::{self, sz};
 use crate::ui::widgets::{buttons, heading, kbd, material_symbol, material_symbol_sized};
 use crate::{DanceInterpreter, Message};
@@ -14,14 +14,10 @@ use iced::{Alignment, Color, Element, Length, Theme};
 /// Full width of the right info rail when expanded.
 pub const RAIL_WIDTH: f32 = 292.0;
 
-pub fn build<'a>(
-    config_window: &'a ConfigWindow,
-    dance_interpreter: &'a DanceInterpreter,
-    width: f32,
-) -> Element<'a, Message> {
+pub fn build<'a>(dance_interpreter: &'a DanceInterpreter, width: f32) -> Element<'a, Message> {
     let content = col![
         build_up_next(dance_interpreter),
-        build_dj_card(config_window, dance_interpreter),
+        build_dj_card(dance_interpreter),
         build_tip(),
     ]
     .spacing(19)
@@ -32,21 +28,7 @@ pub fn build<'a>(
         .height(Length::Fill)
         .clip(true)
         .padding(crate::ui::theme::pad4(14.0, 14.0, 16.0, 14.0))
-        .style(move |t: &Theme| {
-            // While the rail is collapsed (animated width ~0) paint nothing,
-            // so no border hairline survives at the window edge.
-            if width < 1.0 {
-                return container::Style::default();
-            }
-            let tk = theme::Tokens::of(t);
-            container::Style::default()
-                .background(tk.panel)
-                .border(iced::Border {
-                    color: tk.border,
-                    width: 1.0,
-                    radius: 10.0.into(),
-                })
-        });
+        .style(move |t: &Theme| theme::panel_collapsible(t, width));
 
     rail.into()
 }
@@ -82,9 +64,7 @@ fn build_up_next<'a>(dance_interpreter: &'a DanceInterpreter) -> Element<'a, Mes
         text("COMING UP NEXT")
             .size(sz::TINY)
             .style(theme::text_style(|tk| tk.muted)),
-        container(source_tag(tag))
-            .width(Length::Fill)
-            .align_x(Alignment::End),
+        source_tag_right(tag),
     ]
     .spacing(7)
     .align_y(Alignment::Center);
@@ -104,7 +84,7 @@ fn build_up_next<'a>(dance_interpreter: &'a DanceInterpreter) -> Element<'a, Mes
     container(
         col![
             kicker,
-            heading(dance, 20.0, iced::font::Weight::Semibold).style(move |t: &Theme| {
+            heading(dance, sz::H2, iced::font::Weight::Semibold).style(move |t: &Theme| {
                 iced::widget::text::Style {
                     color: Some(dance_color.unwrap_or_else(|| theme::Tokens::of(t).text)),
                 }
@@ -130,10 +110,7 @@ fn build_up_next<'a>(dance_interpreter: &'a DanceInterpreter) -> Element<'a, Mes
 // DJ integration card
 // ---------------------------------------------------------------------------
 
-fn build_dj_card<'a>(
-    _config_window: &'a ConfigWindow,
-    dance_interpreter: &'a DanceInterpreter,
-) -> Element<'a, Message> {
+fn build_dj_card<'a>(dance_interpreter: &'a DanceInterpreter) -> Element<'a, Message> {
     let provider = &dance_interpreter.data_provider.traktor_provider;
     let enabled = provider.enabled();
     let connection = provider.get_connection_state();
@@ -146,12 +123,7 @@ fn build_dj_card<'a>(
         (true, _) => "IDLE",
     };
 
-    let summary = match connection {
-        crate::traktor_api::ConnectionState::Connected => "Traktor & Cover Loader",
-        crate::traktor_api::ConnectionState::Traktor => "Traktor connected",
-        crate::traktor_api::ConnectionState::CoverLoader => "Cover Loader connected",
-        crate::traktor_api::ConnectionState::Disconnected => "No client connected",
-    };
+    let summary = connection.summary();
 
     let heading_row = row![
         material_symbol_sized("link", false, 15.0).style(theme::text_style(|tk| tk.muted)),
@@ -161,9 +133,7 @@ fn build_dj_card<'a>(
             iced::font::Weight::Semibold
         )
         .style(theme::text_style(|tk| tk.text)),
-        container(source_tag(state_tag))
-            .width(Length::Fill)
-            .align_x(Alignment::End),
+        source_tag_right(state_tag),
     ]
     .spacing(8)
     .align_y(Alignment::Center);
@@ -180,7 +150,7 @@ fn build_dj_card<'a>(
                 .border(iced::Border {
                     color: Color::TRANSPARENT,
                     width: 0.0,
-                    radius: 4.0.into(),
+                    radius: theme::r::SM.into(),
                 })
         });
 
@@ -221,7 +191,7 @@ fn build_dj_card<'a>(
             .border(iced::Border {
                 color: tk.border,
                 width: 1.0,
-                radius: 5.0.into(),
+                radius: theme::r::MD.into(),
             })
     });
 
@@ -322,7 +292,7 @@ fn build_tip() -> Element<'static, Message> {
                     text("Press")
                         .size(sz::SMALL)
                         .style(theme::text_style(|tk| tk.muted)),
-                    kbd("Space"),
+                    kbd("Space", theme::kbd),
                     text("to move to the next song.")
                         .size(sz::SMALL)
                         .style(theme::text_style(|tk| tk.muted)),

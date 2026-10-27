@@ -3,13 +3,17 @@
 
 use crate::ui::config_window::{ConfigWindow, DialogState, View};
 use crate::ui::theme::{self, sz};
-use crate::ui::widgets::material_symbol;
+use crate::ui::widgets::{kbd, material_symbol};
 use crate::{DanceInterpreter, Message};
 use iced::widget::{column as col, container, row, text};
 use iced::{Alignment, Color, Element, Length, Theme};
 
 /// Full width of the navigation sidebar when expanded.
 pub const SIDEBAR_WIDTH: f32 = 218.0;
+
+// Geometry (design px).
+const NAV_ITEM_HEIGHT: f32 = 43.0;
+const VERSION_ROW_HEIGHT: f32 = 48.0;
 
 pub fn build<'a>(
     config_window: &'a ConfigWindow,
@@ -50,10 +54,10 @@ pub fn build<'a>(
             false,
             Message::OpenDialog(DialogState::Settings),
         ),
-        nav_item_with_kbd(
+        nav_item(
             "help",
             "Help & shortcuts",
-            crate::ui::widgets::kbd("?").into(),
+            Some(kbd("?", theme::kbd).into()),
             false,
             Message::OpenDialog(DialogState::Help),
         ),
@@ -142,7 +146,7 @@ fn session_card<'a>(config_window: &'a ConfigWindow) -> Element<'a, Message> {
             .border(iced::Border {
                 color: Color::TRANSPARENT,
                 width: 0.0,
-                radius: 5.0.into(),
+                radius: theme::r::MD.into(),
             })
     });
 
@@ -169,7 +173,7 @@ fn session_card<'a>(config_window: &'a ConfigWindow) -> Element<'a, Message> {
         container::Style::default().border(iced::Border {
             color: tk.border,
             width: 1.0,
-            radius: 7.0.into(),
+            radius: theme::r::XL.into(),
         })
     })
     .width(Length::Fill)
@@ -190,74 +194,42 @@ fn count_badge(count: usize) -> Element<'static, Message> {
             .border(iced::Border {
                 color: Color::TRANSPARENT,
                 width: 0.0,
-                radius: 3.0.into(),
+                radius: theme::r::XS.into(),
             })
     })
     .into()
 }
 
-fn nav_item(
-    icon: &'static str,
-    label: &'static str,
-    trailing: Option<Element<'static, Message>>,
-    selected: bool,
-    message: Message,
-) -> Element<'static, Message> {
-    nav_item_impl(icon, label, trailing, None, selected, message)
-}
-
-fn nav_item_with_kbd(
-    icon: &'static str,
-    label: &'static str,
-    kbd: Element<'static, Message>,
-    selected: bool,
-    message: Message,
-) -> Element<'static, Message> {
-    nav_item_impl(icon, label, None, Some(kbd), selected, message)
-}
-
-fn nav_item_impl<'a>(
+fn nav_item<'a>(
     icon: &'static str,
     label: &'a str,
     trailing: Option<Element<'a, Message>>,
-    kbd: Option<Element<'a, Message>>,
     selected: bool,
     message: Message,
 ) -> Element<'a, Message> {
-    let icon_el: Element<'a, Message> = material_symbol(icon, false)
-        .style(move |t: &Theme| iced::widget::text::Style {
-            color: Some(if selected {
-                theme::Tokens::of(t).accent_nav_text
-            } else {
-                theme::Tokens::of(t).muted
-            }),
-        })
-        .into();
+    let icon_color: fn(&theme::Tokens) -> Color = if selected {
+        |tk| tk.accent_nav_text
+    } else {
+        |tk| tk.muted
+    };
 
-    let label_el: Element<'a, Message> = text(label)
-        .size(sz::BASE)
-        .style(move |t: &Theme| iced::widget::text::Style {
-            color: Some(if selected {
-                theme::Tokens::of(t).accent_nav_text
-            } else {
-                theme::Tokens::of(t).muted
-            }),
-        })
-        .into();
-
-    let mut content = row![icon_el, label_el]
-        .spacing(12)
-        .height(Length::Fill)
-        .align_y(Alignment::Center);
-    content = match (trailing, kbd) {
-        (Some(t), _) => content.push(t),
-        (None, Some(k)) => content.push(k),
-        _ => content,
+    let content = row![
+        material_symbol(icon, false).style(theme::text_style(icon_color)),
+        text(label)
+            .size(sz::BASE)
+            .style(theme::text_style(icon_color)),
+    ]
+    .spacing(12)
+    .height(Length::Fill)
+    .align_y(Alignment::Center);
+    let content = match trailing {
+        Some(trailing) => content.push(trailing),
+        None => content,
     };
 
     iced::widget::button(content)
         .width(Length::Fill)
-        .height(Length::Fixed(43.0))
+        .height(Length::Fixed(NAV_ITEM_HEIGHT))
         .padding([0, 12])
         .style(theme::btn_nav(selected))
         .on_press(message)
@@ -286,7 +258,7 @@ fn version_row() -> Element<'static, Message> {
         .align_y(Alignment::Center),
     )
     .padding(crate::ui::theme::pad4(0.0, 0.0, 0.0, 3.0))
-    .height(Length::Fixed(48.0))
+    .height(Length::Fixed(VERSION_ROW_HEIGHT))
     .align_y(Alignment::Center)
     .into()
 }

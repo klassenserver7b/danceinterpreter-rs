@@ -63,17 +63,15 @@ pub fn material_symbol(id: &'_ str, filled: bool) -> Text<'_, Theme, Renderer> {
         .width(Length::Shrink)
 }
 
-/// Keyboard hint pill, e.g. `Space`, `Ctrl+F`.
+/// Keyboard hint pill, e.g. `Space`, `Ctrl+F`. `style` picks the pill look —
+/// usually [`crate::ui::theme::kbd`], or a tinted variant on colored surfaces.
 pub fn kbd<'a>(
     label: impl text::IntoFragment<'a>,
+    style: fn(&Theme) -> iced::widget::container::Style,
 ) -> iced::widget::Container<'a, Message, Theme, Renderer> {
-    iced::widget::container(
-        text(label)
-            .size(theme::sz::MICRO)
-            .style(theme::text_style(|tk| tk.kbd_text)),
-    )
-    .padding([1, 5])
-    .style(theme::kbd)
+    iced::widget::container(text(label).size(theme::sz::MICRO))
+        .padding([1, 5])
+        .style(style)
 }
 
 /// Body text at the micro size (tags, eyebrows, hints).
@@ -95,6 +93,17 @@ pub fn dot(size: f32, color: impl Fn(&Theme) -> Color + 'static) -> Element<'sta
                     width: 0.0,
                     radius: (size / 2.0).into(),
                 })
+        })
+        .into()
+}
+
+/// A 1px horizontal divider spanning the full width.
+pub fn divider() -> Element<'static, Message> {
+    container(iced::widget::Space::new())
+        .width(Length::Fill)
+        .height(Length::Fixed(1.0))
+        .style(|t: &Theme| {
+            iced::widget::container::Style::default().background(theme::Tokens::of(t).border)
         })
         .into()
 }

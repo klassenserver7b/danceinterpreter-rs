@@ -3,18 +3,15 @@
 
 use crate::dataloading::dataprovider::ItemSource;
 use crate::dataloading::displayable_data::DisplayableData;
-use crate::ui::config_window::{ConfigWindow, source_tag};
+use crate::ui::config_window::source_tag;
 use crate::ui::theme::{self, sz};
-use crate::ui::widgets::{buttons, heading, material_symbol, material_symbol_sized};
+use crate::ui::widgets::{buttons, heading, kbd, material_symbol, material_symbol_sized};
 use crate::{DanceInterpreter, Message};
 use iced::alignment::Vertical;
 use iced::widget::{column as col, container, image, row, text};
 use iced::{Alignment, Color, ContentFit, Element, Length, Theme};
 
-pub fn build<'a>(
-    _config_window: &'a ConfigWindow,
-    dance_interpreter: &'a DanceInterpreter,
-) -> Element<'a, Message> {
+pub fn build<'a>(dance_interpreter: &'a DanceInterpreter) -> Element<'a, Message> {
     let provider = &dance_interpreter.data_provider;
     let current = provider.get_current_source();
 
@@ -57,12 +54,10 @@ pub fn build<'a>(
             .style(theme::cover_placeholder)
             .into(),
             None => container(material_symbol("music_note", false).size(22.0).style(
-                |t: &Theme| iced::widget::text::Style {
-                    color: Some(Color {
-                        a: 0.35,
-                        ..theme::Tokens::of(t).accent_soft
-                    }),
-                },
+                theme::text_style(move |tk| Color {
+                    a: 0.35,
+                    ..tk.accent_soft
+                }),
             ))
             .width(Length::Fixed(56.0))
             .height(Length::Fill)
@@ -164,7 +159,7 @@ fn transport<'a>(is_blank: bool, position: String) -> Element<'a, Message> {
         row![
             material_symbol_sized("skip_next", false, 15.0),
             text("Next song").size(sz::BASE),
-            kbd_on_accent("Space"),
+            kbd("Space", kbd_accent),
         ]
         .spacing(8)
         .align_y(Vertical::Center),
@@ -175,16 +170,11 @@ fn transport<'a>(is_blank: bool, position: String) -> Element<'a, Message> {
         crate::dataloading::dataprovider::ItemChange::Next,
     ));
 
-    let position_text =
-        text(position)
-            .size(sz::SMALL)
-            .style(move |t: &Theme| iced::widget::text::Style {
-                color: Some(if is_blank {
-                    theme::Tokens::of(t).faint
-                } else {
-                    theme::Tokens::of(t).muted
-                }),
-            });
+    let position_text = text(position)
+        .size(sz::SMALL)
+        .style(theme::text_style(move |tk| {
+            if is_blank { tk.faint } else { tk.muted }
+        }));
 
     container(
         row![prev, next_button, position_text]
@@ -194,20 +184,16 @@ fn transport<'a>(is_blank: bool, position: String) -> Element<'a, Message> {
     .into()
 }
 
-/// Small kbd pill tinted for use on colored surfaces.
-fn kbd_on_accent<'a>(label: &'a str) -> Element<'a, Message> {
-    container(text(label).size(sz::MICRO))
-        .padding([1, 5])
-        .style(|t: &Theme| {
-            let tk = theme::Tokens::of(t);
-            container::Style::default().border(iced::Border {
-                color: Color {
-                    a: 0.4,
-                    ..tk.btn2_border
-                },
-                width: 1.0,
-                radius: 3.0.into(),
-            })
-        })
-        .into()
+/// Kbd pill style tinted for use on colored (button) surfaces: hairline in
+/// the secondary-button border color, text inherited from the button.
+fn kbd_accent(theme: &Theme) -> iced::widget::container::Style {
+    let tk = theme::Tokens::of(theme);
+    iced::widget::container::Style::default().border(iced::Border {
+        color: Color {
+            a: 0.4,
+            ..tk.btn2_border
+        },
+        width: 1.0,
+        radius: theme::r::XS.into(),
+    })
 }

@@ -8,7 +8,7 @@ use crate::ui::theme::{self, sz};
 use crate::ui::widgets::material_symbol_sized;
 use iced::alignment::Vertical;
 use iced::widget::text::IntoFragment;
-use iced::widget::{Button, button, text};
+use iced::widget::{Button, button, row, text};
 use iced::{Length, Pixels, Renderer, Theme};
 
 fn label_text<'a>(label: impl IntoFragment<'a>) -> iced::widget::Text<'a, Theme, Renderer> {
@@ -61,6 +61,32 @@ pub fn ghost_icon<'a>(
 ) -> Button<'a, Message> {
     button(material_symbol_sized(icon_id, filled, size))
         .padding(5)
+        .style(theme::btn_ghost)
+        .on_press(message)
+        .width(Length::Shrink)
+}
+
+/// Ghost button with a leading icon and a small label (top bar actions),
+/// optionally with a small trailing icon.
+pub fn ghost_labelled<'a>(
+    icon_id: &'a str,
+    label: impl IntoFragment<'a> + 'a,
+    trailing_icon: Option<&'a str>,
+    message: Message,
+) -> Button<'a, Message> {
+    let mut content = row![
+        material_symbol_sized(icon_id, false, sz::ICON),
+        text(label).size(sz::SMALL).align_y(Vertical::Center),
+    ]
+    .spacing(8)
+    .align_y(Vertical::Center);
+
+    if let Some(trailing_icon) = trailing_icon {
+        content = content.push(material_symbol_sized(trailing_icon, false, 13.0));
+    }
+
+    button(content)
+        .padding([6, 8])
         .style(theme::btn_ghost)
         .on_press(message)
         .width(Length::Shrink)

@@ -700,6 +700,24 @@ pub fn chip() -> impl Fn(&Theme) -> container::Style {
     }
 }
 
+/// Collapsible side panel (info rail, DJ panel): rounded panel card that
+/// paints nothing while collapsed (animated width ~0) so no border hairline
+/// survives at the window edge. Callers needing a shadow add it to the
+/// returned style.
+pub fn panel_collapsible(theme: &Theme, width: f32) -> container::Style {
+    if width < 1.0 {
+        return container::Style::default();
+    }
+    let t = Tokens::of(theme);
+    container::Style::default()
+        .background(t.panel)
+        .border(Border {
+            color: t.border,
+            width: 1.0,
+            radius: Radius::from(r::MODAL),
+        })
+}
+
 /// Blends a user-picked color toward the theme text color when its contrast
 /// against the background is too low. Dance colors are picked freely and are
 /// often too dark (or too close to the background) to stay readable.
@@ -736,13 +754,16 @@ pub fn cover_placeholder(theme: &Theme) -> container::Style {
 /// Keyboard hint pill.
 pub fn kbd(theme: &Theme) -> container::Style {
     let t = Tokens::of(theme);
-    container::Style::default()
-        .background(t.kbd_bg)
-        .border(Border {
-            color: t.kbd_border,
-            width: 1.0,
-            radius: Radius::from(r::XS),
-        })
+    container::Style {
+        text_color: Some(t.kbd_text),
+        ..container::Style::default()
+    }
+    .background(t.kbd_bg)
+    .border(Border {
+        color: t.kbd_border,
+        width: 1.0,
+        radius: Radius::from(r::XS),
+    })
 }
 
 // ---------------------------------------------------------------------------

@@ -168,12 +168,11 @@ fn setting_row<'a>(label: &'a str, control: Element<'a, Message>) -> Element<'a,
         .align_y(Alignment::Center)
         .spacing(20)
         .padding([13, 0]),
-        super::top_bar::divider(),
+        crate::ui::widgets::divider(),
     ]
     .width(Length::Fill)
     .into()
 }
-
 fn section_label(label: &'static str) -> Element<'static, Message> {
     container(
         text(label)
@@ -364,7 +363,7 @@ fn build_help() -> (
                         .size(sz::BASE)
                         .style(theme::text_style(|tk| tk.text_soft))
                         .width(Length::Fill),
-                    kbd(*keys),
+                    kbd(*keys, theme::kbd),
                 ]
                 .align_y(Alignment::Center),
             )

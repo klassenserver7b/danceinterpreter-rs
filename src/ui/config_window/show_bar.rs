@@ -2,14 +2,14 @@
 //! operator's one-click show control during an event.
 
 use crate::dataloading::dataprovider::{ItemChange, ItemSource};
-use crate::ui::config_window::{ConfigWindow, View};
+use crate::ui::config_window::View;
 use crate::ui::theme::{self, sz};
-use crate::ui::widgets::{kbd, material_symbol, material_symbol_sized};
+use crate::ui::widgets::{dot, kbd, material_symbol, material_symbol_sized};
 use crate::ui::with_tooltip;
 use crate::{DanceInterpreter, Message};
 use iced::widget::scrollable::{Direction, Scrollbar};
 use iced::widget::{button, container, row, scrollable, text};
-use iced::{Alignment, Element, Length, Theme};
+use iced::{Alignment, Color, Element, Length, Theme};
 
 /// Total height the show bar occupies at the window bottom (77px bar plus
 /// margin); floating overlays such as the toast keep this much clearance.
@@ -18,10 +18,7 @@ pub const DOCK_CLEARANCE: f32 = 92.0;
 /// Height of the show bar's pills and of the label band.
 pub const PILL_HEIGHT: f32 = 33.0;
 
-pub fn build<'a>(
-    _config_window: &'a ConfigWindow,
-    dance_interpreter: &'a DanceInterpreter,
-) -> Element<'a, Message> {
+pub fn build<'a>(dance_interpreter: &'a DanceInterpreter) -> Element<'a, Message> {
     let current = dance_interpreter.data_provider.get_current_source().clone();
 
     let label = row![
@@ -39,8 +36,8 @@ pub fn build<'a>(
     let blank = quick_button(
         Some("crop_free"),
         "Blank",
-        Some(kbd("End").into()),
-        current == ItemSource::Blank,
+        Some(kbd("End", theme::kbd).into()),
+        matches!(&current, ItemSource::Blank),
         Message::ItemChanged(ItemChange::Blank),
     );
 
@@ -48,7 +45,7 @@ pub fn build<'a>(
         Some("graphic_eq"),
         "DJ live",
         None,
-        current == ItemSource::Traktor,
+        matches!(&current, ItemSource::Traktor),
         Message::ItemChanged(ItemChange::Traktor),
     );
 
@@ -70,23 +67,13 @@ pub fn build<'a>(
         .iter()
         .filter(|(_, s)| s.is_favorite)
     {
-        let active = current == ItemSource::Static(name.clone());
+        let active = matches!(&current, ItemSource::Static(current_name) if *current_name == *name);
+        // Dark-based fallback (not theme-aware) per the approved prototype.
         let color = static_info
             .color
             .unwrap_or_else(|| theme::Tokens::dark().muted);
 
-        let dot = container(iced::widget::Space::new())
-            .width(Length::Fixed(5.0))
-            .height(Length::Fixed(5.0))
-            .style(move |_: &Theme| {
-                container::Style::default()
-                    .background(color)
-                    .border(iced::Border {
-                        color: iced::Color::TRANSPARENT,
-                        width: 0.0,
-                        radius: 3.0.into(),
-                    })
-            });
+        let dot = dot(5.0, move |_| color);
 
         let btn = button(
             row![dot, text(&static_info.name).size(sz::TINY)]
@@ -96,13 +83,7 @@ pub fn build<'a>(
         )
         .padding([0, 11])
         .height(Length::Fixed(PILL_HEIGHT))
-        .style(move |t: &Theme, s: button::Status| {
-            if active {
-                theme::btn_active(t, s)
-            } else {
-                theme::btn_secondary(t, s)
-            }
-        })
+        .style(move |t: &Theme, s: button::Status| pill_style(t, s, active))
         .on_press(Message::ItemChanged(ItemChange::StaticAbsolute(
             name.clone(),
         )));
@@ -163,27 +144,16 @@ fn quick_button<'a>(
 
     if let Some(icon) = icon {
         content = content.push(
-            material_symbol_sized(icon, false, 15.0).style(move |t: &Theme| {
-                iced::widget::text::Style {
-                    color: Some(if active {
-                        theme::Tokens::of(t).active_text
-                    } else {
-                        theme::Tokens::of(t).btn2_text
-                    }),
-                }
-            }),
+            material_symbol_sized(icon, false, 15.0)
+                .style(theme::text_style(move |tk| pill_text(tk, active))),
         );
     }
 
-    content = content.push(text(label).size(sz::TINY).style(move |t: &Theme| {
-        iced::widget::text::Style {
-            color: Some(if active {
-                theme::Tokens::of(t).active_text
-            } else {
-                theme::Tokens::of(t).btn2_text
-            }),
-        }
-    }));
+    content = content.push(
+        text(label)
+            .size(sz::TINY)
+            .style(theme::text_style(move |tk| pill_text(tk, active))),
+    );
 
     if let Some(hint) = hint {
         content = content.push(hint);
@@ -192,13 +162,7 @@ fn quick_button<'a>(
     let btn = button(content)
         .padding([0, 11])
         .height(Length::Fixed(PILL_HEIGHT))
-        .style(move |t: &Theme, s: button::Status| {
-            if active {
-                theme::btn_active(t, s)
-            } else {
-                theme::btn_secondary(t, s)
-            }
-        });
+        .style(move |t: &Theme, s: button::Status| pill_style(t, s, active));
 
     if active {
         // The active item is already on screen; pressing again is a no-op.
@@ -206,4 +170,18 @@ fn quick_button<'a>(
     } else {
         btn.on_press(message).into()
     }
+}
+
+/// Pill button style: active variant while this source is on screen.
+fn pill_style(t: &Theme, s: button::Status, active: bool) -> button::Style {
+    if active {
+        theme::btn_active(t, s)
+    } else {
+        theme::btn_secondary(t, s)
+    }
+}
+
+/// Pill text/icon color.
+fn pill_text(tk: &theme::Tokens, active: bool) -> Color {
+    if active { tk.active_text } else { tk.btn2_text }
 }
