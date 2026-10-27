@@ -80,7 +80,7 @@ pub fn build<'a>(
     };
 
     let kicker = row![
-        crate::ui::config_window::nav_sidebar::dot(6.0, |t| theme::Tokens::of(t).dot_green),
+        crate::ui::widgets::dot(6.0, |t| theme::Tokens::of(t).dot_green),
         text("ON THE FLOOR")
             .size(sz::TINY)
             .style(theme::text_style(|tk| tk.muted)),

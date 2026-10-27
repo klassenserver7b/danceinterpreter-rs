@@ -3,7 +3,7 @@
 
 use crate::dataloading::dataprovider::ItemChange;
 use crate::traktor_api::TraktorMessage;
-use crate::ui::config_window::sidebar::SidebarMessage;
+use crate::ui::config_window::dj_panel::SidebarMessage;
 use crate::ui::config_window::{ConfigWindow, source_tag};
 use crate::ui::theme::{self, sz};
 use crate::ui::widgets::{buttons, heading, kbd, material_symbol, material_symbol_sized};
@@ -226,7 +226,7 @@ fn build_dj_card<'a>(
     });
 
     let connection_row = row![
-        container(crate::ui::config_window::nav_sidebar::dot(6.0, move |t| {
+        container(crate::ui::widgets::dot(6.0, move |t| {
             theme::led_color(t, connection)
         })),
         text(summary)

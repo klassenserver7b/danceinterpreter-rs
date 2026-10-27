@@ -1,12 +1,14 @@
 use crate::Message;
 use crate::ui::theme;
 use iced::advanced::text::Shaping;
-use iced::widget::{Text, text, toggler};
-use iced::{Color, Font, Length, Pixels, Renderer, Theme};
+use iced::widget::{Text, container, text, toggler};
+use iced::{Color, Element, Font, Length, Pixels, Renderer, Theme};
 
 pub mod buttons;
+pub mod canvas;
 pub mod color_swatch;
 pub mod parity;
+pub mod suggestion_text_input;
 
 /// Small labeled toggler (switch) styled with the design tokens.
 pub fn labeled_message_toggler(
@@ -67,6 +69,24 @@ pub fn kbd<'a>(
 /// Body text at the micro size (tags, eyebrows, hints).
 pub fn text_micro<'a>(label: impl text::IntoFragment<'a>) -> Text<'a, Theme, Renderer> {
     text(label).size(theme::sz::MICRO)
+}
+
+/// Small filled circle (status dots, dance color dots). `color` resolves the
+/// fill from the active theme.
+pub fn dot(size: f32, color: impl Fn(&Theme) -> Color + 'static) -> Element<'static, Message> {
+    container(iced::widget::Space::new())
+        .width(Length::Fixed(size))
+        .height(Length::Fixed(size))
+        .style(move |t: &Theme| {
+            iced::widget::container::Style::default()
+                .background(color(t))
+                .border(iced::Border {
+                    color: Color::TRANSPARENT,
+                    width: 0.0,
+                    radius: (size / 2.0).into(),
+                })
+        })
+        .into()
 }
 
 /// Manrope heading text.

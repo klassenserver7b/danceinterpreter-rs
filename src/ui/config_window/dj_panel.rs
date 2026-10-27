@@ -7,9 +7,10 @@ use crate::traktor_api::{
 };
 use crate::ui::config_window::source_tag;
 use crate::ui::theme::{self, sz};
-use crate::ui::widget::canvas_toggle::CanvasToggle;
-use crate::ui::widget::suggestion_text_input::SuggestionTextInput;
-use crate::ui::widget::{power_button, restart_button, suggestion_text_input};
+use crate::ui::widgets::canvas::canvas_toggle::CanvasToggle;
+use crate::ui::widgets::canvas::{power_button, restart_button};
+use crate::ui::widgets::suggestion_text_input;
+use crate::ui::widgets::suggestion_text_input::SuggestionTextInput;
 use crate::ui::widgets::{buttons, heading, labeled_message_toggler, material_symbol};
 use crate::ui::with_tooltip;
 use crate::{DanceInterpreter, Message};

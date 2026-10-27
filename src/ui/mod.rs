@@ -4,7 +4,7 @@ use iced::widget::{container, text, tooltip};
 pub mod config_window;
 pub mod song_window;
 pub mod theme;
-pub mod widget;
+
 pub mod widgets;
 
 /// Wraps a widget in a tooltip with a readable styled container.

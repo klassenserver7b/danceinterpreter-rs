@@ -264,22 +264,6 @@ fn nav_item_impl<'a>(
         .into()
 }
 
-pub fn dot(size: f32, color: impl Fn(&Theme) -> Color + 'static) -> Element<'static, Message> {
-    container(iced::widget::Space::new())
-        .width(Length::Fixed(size))
-        .height(Length::Fixed(size))
-        .style(move |t: &Theme| {
-            container::Style::default()
-                .background(color(t))
-                .border(iced::Border {
-                    color: Color::TRANSPARENT,
-                    width: 0.0,
-                    radius: (size / 2.0).into(),
-                })
-        })
-        .into()
-}
-
 fn version_row() -> Element<'static, Message> {
     container(
         row![

@@ -12,7 +12,7 @@ use crate::dataloading::id3tagreader::read_song_info_from_filepath;
 use crate::dataloading::m3uloader::load_tag_data_from_m3u;
 use crate::dataloading::songinfo::SongInfo;
 use crate::traktor_api::{ServerMessage, StateUpdate, TraktorMessage, TraktorSyncAction};
-use crate::ui::config_window::sidebar::SidebarMessage;
+use crate::ui::config_window::dj_panel::SidebarMessage;
 use crate::ui::config_window::{
     ConfigWindow, DialogState, EditField, EditSnapshot, PLAYLIST_SCROLLABLE_ID, Toast, View,
     edit_input_id,

@@ -4,12 +4,12 @@
 //! quick-show bar, toasts and modal dialogs.
 
 pub mod dialog;
+pub mod dj_panel;
 pub mod nav_sidebar;
 pub mod now_card;
 pub mod playlist_view;
 pub mod right_column;
 pub mod show_bar;
-pub mod sidebar;
 pub mod statics_view;
 pub mod toast;
 pub mod top_bar;
@@ -17,7 +17,7 @@ pub mod top_bar;
 pub use dialog::DialogState;
 pub use playlist_view::PLAYLIST_SCROLLABLE_ID;
 
-use crate::ui::config_window::sidebar::Sidebar;
+use crate::ui::config_window::dj_panel::Sidebar;
 use crate::ui::theme;
 use crate::{DanceInterpreter, Message, Window};
 use iced::widget::{column as col, container, mouse_area, row, stack};

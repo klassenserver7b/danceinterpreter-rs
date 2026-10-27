@@ -2,8 +2,8 @@
 //! quick-add row and summary footer. Includes the empty/first-run state.
 
 use crate::dataloading::dataprovider::{ItemChange, ItemSource};
+use crate::ui::config_window::dj_panel::SidebarMessage;
 use crate::ui::config_window::search::data_matches_search_query;
-use crate::ui::config_window::sidebar::SidebarMessage;
 use crate::ui::config_window::{ConfigWindow, EditField, edit_input_id};
 use crate::ui::theme::RowLook;
 use crate::ui::theme::{self, sz};
@@ -317,7 +317,7 @@ fn build_song_row<'a>(
 
     let status: Element<'a, Message> = if is_current {
         row![
-            crate::ui::config_window::nav_sidebar::dot(5.0, |t| theme::Tokens::of(t).accent_soft),
+            crate::ui::widgets::dot(5.0, |t| theme::Tokens::of(t).accent_soft),
             text("On air")
                 .size(sz::SMALL)
                 .style(theme::text_style(|tk| tk.accent_soft)),
@@ -482,7 +482,7 @@ fn build_dance_cell<'a>(
 
     let chip = container(
         row![
-            crate::ui::config_window::nav_sidebar::dot(7.0, move |t| {
+            crate::ui::widgets::dot(7.0, move |t| {
                 color
                     .map(|c| theme::readable(c, t))
                     .unwrap_or_else(|| theme::Tokens::of(t).muted)
