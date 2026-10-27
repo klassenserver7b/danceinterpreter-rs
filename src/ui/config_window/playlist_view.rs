@@ -7,9 +7,12 @@ use crate::ui::config_window::search::data_matches_search_query;
 use crate::ui::config_window::{ConfigWindow, EditField, edit_input_id};
 use crate::ui::theme::RowLook;
 use crate::ui::theme::{self, sz};
-use crate::ui::widgets::{buttons, heading, material_symbol, material_symbol_sized};
+use crate::ui::widgets::{
+    ACCENT_BAR_W, buttons, dot, heading, material_symbol, material_symbol_sized, panel_header,
+    row_shell,
+};
 use crate::ui::with_tooltip;
-use crate::{DanceInterpreter, DialogMessage, Message, QuickAddMessage};
+use crate::{DanceInterpreter, DialogMessage, Message, QuickAddMessage, SearchMessage};
 use iced::advanced::text::{Shaping, Wrapping};
 use iced::widget::{
     Column, Space, button, column as col, container, mouse_area, row, scrollable, text, text_input,
@@ -25,7 +28,14 @@ const COL_NUMBER: f32 = 28.0;
 const COL_DANCE: f32 = 150.0;
 const COL_STATUS: f32 = 78.0;
 const COL_ACTIONS: f32 = 78.0;
-const ROW_HEIGHT: f32 = 68.0;
+/// Height of the column-label band above the rows.
+const TABLE_HEAD_HEIGHT: f32 = 33.0;
+/// Widths of the quick-add inputs (the artist column mirrors the dance
+/// column above).
+const COL_QUICK_DANCE: f32 = 130.0;
+/// Search field metrics.
+const SEARCH_WIDTH: f32 = 170.0;
+const SEARCH_HEIGHT: f32 = 30.0;
 
 pub fn build<'a>(
     config_window: &'a ConfigWindow,
@@ -62,22 +72,7 @@ fn build_toolbar<'a>(
     dance_interpreter: &'a DanceInterpreter,
 ) -> Element<'a, Message> {
     let count = dance_interpreter.data_provider.playlist().len();
-
-    let title = row![
-        material_symbol_sized("format_list_bulleted", false, 15.0)
-            .style(theme::text_style(|tk| tk.muted)),
-        heading(
-            "Evening playlist",
-            sz::PANEL_TITLE,
-            iced::font::Weight::Semibold
-        )
-        .style(theme::text_style(|tk| tk.text)),
-        text(format!("{} songs", count))
-            .size(sz::TINY)
-            .style(theme::text_style(|tk| tk.muted)),
-    ]
-    .spacing(9)
-    .align_y(Alignment::Center);
+    let count_label = format!("{count} {}", if count == 1 { "song" } else { "songs" });
 
     let mut tools = row![].spacing(10).align_y(Alignment::Center);
 
@@ -100,59 +95,65 @@ fn build_toolbar<'a>(
         "Undo delete",
     ));
 
-    container(
-        row![
-            title,
-            container(tools).width(Length::Fill).align_x(Alignment::End)
-        ]
-        .width(Length::Fill)
-        .align_y(Alignment::Center),
+    panel_header(
+        "format_list_bulleted",
+        "Evening playlist",
+        count_label,
+        tools.into(),
     )
-    .padding([14, 17])
-    .width(Length::Fill)
-    .into()
 }
 
 fn build_search<'a>(config_window: &'a ConfigWindow) -> Element<'a, Message> {
     let input = text_input("Find a song, artist, dance…", &config_window.search_query)
         .size(sz::TINY)
-        .width(Length::Fixed(170.0))
+        .width(Length::Fixed(SEARCH_WIDTH))
         .id(config_window.search_input_id.clone())
-        .on_input(|v| Message::Search(crate::SearchMessage::Changed(v)))
-        .on_submit(Message::Noop)
+        .on_input(|v| Message::Search(SearchMessage::Changed(v)))
         .style(theme::input_boxed)
         .padding([5, 8]);
 
-    let close = buttons::ghost_icon(
+    let mut search_row = row![
+        material_symbol_sized("search", false, 15.0).style(theme::text_style(|tk| tk.muted)),
+        input,
+    ]
+    .spacing(6)
+    .align_y(Alignment::Center);
+
+    // ✕ clears the query without hiding the search bar.
+    if !config_window.search_query.is_empty() {
+        search_row = search_row.push(with_tooltip(
+            buttons::ghost_icon(
+                "backspace",
+                false,
+                14.0,
+                Message::Search(SearchMessage::Clear),
+            ),
+            "Clear search",
+        ));
+    }
+
+    search_row = search_row.push(buttons::ghost_icon(
         "close",
         false,
         14.0,
-        Message::Search(crate::SearchMessage::Toggle),
-    );
+        Message::Search(SearchMessage::Toggle),
+    ));
 
-    container(
-        row![
-            material_symbol_sized("search", false, 15.0).style(theme::text_style(|tk| tk.muted)),
-            input,
-            close,
-        ]
-        .spacing(6)
-        .align_y(Alignment::Center),
-    )
-    .padding([0, 8])
-    .style(|t: &Theme| {
-        let tk = theme::Tokens::of(t);
-        container::Style::default()
-            .background(tk.panel_deep)
-            .border(iced::Border {
-                color: tk.border,
-                width: 1.0,
-                radius: 4.0.into(),
-            })
-    })
-    .height(Length::Fixed(30.0))
-    .align_y(Alignment::Center)
-    .into()
+    container(search_row)
+        .padding([0, 8])
+        .style(|t: &Theme| {
+            let tk = theme::Tokens::of(t);
+            container::Style::default()
+                .background(tk.panel_deep)
+                .border(iced::Border {
+                    color: tk.border,
+                    width: 1.0,
+                    radius: theme::r::SM.into(),
+                })
+        })
+        .height(Length::Fixed(SEARCH_HEIGHT))
+        .align_y(Alignment::Center)
+        .into()
 }
 
 // ---------------------------------------------------------------------------
@@ -171,10 +172,12 @@ fn build_table_head() -> Element<'static, Message> {
         .into()
     };
 
-    // The 3px spacer mirrors the row accent bar; its Fill height also
-    // inflates the line so align_y centers the head cells in the band.
+    // The accent-bar spacer mirrors the rows' accent bar; its Fill height
+    // also inflates the line so align_y centers the head cells in the band.
     let head = row![
-        Space::new().width(Length::Fixed(3.0)).height(Length::Fill),
+        Space::new()
+            .width(Length::Fixed(ACCENT_BAR_W))
+            .height(Length::Fill),
         head_cell("#", Length::Fixed(COL_NUMBER)),
         head_cell("SONG / ARTIST", Length::Fill),
         head_cell("DANCE", Length::Fixed(COL_DANCE)),
@@ -183,7 +186,7 @@ fn build_table_head() -> Element<'static, Message> {
     ]
     .spacing(7)
     .padding([0, 10])
-    .height(Length::Fixed(33.0))
+    .height(Length::Fixed(TABLE_HEAD_HEIGHT))
     .align_y(Alignment::Center);
 
     container(head).style(theme::table_head).into()
@@ -245,13 +248,9 @@ fn build_song_row<'a>(
     } else {
         text(format!("{:02}", idx + 1))
             .size(sz::TINY)
-            .style(move |t: &Theme| iced::widget::text::Style {
-                color: Some(if is_played {
-                    theme::Tokens::of(t).faint
-                } else {
-                    theme::Tokens::of(t).muted
-                }),
-            })
+            .style(theme::text_style(move |tk| {
+                if is_played { tk.faint } else { tk.muted }
+            }))
             .into()
     };
 
@@ -274,8 +273,8 @@ fn build_song_row<'a>(
             &song.title,
             "Title",
             sz::ROW,
-            |t: &Theme| theme::Tokens::of(t).text_soft,
-            |t: &Theme| theme::Tokens::of(t).faint,
+            |tk| tk.text_soft,
+            |tk| tk.faint,
         ))
         .on_double_click(Message::BeginSongEdit(idx, EditField::Title))
         .into()
@@ -295,8 +294,8 @@ fn build_song_row<'a>(
             &song.artist,
             "Artist",
             sz::BASE,
-            |t: &Theme| theme::Tokens::of(t).muted,
-            |t: &Theme| theme::Tokens::of(t).faint,
+            |tk| tk.muted,
+            |tk| tk.faint,
         ))
         .on_double_click(Message::BeginSongEdit(idx, EditField::Artist))
         .into()
@@ -312,7 +311,7 @@ fn build_song_row<'a>(
         edit_draft,
         idx,
         dance_color,
-        editing_field.is_some(),
+        editing_field == Some(EditField::Dance),
     );
 
     let status: Element<'a, Message> = if is_current {
@@ -401,41 +400,13 @@ fn build_song_row<'a>(
     .padding([0, 10])
     .width(Length::Fill);
 
-    // The accent bar is rendered on every row at a constant 3px width (only
-    // colored for the current song) so all columns of all rows — and the
-    // table head, which reserves the same 3px spacer — line up exactly.
-    let bar = container(Space::new())
-        .width(Length::Fixed(3.0))
-        .height(Length::Fill)
-        .style(move |t: &Theme| {
-            container::Style::default().background(if is_current {
-                theme::Tokens::of(t).accent_bar
-            } else {
-                Color::TRANSPARENT
-            })
-        });
-
     let look = RowLook {
         zebra: idx % 2 == 1,
         current: is_current,
         matched: is_match && !is_current,
     };
 
-    // The inner row needs an explicit fixed height: iced's layout marks
-    // children of Shrink-height rows as "compressed", which collapses the
-    // accent bar's Fill height to 0 and leaves the content stuck to the top.
-    // With a fixed height the bar expands to the full stripe, inflating the
-    // line height that align_y then centers the content block in.
-    container(
-        row![bar, content]
-            .width(Length::Fill)
-            .height(Length::Fixed(ROW_HEIGHT))
-            .align_y(Alignment::Center),
-    )
-    .height(Length::Fixed(ROW_HEIGHT))
-    .width(Length::Fill)
-    .style(move |t: &Theme| theme::row(t, look))
-    .into()
+    row_shell(content, look, |t| theme::Tokens::of(t).accent_bar)
 }
 
 // Dance cell: compact chip with an inline editable dance name. Submitting
@@ -457,7 +428,9 @@ fn build_dance_cell<'a>(
             .style(move |t: &Theme, status: iced::widget::text_input::Status| {
                 let mut style = theme::input_plain(t, status);
                 style.value = match color {
-                    Some(color) if !edit_draft.is_empty() => theme::readable(color, t),
+                    Some(color) if !edit_draft.is_empty() => {
+                        theme::readable(color, &theme::Tokens::of(t))
+                    }
                     _ => theme::Tokens::of(t).muted,
                 };
                 style
@@ -469,12 +442,8 @@ fn build_dance_cell<'a>(
             dance,
             "Unassigned",
             sz::BASE,
-            move |t: &Theme| {
-                color
-                    .map(|c| theme::readable(c, t))
-                    .unwrap_or_else(|| theme::Tokens::of(t).muted)
-            },
-            |t: &Theme| theme::Tokens::of(t).faint,
+            move |tk: &theme::Tokens| color.map(|c| theme::readable(c, tk)).unwrap_or(tk.muted),
+            |tk| tk.faint,
         ))
         .on_double_click(Message::BeginSongEdit(idx, EditField::Dance))
         .into()
@@ -482,10 +451,9 @@ fn build_dance_cell<'a>(
 
     let chip = container(
         row![
-            crate::ui::widgets::dot(7.0, move |t| {
-                color
-                    .map(|c| theme::readable(c, t))
-                    .unwrap_or_else(|| theme::Tokens::of(t).muted)
+            dot(7.0, move |t| {
+                let tk = theme::Tokens::of(t);
+                color.map(|c| theme::readable(c, &tk)).unwrap_or(tk.muted)
             }),
             dance_field,
         ]
@@ -508,26 +476,24 @@ fn editable_text<'a>(
     value: &'a str,
     placeholder: &'static str,
     size: f32,
-    value_color: impl Fn(&Theme) -> Color + 'a,
-    placeholder_color: impl Fn(&Theme) -> Color + 'a,
+    value_color: impl Fn(&theme::Tokens) -> Color + 'a,
+    placeholder_color: impl Fn(&theme::Tokens) -> Color + 'a,
 ) -> Element<'a, Message> {
+    // Two branches (instead of one shared binding) because the two color
+    // closures have distinct `impl Fn` types.
     if value.is_empty() {
         text(placeholder)
             .size(size)
             .shaping(Shaping::Advanced)
             .wrapping(Wrapping::None)
-            .style(move |t: &Theme| iced::widget::text::Style {
-                color: Some(placeholder_color(t)),
-            })
+            .style(theme::text_style(placeholder_color))
             .into()
     } else {
         text(value)
             .size(size)
             .shaping(Shaping::Advanced)
             .wrapping(Wrapping::None)
-            .style(move |t: &Theme| iced::widget::text::Style {
-                color: Some(value_color(t)),
-            })
+            .style(theme::text_style(value_color))
             .into()
     }
 }
@@ -549,14 +515,14 @@ fn build_quick_add<'a>(config_window: &'a ConfigWindow) -> Element<'a, Message> 
             .padding([5, 8]),
         text_input("Artist", &config_window.quick_artist)
             .size(sz::ROW)
-            .width(Length::Fixed(150.0))
+            .width(Length::Fixed(COL_DANCE))
             .on_input(|v| Message::QuickAdd(QuickAddMessage::UpdateArtist(v)))
             .on_submit(submit.clone())
             .style(theme::input_boxed)
             .padding([5, 8]),
         text_input("Dance", &config_window.quick_dance)
             .size(sz::ROW)
-            .width(Length::Fixed(130.0))
+            .width(Length::Fixed(COL_QUICK_DANCE))
             .on_input(|v| Message::QuickAdd(QuickAddMessage::UpdateDance(v)))
             .on_submit(submit.clone())
             .style(theme::input_boxed)
@@ -650,7 +616,7 @@ fn build_empty_playlist_view(dance_interpreter: &DanceInterpreter) -> Element<'s
     );
 
     let content = col![
-        heading("No playlist loaded.", 22.0, iced::font::Weight::Semibold)
+        heading("No playlist loaded.", sz::H2, iced::font::Weight::Semibold)
             .style(theme::text_style(|tk| tk.text)),
         text("Drop an .m3u or audio file anywhere in this window, or start below.")
             .size(sz::SMALL)
@@ -729,7 +695,7 @@ fn empty_state_card(
             border: iced::Border {
                 color: tk.border,
                 width: 1.0,
-                radius: 7.0.into(),
+                radius: theme::r::XL.into(),
             },
             ..button::Style::default()
         }

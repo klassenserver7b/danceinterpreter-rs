@@ -3,19 +3,20 @@
 
 use crate::dataloading::dataprovider::{ItemChange, ItemSource};
 use crate::dataloading::staticinfo::StaticInfo;
-use crate::ui::config_window::ConfigWindow;
 use crate::ui::config_window::search::data_matches_search_query;
+use crate::ui::config_window::{ConfigWindow, DialogState};
 use crate::ui::theme::RowLook;
 use crate::ui::theme::{self, sz};
 use crate::ui::widgets::{
     buttons, heading, material_symbol, material_symbol_colored, material_symbol_sized,
+    panel_header, row_shell,
 };
 use crate::ui::with_tooltip;
 use crate::{DanceInterpreter, DialogMessage, Message, StaticsMessage};
 use iced::widget::{
     Column, Space, button, column as col, container, row, scrollable, text, text_input,
 };
-use iced::{Alignment, Color, Element, Length, Theme};
+use iced::{Alignment, Element, Length};
 
 pub fn build<'a>(
     config_window: &'a ConfigWindow,
@@ -38,15 +39,12 @@ pub fn build<'a>(
     let list: Element<'_, Message> = if dance_interpreter.data_provider.statics().is_empty() {
         col![
             Space::new().height(Length::Fill),
-            heading("No statics yet.", 18.0, iced::font::Weight::Semibold)
+            heading("No statics yet.", sz::H2, iced::font::Weight::Semibold)
                 .style(theme::text_style(|tk| tk.text)),
             text("Statics appear automatically from playlist dances. Add one below.")
                 .size(sz::SMALL)
                 .style(theme::text_style(|tk| tk.muted)),
-            buttons::primary_small(
-                "Add static",
-                Message::OpenDialog(crate::ui::config_window::DialogState::AddStatic),
-            ),
+            buttons::primary_small("Add static", Message::OpenDialog(DialogState::AddStatic),),
             Space::new().height(Length::Fill),
         ]
         .spacing(10)
@@ -62,47 +60,22 @@ pub fn build<'a>(
             .into()
     };
 
-    let toolbar = container(
-        row![
-            row![
-                material_symbol_sized("grid_view", false, 15.0)
-                    .style(theme::text_style(|tk| tk.muted)),
-                heading(
-                    "Dances & announcements",
-                    sz::PANEL_TITLE,
-                    iced::font::Weight::Semibold
-                )
-                .style(theme::text_style(|tk| tk.text)),
-            ]
-            .spacing(9)
-            .align_y(Alignment::Center),
-            container(
-                row![
-                    with_tooltip(
-                        buttons::ghost_icon(
-                            "refresh",
-                            false,
-                            sz::ICON,
-                            Message::Statics(StaticsMessage::Reload),
-                        ),
-                        "Reload statics",
-                    ),
-                    buttons::primary_small(
-                        "Add static",
-                        Message::OpenDialog(crate::ui::config_window::DialogState::AddStatic),
-                    ),
-                ]
-                .spacing(8)
-                .align_y(Alignment::Center),
-            )
-            .width(Length::Fill)
-            .align_x(Alignment::End),
-        ]
-        .width(Length::Fill)
-        .align_y(Alignment::Center),
-    )
-    .padding([14, 17])
-    .width(Length::Fill);
+    let tools = row![
+        with_tooltip(
+            buttons::ghost_icon(
+                "refresh",
+                false,
+                sz::ICON,
+                Message::Statics(StaticsMessage::Reload),
+            ),
+            "Reload statics",
+        ),
+        buttons::primary_small("Add static", Message::OpenDialog(DialogState::AddStatic),),
+    ]
+    .spacing(8)
+    .align_y(Alignment::Center);
+
+    let toolbar = panel_header("grid_view", "Dances & announcements", "", tools.into());
 
     let panel = col![toolbar, list].width(Length::Fill).height(Length::Fill);
 
@@ -117,9 +90,7 @@ pub fn build<'a>(
 const COL_FAV: f32 = 26.0;
 const COL_COLOR: f32 = 26.0;
 const COL_CAPTION: f32 = 70.0;
-const ROW_HEIGHT: f32 = 62.0;
 
-#[allow(clippy::too_many_arguments)]
 fn build_static_row<'a>(
     config_window: &'a ConfigWindow,
     dance_interpreter: &'a DanceInterpreter,
@@ -128,31 +99,22 @@ fn build_static_row<'a>(
     idx: usize,
     is_match: bool,
 ) -> Element<'a, Message> {
-    let is_current =
-        *dance_interpreter.data_provider.get_current_source() == ItemSource::Static(name.clone());
+    let is_current = matches!(
+        dance_interpreter.data_provider.get_current_source(),
+        ItemSource::Static(current) if *current == name
+    );
 
-    // Favorite star.
-    let star: Element<'a, Message> = if static_info.is_favorite {
-        button(material_symbol_colored(
-            "star",
-            true,
-            theme::Tokens::of(&config_window.theme).star,
-        ))
+    let star_icon = if static_info.is_favorite {
+        material_symbol_colored("star", true, theme::Tokens::of(&config_window.theme).star)
+    } else {
+        material_symbol("star", false)
+    };
+    let star = button(star_icon)
         .padding(4)
         .style(theme::btn_ghost)
         .on_press(Message::Statics(StaticsMessage::ToggleFavorite(
             name.clone(),
-        )))
-        .into()
-    } else {
-        button(material_symbol("star", false))
-            .padding(4)
-            .style(theme::btn_ghost)
-            .on_press(Message::Statics(StaticsMessage::ToggleFavorite(
-                name.clone(),
-            )))
-            .into()
-    };
+        )));
 
     // Color swatch / color picker.
     let swatch_color = static_info
@@ -186,6 +148,7 @@ fn build_static_row<'a>(
     // Name (inline editable; submitting an existing name opens the merge dialog).
     let edit_name = name.clone();
     let name_input = text_input("Static name", &static_info.name)
+        .size(sz::ROW)
         .on_input(move |v| Message::Statics(StaticsMessage::UpdateName(edit_name.clone(), v)))
         .on_submit(Message::Statics(StaticsMessage::SubmitName(name.clone())))
         .style(theme::input_plain)
@@ -246,23 +209,8 @@ fn build_static_row<'a>(
     ]
     .spacing(10)
     .align_y(Alignment::Center)
-    .padding(crate::ui::theme::pad4(0.0, 19.0, 0.0, 14.0))
+    .padding(theme::pad4(0.0, 19.0, 0.0, 14.0))
     .width(Length::Fill);
-
-    // Constant 3px accent bar (colored only for the current static) so every
-    // row's columns line up regardless of selection.
-    let bar = container(Space::new())
-        .width(Length::Fixed(3.0))
-        .height(Length::Fill)
-        .style(move |t: &Theme| {
-            container::Style::default().background(if is_current {
-                static_info
-                    .color
-                    .unwrap_or_else(|| theme::Tokens::of(t).accent_bar)
-            } else {
-                Color::TRANSPARENT
-            })
-        });
 
     let look = RowLook {
         zebra: idx % 2 == 1,
@@ -270,16 +218,9 @@ fn build_static_row<'a>(
         matched: is_match && !is_current,
     };
 
-    // Same fixed-height pattern as the playlist rows: without it the accent
-    // bar collapses and the content sticks to the top of the stripe.
-    container(
-        row![bar, content]
-            .width(Length::Fill)
-            .height(Length::Fixed(ROW_HEIGHT))
-            .align_y(Alignment::Center),
-    )
-    .height(Length::Fixed(ROW_HEIGHT))
-    .width(Length::Fill)
-    .style(move |t: &Theme| theme::row(t, look))
-    .into()
+    // The current static's bar takes its dance color when it has one.
+    let static_color = static_info.color;
+    row_shell(content, look, move |t| {
+        static_color.unwrap_or_else(|| theme::Tokens::of(t).accent_bar)
+    })
 }

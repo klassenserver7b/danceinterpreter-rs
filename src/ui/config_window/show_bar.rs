@@ -11,6 +11,13 @@ use iced::widget::scrollable::{Direction, Scrollbar};
 use iced::widget::{button, container, row, scrollable, text};
 use iced::{Alignment, Element, Length, Theme};
 
+/// Total height the show bar occupies at the window bottom (77px bar plus
+/// margin); floating overlays such as the toast keep this much clearance.
+pub const DOCK_CLEARANCE: f32 = 92.0;
+
+/// Height of the show bar's pills and of the label band.
+pub const PILL_HEIGHT: f32 = 33.0;
+
 pub fn build<'a>(
     _config_window: &'a ConfigWindow,
     dance_interpreter: &'a DanceInterpreter,
@@ -88,7 +95,7 @@ pub fn build<'a>(
                 .align_y(Alignment::Center),
         )
         .padding([0, 11])
-        .height(Length::Fixed(33.0))
+        .height(Length::Fixed(PILL_HEIGHT))
         .style(move |t: &Theme, s: button::Status| {
             if active {
                 theme::btn_active(t, s)
@@ -116,7 +123,7 @@ pub fn build<'a>(
             .align_y(Alignment::Center),
         )
         .padding([0, 10])
-        .height(Length::Fixed(33.0))
+        .height(Length::Fixed(PILL_HEIGHT))
         .style(theme::btn_outline)
         .on_press(Message::SetView(View::Statics)),
         "Manage favorite statics",
@@ -184,7 +191,7 @@ fn quick_button<'a>(
 
     let btn = button(content)
         .padding([0, 11])
-        .height(Length::Fixed(33.0))
+        .height(Length::Fixed(PILL_HEIGHT))
         .style(move |t: &Theme, s: button::Status| {
             if active {
                 theme::btn_active(t, s)

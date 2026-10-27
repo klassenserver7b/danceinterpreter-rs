@@ -703,8 +703,7 @@ pub fn chip() -> impl Fn(&Theme) -> container::Style {
 /// Blends a user-picked color toward the theme text color when its contrast
 /// against the background is too low. Dance colors are picked freely and are
 /// often too dark (or too close to the background) to stay readable.
-pub fn readable(color: Color, theme: &Theme) -> Color {
-    let t = Tokens::of(theme);
+pub fn readable(color: Color, t: &Tokens) -> Color {
     let (hi, lo) = if luminance(color) > luminance(t.bg) {
         (color, t.bg)
     } else {

@@ -46,7 +46,12 @@ pub fn build(toast: &Option<Toast>) -> Option<Element<'_, Message>> {
             .height(Length::Fill)
             .align_x(Alignment::Center)
             .align_y(Vertical::Bottom)
-            .padding(crate::ui::theme::pad4(0.0, 0.0, 92.0, 0.0))
+            .padding(crate::ui::theme::pad4(
+                0.0,
+                0.0,
+                crate::ui::config_window::show_bar::DOCK_CLEARANCE,
+                0.0,
+            ))
             .into(),
     )
 }
