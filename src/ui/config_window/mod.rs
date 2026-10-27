@@ -31,7 +31,7 @@ use crate::traktor_api::ConnectionState;
 use crate::ui::config_window::dj_panel::Sidebar;
 use crate::ui::theme::{self, pad4};
 use crate::ui::widgets::text_micro;
-use crate::{DanceInterpreter, Message, Window};
+use crate::{DanceInterpreter, Message, StaticsMessage, Window};
 use iced::widget::{column as col, container, mouse_area, row, stack};
 use iced::{Alignment, Animation, Color, Element, Length, Size, Theme, animation, window};
 use std::path::PathBuf;
@@ -73,6 +73,12 @@ pub fn edit_input_id(idx: usize, field: EditField) -> iced::widget::Id {
     };
 
     iced::widget::Id::from(format!("song-{idx}-{field}"))
+}
+
+/// Widget id of the inline edit input for a static's name, so the `focus`
+/// task can target the input that only exists while editing.
+pub fn static_edit_input_id(name: &str) -> iced::widget::Id {
+    iced::widget::Id::from(format!("static-{name}"))
 }
 
 /// A short-lived notification bubble above the quick-show bar.
@@ -123,6 +129,11 @@ pub struct ConfigWindow {
     /// The playlist row field currently open for inline editing, if any.
     pub editing: Option<(usize, EditField)>,
 
+    /// The static whose name is open for inline editing, if any (the entry's
+    /// key). Shares the draft string with the playlist editor — the two are
+    /// never active at the same time.
+    pub static_editing: Option<String>,
+
     /// Buffer for the inline editor: keystrokes land here and are only
     /// committed to the song on Enter or click-away (Escape rolls back).
     pub edit_draft: String,
@@ -168,6 +179,7 @@ impl Window for ConfigWindow {
             color_picker_old_color: None,
 
             editing: None,
+            static_editing: None,
             edit_draft: String::new(),
             edit_snapshot: None,
 
@@ -270,13 +282,20 @@ impl ConfigWindow {
         .width(Length::Fill)
         .height(Length::Fill);
 
-        // While a playlist field is open for editing, a click that no widget
-        // claims commits the draft (treated exactly like pressing Enter), so
-        // re-editing always takes a double click. The wrapper is a polite
-        // observer: the editor, buttons and other inputs capture their clicks
-        // before they ever reach it — it only fires for dead areas.
-        let main: Element<'a, Message> = if self.editing.is_some() {
-            mouse_area(main).on_press(Message::EndSongEdit).into()
+        // While a playlist field or a static's name is open for editing, a
+        // click that no widget claims commits the draft (treated exactly
+        // like pressing Enter), so re-editing always takes a double click.
+        // The wrapper is a polite observer: the editor, buttons and other
+        // inputs capture their clicks before they ever reach it — it only
+        // fires for dead areas.
+        let main: Element<'a, Message> = if self.editing.is_some() || self.static_editing.is_some()
+        {
+            let commit = if self.editing.is_some() {
+                Message::EndSongEdit
+            } else {
+                Message::Statics(StaticsMessage::EndEdit)
+            };
+            mouse_area(main).on_press(commit).into()
         } else {
             main.into()
         };

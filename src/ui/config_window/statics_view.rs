@@ -3,7 +3,9 @@
 
 use crate::dataloading::dataprovider::{ItemChange, ItemSource};
 use crate::dataloading::staticinfo::StaticInfo;
+use crate::ui::config_window::playlist_view::editable_text;
 use crate::ui::config_window::search::data_matches_search_query;
+use crate::ui::config_window::static_edit_input_id;
 use crate::ui::config_window::{ConfigWindow, DialogState};
 use crate::ui::theme::RowLook;
 use crate::ui::theme::{self, pad4, sz};
@@ -13,7 +15,7 @@ use crate::ui::widgets::{
 };
 use crate::{DanceInterpreter, Message, StaticsMessage};
 use iced::widget::{
-    Column, Space, button, column as col, container, row, scrollable, text, text_input,
+    Column, Space, button, column as col, container, mouse_area, row, scrollable, text, text_input,
 };
 use iced::{Alignment, Element, Length};
 
@@ -136,14 +138,29 @@ fn build_static_row<'a>(
         swatch
     };
 
-    // Name (inline editable; submitting an existing name opens the merge dialog).
-    let edit_name = name.clone();
-    let name_input = text_input("Static name", &static_info.name)
-        .size(sz::ROW)
-        .on_input(move |v| Message::Statics(StaticsMessage::UpdateName(edit_name.clone(), v)))
-        .on_submit(Message::Statics(StaticsMessage::SubmitName(name.clone())))
-        .style(theme::input_plain)
-        .padding(0);
+    // Name (inline editable via double-click; submitting an existing name
+    // opens the merge dialog).
+    let editing_this = config_window.static_editing.as_deref() == Some(name.as_str());
+    let name_field: Element<'a, Message> = if editing_this {
+        text_input("Static name", &config_window.edit_draft)
+            .id(static_edit_input_id(&name))
+            .size(sz::ROW)
+            .on_input(|v| Message::Statics(StaticsMessage::DraftChanged(v)))
+            .on_submit(Message::Statics(StaticsMessage::EndEdit))
+            .style(theme::input_plain)
+            .padding(0)
+            .into()
+    } else {
+        mouse_area(editable_text(
+            &static_info.name,
+            "Static name",
+            sz::ROW,
+            |tk| tk.text_soft,
+            |tk| tk.faint,
+        ))
+        .on_double_click(Message::Statics(StaticsMessage::BeginEdit(name.clone())))
+        .into()
+    };
 
     let show_now = button(
         row![
@@ -177,7 +194,7 @@ fn build_static_row<'a>(
     let content = row![
         container(star).width(Length::Fixed(COL_FAV)),
         container(color_element).width(Length::Fixed(COL_COLOR)),
-        container(name_input).width(Length::Fill).clip(true),
+        container(name_field).width(Length::Fill).clip(true),
         container(
             text(usage_label)
                 .size(sz::TINY)

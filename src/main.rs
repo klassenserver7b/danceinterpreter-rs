@@ -15,7 +15,7 @@ use crate::ui::config_window::dj_panel::SidebarMessage;
 use crate::ui::config_window::toast;
 use crate::ui::config_window::{
     ConfigWindow, DialogState, EditField, EditSnapshot, PLAYLIST_SCROLLABLE_ID, Toast, View,
-    edit_input_id,
+    edit_input_id, static_edit_input_id,
 };
 use crate::ui::song_window::{Backdrop, SongWindow};
 use crate::ui::theme;
@@ -78,8 +78,14 @@ pub enum SearchMessage {
 pub enum StaticsMessage {
     Reload,
     ToggleFavorite(String),
-    UpdateName(String, String),
-    SubmitName(String),
+    /// Opens the inline name editor for the static with this key.
+    BeginEdit(String),
+    /// Commits the draft (Enter or click-away) and runs the rename/merge
+    /// flow.
+    EndEdit,
+    /// Closes the editor without writing anything (Escape).
+    CancelEdit,
+    DraftChanged(String),
     UpdateColor(String, iced::Color),
     PreviewColor(String, iced::Color),
     ToggleColorPicker(String),
@@ -451,6 +457,8 @@ impl DanceInterpreter {
             Message::EscapePressed => {
                 if self.config_window.editing.is_some() {
                     Task::done(Message::CancelSongEdit)
+                } else if self.config_window.static_editing.is_some() {
+                    Task::done(Message::Statics(StaticsMessage::CancelEdit))
                 } else if self.config_window.search_visible {
                     Task::done(Message::Search(SearchMessage::Toggle))
                 } else if self.config_window.active_dialog.is_some() {
@@ -527,6 +535,9 @@ impl DanceInterpreter {
 
             Message::Statics(msg) => match msg {
                 StaticsMessage::Reload => {
+                    // The editor cannot survive a reload; the key may be gone
+                    // or carry different data afterwards.
+                    self.config_window.static_editing = None;
                     self.data_provider.load_statics();
                     toast::task("Statics reloaded")
                 }
@@ -534,26 +545,54 @@ impl DanceInterpreter {
                     self.data_provider.toggle_static_favorite(&name);
                     ().into()
                 }
-                StaticsMessage::UpdateName(old_name, new_name) => {
-                    let _ = self.data_provider.rename_static(&old_name, &new_name);
+                StaticsMessage::BeginEdit(name) => {
+                    // The draft only lives in the editor until it is
+                    // committed, so Escape just closes it — no snapshot
+                    // needed for a single-field edit.
+                    self.config_window.edit_draft = self
+                        .data_provider
+                        .statics()
+                        .get(&name)
+                        .map(|s| s.name.clone())
+                        .unwrap_or_default();
+                    self.config_window.static_editing = Some(name.clone());
+                    focus(static_edit_input_id(&name))
+                }
+                StaticsMessage::EndEdit => {
+                    if let Some(key) = self.config_window.static_editing.take() {
+                        // Write the typed draft into the static, then run the
+                        // rename/merge flow over the entry's key.
+                        let draft = std::mem::take(&mut self.config_window.edit_draft);
+                        let _ = self.data_provider.rename_static(&key, &draft);
+                        match self.data_provider.process_static_name_submit(&key) {
+                            SubmitStaticResult::NeedsMerge { old_name, new_name } => {
+                                Task::done(new_name).map(move |new_name| {
+                                    Message::Statics(StaticsMessage::RequestMerge(
+                                        old_name.clone(),
+                                        new_name,
+                                    ))
+                                })
+                            }
+                            SubmitStaticResult::Success => toast::task("Static renamed"),
+                            SubmitStaticResult::Failed(message) => {
+                                toast::task(format!("Rename failed: {message}"))
+                            }
+                            SubmitStaticResult::Unchanged | SubmitStaticResult::NotFound => {
+                                ().into()
+                            }
+                        }
+                    } else {
+                        ().into()
+                    }
+                }
+                StaticsMessage::CancelEdit => {
+                    self.config_window.static_editing = None;
+                    self.config_window.edit_draft.clear();
                     ().into()
                 }
-                StaticsMessage::SubmitName(old_name) => {
-                    match self.data_provider.process_static_name_submit(&old_name) {
-                        SubmitStaticResult::NeedsMerge { old_name, new_name } => {
-                            Task::done(new_name).map(move |new_name| {
-                                Message::Statics(StaticsMessage::RequestMerge(
-                                    old_name.clone(),
-                                    new_name,
-                                ))
-                            })
-                        }
-                        SubmitStaticResult::Success => toast::task("Static renamed"),
-                        SubmitStaticResult::Failed(message) => {
-                            toast::task(format!("Rename failed: {message}"))
-                        }
-                        SubmitStaticResult::Unchanged | SubmitStaticResult::NotFound => ().into(),
-                    }
+                StaticsMessage::DraftChanged(draft) => {
+                    self.config_window.edit_draft = draft;
+                    ().into()
                 }
                 StaticsMessage::UpdateColor(name, color) => {
                     self.set_static_color(&name, color, true);

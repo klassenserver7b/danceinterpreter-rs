@@ -472,7 +472,10 @@ fn build_dance_cell<'a>(
 /// A plain-text stand-in for a row's inline text input (shown while the field
 /// is not being edited). Renders the placeholder word in the placeholder
 /// color when the value is empty, so blank rows stay clickable.
-fn editable_text<'a>(
+/// Playlist/statics shared: a plain text cell for an inline-editable value —
+/// the value (or the placeholder when empty) in the given colors, never
+/// interactive itself; the double-click wrapper lives with the row.
+pub(crate) fn editable_text<'a>(
     value: &'a str,
     placeholder: &'static str,
     size: f32,
