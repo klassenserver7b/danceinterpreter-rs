@@ -1,11 +1,12 @@
-//! Left navigation sidebar: brand, session card, view navigation and the
+//! Left navigation sidebar: brand, session card, and the view navigation /
 //! settings / help entries.
 
+use crate::res_file;
 use crate::ui::config_window::{ConfigWindow, DialogState, View};
 use crate::ui::theme::{self, pad4, sz};
-use crate::ui::widgets::{EllipsisText, kbd, material_symbol, push_right};
+use crate::ui::widgets::{EllipsisText, kbd, material_symbol};
 use crate::{DanceInterpreter, Message};
-use iced::widget::{column as col, container, row, text};
+use iced::widget::{column as col, container, row, svg, text};
 use iced::{Alignment, Color, Element, Length, Theme};
 
 /// Full width of the navigation sidebar when expanded.
@@ -13,7 +14,6 @@ pub const SIDEBAR_WIDTH: f32 = 218.0;
 
 // Geometry (design px).
 const NAV_ITEM_HEIGHT: f32 = 43.0;
-const VERSION_ROW_HEIGHT: f32 = 48.0;
 
 pub fn build<'a>(
     config_window: &'a ConfigWindow,
@@ -60,7 +60,6 @@ pub fn build<'a>(
             false,
             Message::OpenDialog(DialogState::Help),
         ),
-        version_row(),
     ]
     .spacing(3);
 
@@ -82,23 +81,15 @@ pub fn build<'a>(
 }
 
 fn brand() -> Element<'static, Message> {
-    let bars = [14.0, 25.0, 20.0, 10.0]
-        .into_iter()
-        .map(|h| {
-            container(iced::widget::Space::new())
-                .width(Length::Fixed(3.0))
-                .height(Length::Fixed(h))
-                .style(|t: &Theme| {
-                    container::Style::default().background(theme::Tokens::of(t).accent_soft)
-                })
-                .into()
-        })
-        .collect::<Vec<Element<'static, Message, Theme>>>();
-
-    let symbol = row(bars)
-        .spacing(3)
-        .height(Length::Fixed(25.0))
-        .align_y(Alignment::Center);
+    // Monochrome app icon, tinted via the svg color filter.
+    let symbol = svg(svg::Handle::from_memory(include_bytes!(res_file!(
+        "de.klassenserver7b.danceinterpreter-rs.svg"
+    ))))
+    .width(Length::Fixed(25.0))
+    .height(Length::Fixed(25.0))
+    .style(|t: &Theme, _| svg::Style {
+        color: Some(theme::Tokens::of(t).accent_soft),
+    });
 
     let name = row![
         text("dance")
@@ -129,48 +120,20 @@ fn session_card<'a>(config_window: &'a ConfigWindow) -> Element<'a, Message> {
         ),
     };
 
-    let icon_box = container(
-        material_symbol("graphic_eq", false)
-            .size(sz::ICON_SM)
-            .style(theme::text_style(|tk| tk.accent_nav_text)),
-    )
-    .width(Length::Fixed(30.0))
-    .height(Length::Fixed(32.0))
-    .align_x(Alignment::Center)
-    .align_y(Alignment::Center)
-    .style(|t: &Theme| {
-        let tk = theme::Tokens::of(t);
-        container::Style::default()
-            .background(tk.accent_nav_bg)
-            .border(iced::Border {
-                color: Color::TRANSPARENT,
-                width: 0.0,
-                radius: theme::r::MD.into(),
-            })
-    });
-
     container(
-        row![
-            icon_box,
-            col![
-                // Truncates with a trailing `…` so a long playlist file name
-                // cannot push the row past the sidebar edge.
-                EllipsisText::new(title)
-                    .size(sz::SMALL)
-                    .font(theme::body_font(iced::font::Weight::Semibold))
-                    .style(theme::text_style(|tk| tk.text)),
-                text(subtitle)
-                    .size(sz::MICRO)
-                    .style(theme::text_style(|tk| tk.muted)),
-            ]
-            .spacing(3)
-            .width(Length::Fill),
+        col![
+            EllipsisText::new(title)
+                .size(sz::SMALL)
+                .font(theme::body_font(iced::font::Weight::Semibold))
+                .style(theme::text_style(|tk| tk.text)),
+            text(subtitle)
+                .size(sz::MICRO)
+                .style(theme::text_style(|tk| tk.muted)),
         ]
-        .spacing(9)
-        .align_y(Alignment::Center)
+        .spacing(3)
         .width(Length::Fill),
     )
-    .padding(12)
+    .padding([10, 12])
     .style(|t: &Theme| {
         let tk = theme::Tokens::of(t);
         container::Style::default().border(iced::Border {
@@ -237,29 +200,4 @@ fn nav_item<'a>(
         .style(theme::btn_nav(selected))
         .on_press(message)
         .into()
-}
-
-fn version_row() -> Element<'static, Message> {
-    container(
-        row![
-            text("di")
-                .size(sz::ICON)
-                .font(theme::body_font(iced::font::Weight::Bold))
-                .style(theme::text_style(|tk| tk.accent_soft)),
-            text("Danceinterpreter")
-                .size(sz::MICRO)
-                .style(theme::text_style(|tk| tk.faint)),
-            push_right(
-                text(concat!("v", env!("CARGO_PKG_VERSION")))
-                    .size(sz::MICRO)
-                    .style(theme::text_style(|tk| tk.faint)),
-            ),
-        ]
-        .spacing(7)
-        .align_y(Alignment::Center),
-    )
-    .padding(pad4(0.0, 0.0, 0.0, 3.0))
-    .height(Length::Fixed(VERSION_ROW_HEIGHT))
-    .align_y(Alignment::Center)
-    .into()
 }

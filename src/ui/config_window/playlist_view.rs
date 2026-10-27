@@ -2,7 +2,6 @@
 //! quick-add row and summary footer. Includes the empty/first-run state.
 
 use crate::dataloading::dataprovider::{ItemChange, ItemSource};
-use crate::ui::config_window::dj_panel::SidebarMessage;
 use crate::ui::config_window::search::data_matches_search_query;
 use crate::ui::config_window::{ConfigWindow, EditField, edit_input_id};
 use crate::ui::theme::RowLook;
@@ -618,10 +617,10 @@ fn build_empty_playlist_view(dance_interpreter: &DanceInterpreter) -> Element<'s
         )
     } else {
         empty_state_card(
-            "link",
+            "agriculture",
             "Use DJ integration",
             "Connect Traktor or another DJ source",
-            Message::Sidebar(SidebarMessage::Toggle),
+            Message::ToggleInfoRail,
         )
     };
 

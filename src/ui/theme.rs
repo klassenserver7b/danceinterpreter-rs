@@ -88,8 +88,6 @@ pub mod r {
     pub const LG: f32 = 6.0;
     /// Cards.
     pub const XL: f32 = 7.0;
-    /// Hero (now-playing) card.
-    pub const HERO: f32 = 8.0;
     /// Modals.
     pub const MODAL: f32 = 10.0;
     /// Pill-shaped elements.
@@ -217,19 +215,9 @@ pub struct Tokens {
     pub kbd_bg: Color,
     pub kbd_text: Color,
 
-    // Now-playing card
-    pub now_border: Color,
-    pub now_grad_a: Color,
-    pub now_grad_b: Color,
-    pub now_grad_c: Color,
-
     // Inputs
     /// Wash behind focused inline inputs.
     pub input_focus_bg: Color,
-
-    // Cover art placeholder
-    pub cover_grad_a: Color,
-    pub cover_grad_b: Color,
 
     // Shadows
     pub shadow: Color,
@@ -320,15 +308,7 @@ impl Tokens {
             kbd_bg: rgb(0x22, 0x2C, 0x20),
             kbd_text: rgb(0xC3, 0xD0, 0xBC),
 
-            now_border: rgb(0x3C, 0x49, 0x38),
-            now_grad_a: rgb(0x26, 0x32, 0x24),
-            now_grad_b: rgb(0x20, 0x2C, 0x22),
-            now_grad_c: rgb(0x1A, 0x24, 0x1D),
-
             input_focus_bg: color!(0xFFFFFF, 0.04),
-
-            cover_grad_a: rgb(0x2C, 0x38, 0x2B),
-            cover_grad_b: rgb(0x17, 0x21, 0x1C),
 
             shadow: Color::from_rgba(0.0, 0.0, 0.0, 0.35),
         }
@@ -409,15 +389,7 @@ impl Tokens {
             kbd_bg: rgb(0xE9, 0xED, 0xE6),
             kbd_text: rgb(0x40, 0x4E, 0x45),
 
-            now_border: rgb(0xC2, 0xD2, 0xBA),
-            now_grad_a: rgb(0xE9, 0xF0, 0xE0),
-            now_grad_b: rgb(0xEE, 0xF2, 0xE9),
-            now_grad_c: rgb(0xF4, 0xF6, 0xF1),
-
             input_focus_bg: color!(0x242C26, 0.04),
-
-            cover_grad_a: rgb(0xDE, 0xE6, 0xD5),
-            cover_grad_b: rgb(0xC3, 0xD1, 0xBB),
 
             shadow: Color::from_rgba(0.0, 0.0, 0.0, 0.25),
         }
@@ -531,23 +503,7 @@ impl Tokens {
             kbd_bg: mix(bg, accent, 0.12),
             kbd_text: dim(0.18),
 
-            now_border: mix(bg, accent, if is_light { 0.65 } else { 0.3 }),
-            now_grad_a: mix(bg, accent, 0.15),
-            now_grad_b: mix(bg, accent, 0.1),
-            now_grad_c: mix(bg, accent, 0.05),
-
             input_focus_bg: with_alpha(text, 0.04),
-
-            cover_grad_a: if is_light {
-                mix(bg, text, 0.12)
-            } else {
-                mix(bg, accent, 0.16)
-            },
-            cover_grad_b: if is_light {
-                mix(bg, text, 0.25)
-            } else {
-                mix(bg, Color::BLACK, 0.35)
-            },
 
             shadow: with_alpha(Color::BLACK, if is_light { 0.25 } else { 0.35 }),
         }
@@ -611,23 +567,6 @@ pub fn sidebar_bg(theme: &Theme) -> container::Style {
         width: 1.0,
         radius: Radius::default(),
     })
-}
-
-/// Gradient "now playing" hero card.
-pub fn now_card(theme: &Theme) -> container::Style {
-    let t = Tokens::of(theme);
-    container::Style::default()
-        .background(Background::Gradient(iced::Gradient::Linear(
-            iced::gradient::Linear::new(0.0)
-                .add_stop(0.0, t.now_grad_a)
-                .add_stop(0.45, t.now_grad_b)
-                .add_stop(1.0, t.now_grad_c),
-        )))
-        .border(Border {
-            color: t.now_border,
-            width: 1.0,
-            radius: Radius::from(r::HERO),
-        })
 }
 
 /// Strip below the show bar / above rows.
@@ -774,22 +713,6 @@ pub fn readable(color: Color, t: &Tokens) -> Color {
     } else {
         color
     }
-}
-
-/// Placeholder cover art when a song has no embedded image.
-pub fn cover_placeholder(theme: &Theme) -> container::Style {
-    let t = Tokens::of(theme);
-    container::Style::default()
-        .background(Background::Gradient(iced::Gradient::Linear(
-            iced::gradient::Linear::new(1.2)
-                .add_stop(0.0, t.cover_grad_a)
-                .add_stop(1.0, t.cover_grad_b),
-        )))
-        .border(Border {
-            color: t.border,
-            width: 1.0,
-            radius: Radius::from(r::SM),
-        })
 }
 
 /// Keyboard hint pill.

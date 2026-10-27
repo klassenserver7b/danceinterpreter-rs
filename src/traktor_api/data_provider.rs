@@ -70,14 +70,14 @@ pub enum ConnectionState {
 }
 
 impl ConnectionState {
-    /// Human-readable summary of which clients are currently connected,
-    /// shared by the DJ panel status line and the right rail's DJ card.
+    /// Short status text for the LED in the Traktor card; the LED color
+    /// carries the connected/disconnected nuance.
     pub fn summary(&self) -> &'static str {
         match self {
             ConnectionState::Connected => "Traktor & Cover Loader",
-            ConnectionState::Traktor => "Traktor connected",
-            ConnectionState::CoverLoader => "Cover Loader connected",
-            ConnectionState::Disconnected => "No client connected",
+            ConnectionState::Traktor => "Traktor",
+            ConnectionState::CoverLoader => "Cover Loader",
+            ConnectionState::Disconnected => "No clients",
         }
     }
 }

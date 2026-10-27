@@ -1,18 +1,16 @@
-//! The operator-facing configuration window, redesigned after
-//! `docs/src/App.tsx`: left navigation sidebar, "now playing" hero card,
-//! playlist/statics panels, a right rail (up-next, DJ integration, tips), the
-//! quick-show bar, toasts and modal dialogs.
+//! The operator-facing configuration window: left navigation sidebar,
+//! playlist/statics panels, a right rail (now playing, up next, Traktor),
+//! the quick-show bar, toasts and modal dialogs.
 
 pub mod dialog;
-pub mod dj_panel;
 pub mod nav_sidebar;
-pub mod now_card;
 pub mod playlist_view;
 pub mod right_column;
 pub mod show_bar;
 pub mod statics_view;
 pub mod toast;
 pub mod top_bar;
+pub mod traktor_card;
 
 pub use dialog::DialogState;
 pub use playlist_view::PLAYLIST_SCROLLABLE_ID;
@@ -27,9 +25,10 @@ pub fn led_color(theme: &Theme, state: ConnectionState) -> Color {
     }
 }
 
+use crate::dataloading::dataprovider::DataProvider;
 use crate::traktor_api::ConnectionState;
-use crate::ui::config_window::dj_panel::Sidebar;
 use crate::ui::theme::{self, pad4};
+use crate::ui::widgets::suggestion_text_input;
 use crate::ui::widgets::text_micro;
 use crate::{DanceInterpreter, Message, StaticsMessage, Window};
 use iced::widget::{column as col, container, mouse_area, row, stack};
@@ -103,7 +102,7 @@ impl Toast {
     }
 }
 
-/// Slide/expand duration shared by the nav sidebar, info rail and DJ panel.
+/// Slide/expand duration shared by the nav sidebar and info rail.
 pub const SLIDE_DURATION: Duration = Duration::from_millis(140);
 
 pub struct ConfigWindow {
@@ -111,13 +110,17 @@ pub struct ConfigWindow {
     pub closed: bool,
     pub size: Size,
     pub enable_autoscroll: bool,
-    pub sidebar: Sidebar,
     pub view: View,
     pub theme: Theme,
 
     /// Collapsible columns: left navigation sidebar and right info rail.
     pub nav_anim: Animation<bool>,
     pub rail_anim: Animation<bool>,
+
+    /// Server-address presets and canvas caches of the Traktor card.
+    pub traktor_address_presets: suggestion_text_input::State<String>,
+    pub traktor_power_cache: iced::widget::canvas::Cache,
+    pub traktor_restart_cache: iced::widget::canvas::Cache,
 
     pub search_visible: bool,
     pub search_query: String,
@@ -167,7 +170,6 @@ impl Window for ConfigWindow {
             size: Size::default(),
 
             enable_autoscroll: true,
-            sidebar: Sidebar::new(),
             view: View::Playlist,
             theme: Theme::Dracula,
 
@@ -177,6 +179,10 @@ impl Window for ConfigWindow {
             rail_anim: Animation::new(true)
                 .duration(SLIDE_DURATION)
                 .easing(animation::Easing::EaseInOut),
+
+            traktor_address_presets: suggestion_text_input::State::default(),
+            traktor_power_cache: iced::widget::canvas::Cache::default(),
+            traktor_restart_cache: iced::widget::canvas::Cache::default(),
 
             search_visible: false,
             search_query: String::new(),
@@ -228,34 +234,27 @@ impl ConfigWindow {
     pub fn view<'a>(&'a self, dance_interpreter: &'a DanceInterpreter) -> Element<'a, Message> {
         let now = Instant::now();
 
-        // Primary content column: hero card and the active panel.
-        let primary = container(
-            col![
-                now_card::build(dance_interpreter),
-                match self.view {
-                    View::Playlist => playlist_view::build(self, dance_interpreter),
-                    View::Statics => statics_view::build(self, dance_interpreter),
-                },
-            ]
-            .spacing(22),
-        )
+        // Primary content column: the active panel.
+        let primary = container(match self.view {
+            View::Playlist => playlist_view::build(self, dance_interpreter),
+            View::Statics => statics_view::build(self, dance_interpreter),
+        })
         .padding(pad4(18.0, theme::PAGE_GUTTER, 22.0, theme::PAGE_GUTTER))
         .width(Length::Fill)
         .height(Length::Fill);
 
-        // Slide-in DJ integration panel (animated width, pushes content).
-        let dj_panel = self.sidebar.build(
+        // Collapsible columns; expanded width follows the window, capped at
+        // the design width with a readable floor.
+        let rail = right_column::build(
             dance_interpreter,
-            self.sidebar.state.interpolate(
+            self,
+            self.rail_anim.interpolate(
                 0.0,
-                Self::expanded_width(self.size.width, 5.0, 0.0, dj_panel::PANEL_WIDTH),
+                Self::expanded_width(self.size.width, 5.0, 210.0, right_column::RAIL_WIDTH),
                 now,
             ),
         );
 
-        // Collapsible columns: navigation sidebar (left) and info rail
-        // (right). Their expanded width follows the window (like the DJ
-        // panel), capped at the design width with a readable floor.
         let nav = nav_sidebar::build(
             self,
             dance_interpreter,
@@ -266,16 +265,7 @@ impl ConfigWindow {
             ),
         );
 
-        let rail = right_column::build(
-            dance_interpreter,
-            self.rail_anim.interpolate(
-                0.0,
-                Self::expanded_width(self.size.width, 5.0, 210.0, right_column::RAIL_WIDTH),
-                now,
-            ),
-        );
-
-        let content = row![primary, dj_panel, rail]
+        let content = row![primary, rail]
             .spacing(10)
             .width(Length::Fill)
             .height(Length::Fill);
@@ -330,6 +320,15 @@ impl ConfigWindow {
     /// Whether the left navigation sidebar is (being) shown.
     pub fn nav_open(&self) -> bool {
         self.nav_anim.value()
+    }
+
+    /// Rebuilds the Traktor card's server-address presets.
+    pub fn update_traktor_presets(&mut self, data_provider: &DataProvider) {
+        let presets = traktor_card::address_presets(data_provider);
+        self.traktor_address_presets = suggestion_text_input::State::with_selection(
+            presets,
+            Some(&data_provider.traktor_provider.address),
+        );
     }
 
     /// Whether the right info rail is (being) shown.

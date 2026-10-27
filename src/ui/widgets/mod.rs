@@ -4,7 +4,7 @@ use crate::dataloading::dataprovider::ItemSource;
 use crate::ui::theme;
 use crate::ui::with_tooltip;
 use iced::advanced::text::Shaping;
-use iced::widget::{Text, container, text, toggler};
+use iced::widget::{Text, container, text};
 use iced::{Alignment, Color, Element, Font, Length, Pixels, Renderer, Theme};
 
 /// Button builders (primary, secondary, ghosts).
@@ -29,20 +29,6 @@ pub const ROW_HEIGHT: f32 = 68.0;
 
 /// Vertical/horizontal padding of panel toolbars (playlist, statics).
 pub const PANEL_HEADER_PAD: [f32; 2] = [14.0, 17.0];
-
-/// Small labeled toggler (switch) styled with the design tokens.
-pub fn labeled_message_toggler(
-    label: &'_ str,
-    checked: bool,
-    message: fn(bool) -> Message,
-) -> toggler::Toggler<'_, Message> {
-    toggler(checked)
-        .label(label)
-        .on_toggle(message)
-        .width(Length::Fill)
-        .text_size(theme::sz::SMALL)
-        .style(theme::toggler_style)
-}
 
 /// Outlined (or filled) Material Symbols glyph at an explicit size.
 pub fn material_symbol_sized(

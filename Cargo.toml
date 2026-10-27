@@ -10,7 +10,7 @@ authors = ["Klassenserver7b <klassenserver7bwin10@gmail.com>", "Konsl <82901383+
 id3 = "1.17"
 url = "2.5"
 percent-encoding = "2.3"
-iced = { version = "0.14.0", features = ["image", "wayland", "canvas", "tokio", "advanced"] }
+iced = { version = "0.14.0", features = ["image", "svg", "wayland", "canvas", "tokio", "advanced"] }
 iced_aw = { version = "0.14.1", features = ["default", "color_picker"] }
 rfd = "0.17"
 dirs = "7.0"

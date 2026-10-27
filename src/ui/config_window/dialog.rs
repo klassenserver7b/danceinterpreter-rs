@@ -7,13 +7,13 @@ use crate::dataloading::dataprovider::ItemSource;
 use crate::ui::config_window::ConfigWindow;
 use crate::ui::song_window::Backdrop;
 use crate::ui::theme::{self, pad4, sz};
-use crate::ui::widgets::{
-    buttons, divider, eyebrow, heading, icon_button_tooltip, kbd, push_right,
+use crate::ui::widgets::{buttons, eyebrow, heading, icon_button_tooltip, kbd, push_right};
+use crate::{
+    DanceInterpreter, DialogMessage, Message, SongWindowMessage, StaticsMessage, TraktorMessage,
 };
-use crate::{DanceInterpreter, DialogMessage, Message, SongWindowMessage, StaticsMessage};
 use iced::widget::{
-    Button, Column, column as col, container, mouse_area, opaque, pick_list, row, space::Space,
-    stack, text, text_input, toggler,
+    Button, Column, column as col, container, mouse_area, opaque, pick_list, row, scrollable,
+    space::Space, stack, text, text_input, toggler,
 };
 use iced::{Alignment, Element, Length, Theme};
 use iced_aw::number_input;
@@ -111,6 +111,23 @@ pub fn build_dialog<'a>(
         DialogState::PlaylistChooser => build_playlist_chooser(config_window),
     };
 
+    // Cap tall bodies at ¾ of the window height (scrolls only when needed;
+    // the Shrink height keeps short bodies compact). The inner right padding
+    // keeps the scrollbar off the rows' toggles and controls.
+    let body: Element<'a, Message> = match state {
+        DialogState::Settings | DialogState::Help => container(
+            scrollable(container(body).padding(pad4(0.0, 12.0, 0.0, 0.0)))
+                .direction(scrollable::Direction::Vertical(
+                    scrollable::Scrollbar::new().width(6.0).scroller_width(6.0),
+                ))
+                .style(theme::scrollable_style),
+        )
+        .width(Length::Fill)
+        .max_height((config_window.size.height * 0.75).max(240.0))
+        .into(),
+        _ => body.into(),
+    };
+
     let card = container(
         col![
             row![
@@ -161,23 +178,18 @@ fn dialog_actions<'a>(
     push_right(row(items).spacing(10)).into()
 }
 
-/// A labeled settings row with a bottom hairline.
+/// A labeled settings row.
 fn setting_row<'a>(label: &'a str, control: Element<'a, Message>) -> Element<'a, Message> {
-    // The hairline is a real 1px element: a width-0 container border paints
-    // nothing, so the row would silently lose its separator.
-    col![
-        row![
-            text(label)
-                .size(sz::BASE)
-                .style(theme::text_style(|tk| tk.text_soft))
-                .width(Length::Fill),
-            control,
-        ]
-        .align_y(Alignment::Center)
-        .spacing(20)
-        .padding([13, 0]),
-        divider(),
+    row![
+        text(label)
+            .size(sz::BASE)
+            .style(theme::text_style(|tk| tk.text_soft))
+            .width(Length::Fill),
+        control,
     ]
+    .align_y(Alignment::Center)
+    .spacing(20)
+    .padding([10, 0])
     .width(Length::Fill)
     .into()
 }
@@ -306,9 +318,25 @@ fn build_settings<'a>(
             "Autoscroll to current song",
             switch(config_window.enable_autoscroll, Message::EnableAutoscroll),
         ),
+        setting_row(
+            "Debug logging (DJ integration)",
+            switch(
+                dance_interpreter
+                    .data_provider
+                    .traktor_provider
+                    .debug_logging,
+                |b| { Message::Traktor(TraktorMessage::EnableDebugLogging(b)) }
+            ),
+        ),
         section_label("AUDIENCE WINDOW"),
         setting_row("Text scale", scale_input.into()),
         setting_row("Backdrop", backdrop_pick.into()),
+        container(
+            text("The backdrop fills the audience window behind the song info.")
+                .size(sz::TINY)
+                .style(theme::text_style(|tk| tk.faint)),
+        )
+        .padding(pad4(0.0, 0.0, 8.0, 0.0)),
         setting_row(
             "Show thumbnails",
             switch(dance_interpreter.song_window.enable_image, |v| {
@@ -325,9 +353,7 @@ fn build_settings<'a>(
             "Open audience window",
             buttons::secondary("Focus window", Message::FocusSongWindow).into(),
         ),
-        text("The backdrop fills the audience window behind the song info.")
-            .size(sz::TINY)
-            .style(theme::text_style(|tk| tk.faint)),
+        version_line(),
     ]
     .spacing(0);
 
@@ -350,7 +376,6 @@ fn build_help() -> (
         ("Reload statics", "F5"),
         ("Scroll playlist", "PgUp / PgDn"),
         ("Audience text scale", "Ctrl + / \u{2212}"),
-        ("DJ integration panel", "Alt+C"),
         ("Navigation sidebar", "Ctrl+B"),
         ("Info column", "Ctrl+J"),
         ("This help", "?"),
@@ -375,7 +400,19 @@ fn build_help() -> (
         );
     }
 
+    body = body.push(version_line());
+
     ("Keyboard shortcuts".to_string(), body, col![].into())
+}
+
+fn version_line() -> Element<'static, Message> {
+    container(
+        text(concat!("Danceinterpreter v", env!("CARGO_PKG_VERSION")))
+            .size(sz::MICRO)
+            .style(theme::text_style(|tk| tk.faint)),
+    )
+    .padding(pad4(14.0, 0.0, 0.0, 0.0))
+    .into()
 }
 
 fn build_add_static<'a>(

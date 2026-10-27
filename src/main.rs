@@ -11,7 +11,6 @@ use crate::dataloading::id3tagreader::read_song_info_from_filepath;
 use crate::dataloading::m3uloader::{PlaylistLoad, discover_playlists, load_tag_data_from_m3u};
 use crate::dataloading::songinfo::SongInfo;
 use crate::traktor_api::{ServerMessage, StateUpdate, TraktorMessage, TraktorSyncAction};
-use crate::ui::config_window::dj_panel::SidebarMessage;
 use crate::ui::config_window::toast;
 use crate::ui::config_window::{
     ConfigWindow, DialogState, EditField, EditSnapshot, PLAYLIST_SCROLLABLE_ID, Toast, View,
@@ -138,7 +137,6 @@ pub enum Message {
     SetFullscreen(bool),
 
     SetView(View),
-    Sidebar(SidebarMessage),
     Traktor(TraktorMessage),
     Search(SearchMessage),
     Statics(StaticsMessage),
@@ -172,6 +170,8 @@ pub enum Message {
 
     AddTraktorSong,
     AddAudioFiles,
+
+    UpdateTraktorPresets,
 
     FileDropped(PathBuf),
     ItemChanged(ItemChange),
@@ -450,8 +450,8 @@ impl DanceInterpreter {
     }
 
     pub fn update(&mut self, message: Message) -> Task<Message> {
-        self.config_window.sidebar.power_button_cache.clear();
-        self.config_window.sidebar.restart_button_cache.clear();
+        self.config_window.traktor_power_cache.clear();
+        self.config_window.traktor_restart_cache.clear();
 
         match message {
             Message::WindowOpened(_) => ().into(),
@@ -1052,21 +1052,11 @@ impl DanceInterpreter {
                 ().into()
             }
 
-            Message::Sidebar(msg) => match msg {
-                SidebarMessage::Toggle => {
-                    self.config_window
-                        .sidebar
-                        .state
-                        .go_mut(!self.config_window.sidebar.state.value(), Instant::now());
-                    ().into()
-                }
-                SidebarMessage::UpdateAddressPresets => {
-                    self.config_window
-                        .sidebar
-                        .update_network_interface_selection(&self.data_provider);
-                    ().into()
-                }
-            },
+            Message::UpdateTraktorPresets => {
+                self.config_window
+                    .update_traktor_presets(&self.data_provider);
+                ().into()
+            }
 
             Message::Traktor(msg) => match msg {
                 TraktorMessage::ServerMessage(msg) => {
@@ -1331,18 +1321,10 @@ impl DanceInterpreter {
                     }
                     (Key::Character("b"), Modifiers::CTRL) => Some(Message::ToggleNavSidebar),
                     (Key::Character("j"), Modifiers::CTRL) => Some(Message::ToggleInfoRail),
-                    (Key::Character("c"), Modifiers::ALT) => {
-                        Some(Message::Sidebar(SidebarMessage::Toggle))
-                    }
                     _ => None,
                 }
             }),
-            if self
-                .config_window
-                .sidebar
-                .state
-                .is_animating(Instant::now())
-                || self.config_window.nav_anim.is_animating(Instant::now())
+            if self.config_window.nav_anim.is_animating(Instant::now())
                 || self.config_window.rail_anim.is_animating(Instant::now())
             {
                 window::frames().map(|_| Message::Animate)

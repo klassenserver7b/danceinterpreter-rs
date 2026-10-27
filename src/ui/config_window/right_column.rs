@@ -1,28 +1,26 @@
-//! Right rail: "Coming up next" card, compact DJ-integration card and the
-//! keyboard tip. The full DJ settings live in the slide-in panel.
+//! Right rail: the "now playing", "coming up next" and "Traktor" cards.
 
-use crate::dataloading::dataprovider::ItemChange;
-use crate::traktor_api::TraktorMessage;
-use crate::ui::config_window::DialogState;
-use crate::ui::config_window::dj_panel::SidebarMessage;
-use crate::ui::config_window::led_color;
+use crate::dataloading::dataprovider::{ItemChange, ItemSource};
 use crate::ui::config_window::source_tag_right;
+use crate::ui::config_window::traktor_card;
 use crate::ui::theme::{self, pad4, sz};
-use crate::ui::widgets::{
-    EllipsisText, buttons, dot, heading, kbd, material_symbol, material_symbol_sized, push_right,
-};
-use crate::{DanceInterpreter, Message};
-use iced::widget::{button, column as col, container, row, scrollable, text, toggler};
-use iced::{Alignment, Color, Element, Length, Theme};
+use crate::ui::widgets::{EllipsisText, buttons, dot, kbd, material_symbol_sized};
+use crate::{ConfigWindow, DanceInterpreter, Message};
+use iced::widget::{button, column as col, container, row, scrollable, text};
+use iced::{Alignment, Element, Length, Theme};
 
 /// Full width of the right info rail when expanded.
 pub const RAIL_WIDTH: f32 = 292.0;
 
-pub fn build<'a>(dance_interpreter: &'a DanceInterpreter, width: f32) -> Element<'a, Message> {
+pub fn build<'a>(
+    dance_interpreter: &'a DanceInterpreter,
+    config_window: &'a ConfigWindow,
+    width: f32,
+) -> Element<'a, Message> {
     let content = col![
+        build_now_playing(dance_interpreter),
         build_up_next(dance_interpreter),
-        build_dj_card(dance_interpreter),
-        build_tip(),
+        traktor_card::build(dance_interpreter, config_window),
     ]
     .spacing(19)
     .width(Length::Fill);
@@ -35,6 +33,126 @@ pub fn build<'a>(dance_interpreter: &'a DanceInterpreter, width: f32) -> Element
         .style(move |t: &Theme| theme::panel_collapsible(t, width));
 
     rail.into()
+}
+
+// ---------------------------------------------------------------------------
+// Now playing
+// ---------------------------------------------------------------------------
+
+fn build_now_playing<'a>(dance_interpreter: &'a DanceInterpreter) -> Element<'a, Message> {
+    let provider = &dance_interpreter.data_provider;
+    let current = provider.get_current_source();
+
+    let (tag, is_blank) = match current {
+        ItemSource::Playlist(_) => ("PLAYLIST", false),
+        ItemSource::Static(_) => ("STATIC", false),
+        ItemSource::Traktor => ("DJ LIVE", false),
+        ItemSource::Other(_) => ("MANUAL", false),
+        ItemSource::Blank => ("BLANK", true),
+    };
+
+    let displayable = provider.get_current_displayable_data();
+
+    let dance_name = displayable
+        .as_ref()
+        .map(|d| d.headline.clone())
+        .unwrap_or_else(|| "Display is blank".to_string());
+
+    let (title, artist) = match (&current, &displayable) {
+        (ItemSource::Playlist(_), Some(d))
+        | (ItemSource::Traktor, Some(d))
+        | (ItemSource::Other(_), Some(d)) => (d.subline_upper.clone(), d.subline_lower.clone()),
+        _ => (
+            "Ready when you are".to_string(),
+            "Audience display".to_string(),
+        ),
+    };
+
+    let dance_color = provider.get_dance_color(&dance_name);
+
+    let kicker = row![
+        dot(6.0, |t| theme::Tokens::of(t).dot_green),
+        text("NOW PLAYING")
+            .size(sz::TINY)
+            .style(theme::text_style(|tk| tk.muted)),
+        source_tag_right(tag),
+    ]
+    .spacing(7)
+    .align_y(Alignment::Center);
+
+    // Playlist position indicator.
+    let playlist_len = provider.playlist().len();
+    let position = match current {
+        ItemSource::Playlist(i) => format!("{:02} / {} songs", i + 1, playlist_len),
+        _ => format!("{} songs", playlist_len),
+    };
+
+    let prev = buttons::ghost_icon(
+        "skip_previous",
+        false,
+        sz::ICON,
+        Message::ItemChanged(ItemChange::Previous),
+    );
+
+    let next_button = button(
+        row![
+            material_symbol_sized("skip_next", false, sz::ICON_SM),
+            text("Next song").size(sz::SMALL),
+            kbd("Space", theme::kbd_style),
+        ]
+        .spacing(6)
+        .align_y(Alignment::Center),
+    )
+    .padding([5, 10])
+    .style(theme::btn_secondary)
+    .on_press(Message::ItemChanged(ItemChange::Next));
+
+    let position_text = text(position)
+        .size(sz::TINY)
+        .style(theme::text_style(move |tk| {
+            if is_blank { tk.faint } else { tk.muted }
+        }));
+
+    let transport = container(
+        row![prev, next_button, position_text]
+            .spacing(4)
+            .align_y(Alignment::Center),
+    )
+    .width(Length::Fill)
+    .padding(pad4(4.0, 0.0, 0.0, 0.0));
+
+    container(
+        col![
+            kicker,
+            EllipsisText::new(dance_name)
+                .size(sz::H2)
+                .font(theme::head_font(iced::font::Weight::Semibold))
+                .style(theme::text_style(move |tk| {
+                    if is_blank {
+                        tk.faint
+                    } else {
+                        dance_color.unwrap_or(tk.dance_headline)
+                    }
+                })),
+            EllipsisText::new(title)
+                .size(sz::BASE)
+                .font(theme::body_font(iced::font::Weight::Medium))
+                .style(theme::text_style(move |tk| if is_blank {
+                    tk.muted
+                } else {
+                    tk.text
+                })),
+            EllipsisText::new(artist)
+                .size(sz::CAPTION)
+                .style(theme::text_style(|tk| tk.muted)),
+            transport,
+        ]
+        .spacing(6),
+    )
+    .padding(15)
+    .width(Length::Fill)
+    .style(theme::card)
+    .into()
 }
 
 // ---------------------------------------------------------------------------
@@ -107,210 +225,5 @@ fn build_up_next<'a>(dance_interpreter: &'a DanceInterpreter) -> Element<'a, Mes
     .padding(15)
     .width(Length::Fill)
     .style(theme::card)
-    .into()
-}
-
-// ---------------------------------------------------------------------------
-// DJ integration card
-// ---------------------------------------------------------------------------
-
-fn build_dj_card<'a>(dance_interpreter: &'a DanceInterpreter) -> Element<'a, Message> {
-    let provider = &dance_interpreter.data_provider.traktor_provider;
-    let enabled = provider.enabled();
-    let connection = provider.get_connection_state();
-    let address = &provider.address;
-    let sync = provider.sync;
-
-    let state_tag = match (enabled, connection) {
-        (false, _) => "OFF",
-        (true, crate::traktor_api::ConnectionState::Connected) => "LIVE",
-        (true, _) => "IDLE",
-    };
-
-    let summary = connection.summary();
-
-    let heading_row = row![
-        material_symbol_sized("link", false, sz::ICON_SM).style(theme::text_style(|tk| tk.muted)),
-        heading(
-            "DJ integration",
-            sz::PANEL_TITLE,
-            iced::font::Weight::Semibold
-        )
-        .style(theme::text_style(|tk| tk.text)),
-        source_tag_right(state_tag),
-    ]
-    .spacing(8)
-    .align_y(Alignment::Center);
-
-    let symbol_box = container(material_symbol("graphic_eq", false).size(17.0))
-        .width(Length::Fixed(29.0))
-        .height(Length::Fixed(29.0))
-        .align_x(Alignment::Center)
-        .align_y(Alignment::Center)
-        .style(|t: &Theme| {
-            let tk = theme::Tokens::of(t);
-            container::Style::default()
-                .background(tk.accent_nav_bg)
-                .border(iced::Border {
-                    color: Color::TRANSPARENT,
-                    width: 0.0,
-                    radius: theme::r::SM.into(),
-                })
-        });
-
-    let source_row = container(
-        row![
-            symbol_box,
-            col![
-                text("Traktor Pro")
-                    .size(sz::CAPTION)
-                    .font(theme::body_font(iced::font::Weight::Medium))
-                    .style(theme::text_style(|tk| tk.text)),
-                text(if enabled {
-                    "Source enabled"
-                } else {
-                    "Source disabled"
-                })
-                .size(sz::TINY)
-                .style(theme::text_style(|tk| tk.muted)),
-            ]
-            .spacing(2)
-            .width(Length::Fill),
-            buttons::ghost_icon(
-                "expand_more",
-                false,
-                sz::ICON,
-                Message::Sidebar(SidebarMessage::Toggle),
-            ),
-        ]
-        .spacing(9)
-        .align_y(Alignment::Center),
-    )
-    .padding(9)
-    .width(Length::Fill)
-    .style(|t: &Theme| theme::inset_card(t, theme::r::MD));
-
-    let connection_row = row![
-        container(dot(6.0, move |t| led_color(t, connection))),
-        EllipsisText::new(summary)
-            .width(Length::Shrink)
-            .size(sz::SMALL)
-            .style(theme::text_style(|tk| tk.text_soft)),
-        push_right(
-            EllipsisText::new(address.as_str())
-                .width(Length::Shrink)
-                .size(sz::TINY)
-                .style(theme::text_style(|tk| tk.faint)),
-        ),
-    ]
-    .spacing(5)
-    .align_y(Alignment::Center);
-
-    let sync_row = row![
-        col![
-            text("Follow DJ playback")
-                .size(sz::CAPTION)
-                .font(theme::body_font(iced::font::Weight::Medium))
-                .style(theme::text_style(|tk| tk.text)),
-            text("Automatically update the display")
-                .size(sz::TINY)
-                .style(theme::text_style(|tk| tk.muted)),
-        ]
-        .spacing(3)
-        .width(Length::Fill),
-        toggler(sync)
-            .on_toggle(|b| Message::Traktor(TraktorMessage::EnableSync(b)))
-            .style(theme::toggler_style)
-            .width(Length::Shrink),
-    ]
-    .align_y(Alignment::Center);
-
-    let mut foot = col![].spacing(8);
-
-    if provider.get_song_info().is_some() {
-        foot = foot.push(buttons::secondary(
-            "Add current song",
-            Message::AddTraktorSong,
-        ));
-    }
-
-    foot = foot.push(
-        row![
-            text(if sync {
-                "Manual control off"
-            } else {
-                "Manual control active"
-            })
-            .size(sz::TINY)
-            .style(theme::text_style(|tk| tk.muted)),
-            push_right(
-                button(
-                    row![
-                        text("Configure").size(sz::TINY),
-                        material_symbol_sized("chevron_right", false, 12.0),
-                    ]
-                    .spacing(3)
-                    .align_y(Alignment::Center)
-                )
-                .padding([4, 6])
-                .style(theme::btn_ghost)
-                .on_press(Message::Sidebar(SidebarMessage::Toggle)),
-            ),
-        ]
-        .align_y(Alignment::Center)
-        .width(Length::Fill),
-    );
-
-    container(col![heading_row, source_row, connection_row, sync_row, foot].spacing(12))
-        .padding(15)
-        .width(Length::Fill)
-        .style(theme::card)
-        .into()
-}
-
-// ---------------------------------------------------------------------------
-// Tip
-// ---------------------------------------------------------------------------
-
-fn build_tip() -> Element<'static, Message> {
-    container(
-        col![
-            row![
-                material_symbol("help", false)
-                    .size(sz::ICON_SM)
-                    .style(theme::text_style(|tk| tk.accent_soft)),
-                row![
-                    text("Press")
-                        .size(sz::SMALL)
-                        .style(theme::text_style(|tk| tk.muted)),
-                    kbd("Space", theme::kbd_style),
-                    text("to move to the next song.")
-                        .size(sz::SMALL)
-                        .style(theme::text_style(|tk| tk.muted)),
-                ]
-                .spacing(4)
-                .align_y(Alignment::Center),
-            ]
-            .spacing(8)
-            .align_y(Alignment::Center),
-            container(
-                button(
-                    row![
-                        text("View keyboard shortcuts").size(sz::SMALL),
-                        material_symbol_sized("open_in_new", false, 11.0),
-                    ]
-                    .spacing(4)
-                    .align_y(Alignment::Center)
-                )
-                .padding([4, 6])
-                .style(theme::btn_ghost)
-                .on_press(Message::OpenDialog(DialogState::Help))
-            )
-            .padding(pad4(2.0, 0.0, 0.0, 23.0)),
-        ]
-        .spacing(2),
-    )
-    .padding([8, 5])
-    .width(Length::Fill)
     .into()
 }
