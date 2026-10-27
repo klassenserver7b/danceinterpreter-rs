@@ -8,11 +8,12 @@ use crate::ui::config_window::{ConfigWindow, EditField, edit_input_id};
 use crate::ui::theme::RowLook;
 use crate::ui::theme::{self, sz};
 use crate::ui::widgets::{
-    ACCENT_BAR_W, buttons, card_panel, delete_button, dot, eyebrow, heading, icon_button_tooltip,
-    icon_muted, material_symbol, material_symbol_sized, panel_header, push_right, row_shell,
+    ACCENT_BAR_W, EllipsisText, buttons, card_panel, delete_button, dot, eyebrow, heading,
+    icon_button_tooltip, icon_muted, material_symbol, material_symbol_sized, panel_header,
+    push_right, row_shell,
 };
 use crate::{DanceInterpreter, DialogMessage, Message, QuickAddMessage, SearchMessage};
-use iced::advanced::text::{Shaping, Wrapping};
+use iced::advanced::text::Shaping;
 use iced::widget::{
     Column, Space, button, column as col, container, mouse_area, row, scrollable, text, text_input,
 };
@@ -263,10 +264,7 @@ fn build_song_row<'a>(
         .into()
     };
 
-    let song_cell = col![title_field, artist_field]
-        .spacing(4)
-        .clip(true)
-        .width(Length::Fill);
+    let song_cell = col![title_field, artist_field].spacing(4).width(Length::Fill);
 
     let chip = build_dance_cell(
         &song.dance,
@@ -463,7 +461,6 @@ fn build_dance_cell<'a>(
     )
     .padding([7, 11])
     .width(Length::Fill)
-    .clip(true)
     .style(theme::chip());
 
     chip.into()
@@ -475,6 +472,7 @@ fn build_dance_cell<'a>(
 /// Playlist/statics shared: a plain text cell for an inline-editable value —
 /// the value (or the placeholder when empty) in the given colors, never
 /// interactive itself; the double-click wrapper lives with the row.
+/// Truncates with a trailing `…` when the value does not fit its cell.
 pub(crate) fn editable_text<'a>(
     value: &'a str,
     placeholder: &'static str,
@@ -485,17 +483,17 @@ pub(crate) fn editable_text<'a>(
     // Two branches (instead of one shared binding) because the two color
     // closures have distinct `impl Fn` types.
     if value.is_empty() {
-        text(placeholder)
+        EllipsisText::new(placeholder)
+            .width(Length::Shrink)
             .size(size)
             .shaping(Shaping::Advanced)
-            .wrapping(Wrapping::None)
             .style(theme::text_style(placeholder_color))
             .into()
     } else {
-        text(value)
+        EllipsisText::new(value)
+            .width(Length::Shrink)
             .size(size)
             .shaping(Shaping::Advanced)
-            .wrapping(Wrapping::None)
             .style(theme::text_style(value_color))
             .into()
     }

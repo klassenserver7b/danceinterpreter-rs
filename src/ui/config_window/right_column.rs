@@ -9,7 +9,7 @@ use crate::ui::config_window::led_color;
 use crate::ui::config_window::source_tag_right;
 use crate::ui::theme::{self, pad4, sz};
 use crate::ui::widgets::{
-    buttons, dot, heading, kbd, material_symbol, material_symbol_sized, push_right,
+    EllipsisText, buttons, dot, heading, kbd, material_symbol, material_symbol_sized, push_right,
 };
 use crate::{DanceInterpreter, Message};
 use iced::widget::{button, column as col, container, row, scrollable, text, toggler};
@@ -89,13 +89,15 @@ fn build_up_next<'a>(dance_interpreter: &'a DanceInterpreter) -> Element<'a, Mes
     container(
         col![
             kicker,
-            heading(dance, sz::H2, iced::font::Weight::Semibold)
+            EllipsisText::new(dance)
+                .size(sz::H2)
+                .font(theme::head_font(iced::font::Weight::Semibold))
                 .style(theme::text_style(move |tk| dance_color.unwrap_or(tk.text),)),
-            text(title)
+            EllipsisText::new(title)
                 .size(sz::BASE)
                 .font(theme::body_font(iced::font::Weight::Medium))
                 .style(theme::text_style(|tk| tk.text)),
-            text(artist)
+            EllipsisText::new(artist)
                 .size(sz::CAPTION)
                 .style(theme::text_style(|tk| tk.muted)),
             container(show_now).padding(pad4(4.0, 0.0, 0.0, 0.0)),
@@ -190,11 +192,13 @@ fn build_dj_card<'a>(dance_interpreter: &'a DanceInterpreter) -> Element<'a, Mes
 
     let connection_row = row![
         container(dot(6.0, move |t| led_color(t, connection))),
-        text(summary)
+        EllipsisText::new(summary)
+            .width(Length::Shrink)
             .size(sz::SMALL)
             .style(theme::text_style(|tk| tk.text_soft)),
         push_right(
-            text(address.as_str())
+            EllipsisText::new(address.as_str())
+                .width(Length::Shrink)
                 .size(sz::TINY)
                 .style(theme::text_style(|tk| tk.faint)),
         ),

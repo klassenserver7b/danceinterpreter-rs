@@ -5,7 +5,7 @@ use crate::dataloading::dataprovider::ItemSource;
 use crate::dataloading::displayable_data::DisplayableData;
 use crate::ui::config_window::source_tag;
 use crate::ui::theme::{self, pad4, sz};
-use crate::ui::widgets::{buttons, dot, heading, kbd, material_symbol, material_symbol_sized};
+use crate::ui::widgets::{EllipsisText, buttons, dot, kbd, material_symbol, material_symbol_sized};
 use crate::{DanceInterpreter, Message};
 use iced::alignment::Vertical;
 use iced::widget::{column as col, container, image, row, text};
@@ -85,13 +85,19 @@ pub fn build<'a>(dance_interpreter: &'a DanceInterpreter) -> Element<'a, Message
     .align_y(Alignment::Center);
 
     // One line: dance · title · artist. All segments share an explicit line
-    // height so the mixed font sizes sit on the same baseline, keep their
-    // intrinsic width (adjacent, nothing pushed to the far edge) and the
-    // whole line clips before the transport controls when it runs long.
+    // height so the mixed font sizes sit on the same baseline and keep their
+    // intrinsic width (adjacent, nothing pushed to the far edge). Each text
+    // segment truncates with a `…` when the line runs long: the flex layout
+    // hands every Shrink segment only the space left by its predecessors, so
+    // artist truncates first, then title, then dance — the hard clip before
+    // the transport controls is gone.
     let lh = iced::widget::text::LineHeight::Absolute(iced::Pixels(19.0));
     let mut line = row![].spacing(7).align_y(Alignment::Center);
     line = line.push(
-        heading(dance_name, 15.0, iced::font::Weight::Semibold)
+        EllipsisText::new(dance_name)
+            .width(Length::Shrink)
+            .size(15.0)
+            .font(theme::head_font(iced::font::Weight::Semibold))
             .line_height(lh)
             .style(theme::text_style(|tk| tk.dance_headline)),
     );
@@ -103,7 +109,8 @@ pub fn build<'a>(dance_interpreter: &'a DanceInterpreter) -> Element<'a, Message
                 .style(theme::text_style(|tk| tk.muted)),
         );
         line = line.push(
-            text(title)
+            EllipsisText::new(title)
+                .width(Length::Shrink)
                 .size(sz::BASE)
                 .line_height(lh)
                 .font(theme::body_font(iced::font::Weight::Medium))
@@ -117,14 +124,15 @@ pub fn build<'a>(dance_interpreter: &'a DanceInterpreter) -> Element<'a, Message
                     .style(theme::text_style(|tk| tk.muted)),
             );
             line = line.push(
-                text(artist)
+                EllipsisText::new(artist)
+                    .width(Length::Shrink)
                     .size(sz::SMALL)
                     .line_height(lh)
                     .style(theme::text_style(|tk| tk.text_soft)),
             );
         }
     }
-    let main_line = container(line).width(Length::Fill).clip(true);
+    let main_line = container(line).width(Length::Fill);
 
     // Fixed content height: gives the row a definite height (no compression),
     // so the cover's Fill height expands to the full card content while the

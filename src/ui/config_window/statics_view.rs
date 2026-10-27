@@ -194,7 +194,7 @@ fn build_static_row<'a>(
     let content = row![
         container(star).width(Length::Fixed(COL_FAV)),
         container(color_element).width(Length::Fixed(COL_COLOR)),
-        container(name_field).width(Length::Fill).clip(true),
+        container(name_field).width(Length::Fill),
         container(
             text(usage_label)
                 .size(sz::TINY)

@@ -3,7 +3,7 @@
 
 use crate::ui::config_window::{ConfigWindow, DialogState, View};
 use crate::ui::theme::{self, pad4, sz};
-use crate::ui::widgets::{kbd, material_symbol, push_right};
+use crate::ui::widgets::{kbd, material_symbol, push_right, EllipsisText};
 use crate::{DanceInterpreter, Message};
 use iced::widget::{column as col, container, row, text};
 use iced::{Alignment, Color, Element, Length, Theme};
@@ -153,7 +153,9 @@ fn session_card<'a>(config_window: &'a ConfigWindow) -> Element<'a, Message> {
         row![
             icon_box,
             col![
-                text(title)
+                // Truncates with a trailing `…` so a long playlist file name
+                // cannot push the row past the sidebar edge.
+                EllipsisText::new(title)
                     .size(sz::SMALL)
                     .font(theme::body_font(iced::font::Weight::Semibold))
                     .style(theme::text_style(|tk| tk.text)),
@@ -161,10 +163,12 @@ fn session_card<'a>(config_window: &'a ConfigWindow) -> Element<'a, Message> {
                     .size(sz::MICRO)
                     .style(theme::text_style(|tk| tk.muted)),
             ]
-            .spacing(3),
+            .spacing(3)
+            .width(Length::Fill),
         ]
         .spacing(9)
-        .align_y(Alignment::Center),
+        .align_y(Alignment::Center)
+        .width(Length::Fill),
     )
     .padding(12)
     .style(|t: &Theme| {
