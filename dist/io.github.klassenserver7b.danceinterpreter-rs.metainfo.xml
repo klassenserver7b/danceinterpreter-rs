@@ -51,6 +51,12 @@
     <content_rating type="oars-1.1"/>
 
     <releases>
+ 	<release version="1.0.0-beta.1" date="2026-10-27">
+            <url type="details">https://github.com/klassenserver7b/danceinterpreter-rs/releases/tag/v1.0.0-beta.1</url>
+            <description>
+                <p>Full UI redesign - no new features</p>
+            </description>
+        </release>
         <release version="0.8.4" date="2026-07-31">
             <url type="details">https://github.com/klassenserver7b/danceinterpreter-rs/releases/tag/v0.8.4</url>
             <description>
