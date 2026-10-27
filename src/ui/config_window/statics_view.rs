@@ -1,147 +1,220 @@
-use crate::dataloading::dataprovider::ItemChange;
-use crate::dataloading::dataprovider::ItemSource;
+//! Statics panel: dance labels and announcements with favorite star, color
+//! swatch + picker, inline name editing, merge-on-submit and show-now.
+
+use crate::dataloading::dataprovider::{ItemChange, ItemSource};
 use crate::dataloading::staticinfo::StaticInfo;
-use crate::ui::config_window::ConfigWindow;
-use crate::ui::config_window::item_row::build_item_row_container_styled;
-use crate::ui::config_window::search_bar::data_matches_search_query;
-use crate::ui::widget::dynamic_text_input::DynamicTextInput;
-use crate::ui::widgets::buttons::{
-    material_symbol_message_button, material_symbol_message_button_colored,
+use crate::ui::config_window::playlist_view::editable_text;
+use crate::ui::config_window::search::data_matches_search_query;
+use crate::ui::config_window::static_edit_input_id;
+use crate::ui::config_window::{ConfigWindow, DialogState};
+use crate::ui::theme::RowLook;
+use crate::ui::theme::{self, pad4, sz};
+use crate::ui::widgets::{
+    buttons, card_panel, color_swatch, delete_button, heading, icon_button_tooltip,
+    material_symbol, material_symbol_sized, panel_header, row_shell,
 };
-use crate::ui::widgets::material_symbol;
-use crate::ui::with_tooltip;
-use crate::{DanceInterpreter, DialogMessage, Message, StaticsMessage};
-use iced::alignment::Vertical;
+use crate::{DanceInterpreter, Message, StaticsMessage};
 use iced::widget::{
-    Column, Row, Scrollable, Space, button, column as col, container, row, scrollable, text,
+    Column, Space, button, column as col, container, mouse_area, row, scrollable, text, text_input,
 };
-use iced::{Alignment, Color, Element, Length};
+use iced::{Alignment, Element, Length};
 
 pub fn build<'a>(
     config_window: &'a ConfigWindow,
     dance_interpreter: &'a DanceInterpreter,
-) -> Column<'a, Message> {
-    let trow = container(
-        row![
-            text("Fav").width(Length::Fixed(42.0)),
-            text!("Name").width(Length::Fill),
-            Space::new().width(Length::Fill).height(Length::Shrink),
-            button(row![material_symbol("add", false), text("Add Static")].spacing(5))
-                .on_press(Message::Statics(StaticsMessage::AddBlank))
-                .padding([5, 10])
-                .style(button::primary),
-        ]
-        .align_y(Vertical::Bottom)
-        .spacing(5),
-    )
-    .padding([4, 6])
-    .width(Length::Fill);
-
-    let mut list_column = col!().spacing(5);
+) -> Element<'a, Message> {
+    let mut rows: Column<'_, Message> = col![];
 
     for (i, (name, static_info)) in dance_interpreter.data_provider.statics().iter().enumerate() {
         let is_match = data_matches_search_query(&config_window.search_query, static_info.into());
-        let static_row = build_static_row(
+        rows = rows.push(build_static_row(
+            config_window,
+            dance_interpreter,
             static_info,
             name.clone(),
-            config_window.theme.extended_palette().primary.weak.color,
-            config_window.color_picker_open.as_ref() == Some(name),
-        );
-        let accent_color = static_info.color;
-        let row_container = build_item_row_container_styled(static_row, is_match, i, accent_color);
-        list_column = list_column.push(row_container);
+            i,
+            is_match,
+        ));
     }
 
-    let statics_scrollable: Scrollable<'_, Message> = scrollable(list_column)
+    let list: Element<'_, Message> = if dance_interpreter.data_provider.statics().is_empty() {
+        col![
+            Space::new().height(Length::Fill),
+            heading("No statics yet.", sz::H2, iced::font::Weight::Semibold)
+                .style(theme::text_style(|tk| tk.text)),
+            text("Statics appear automatically from playlist dances. Add one below.")
+                .size(sz::SMALL)
+                .style(theme::text_style(|tk| tk.muted)),
+            buttons::primary_small("Add static", Message::OpenDialog(DialogState::AddStatic),),
+            Space::new().height(Length::Fill),
+        ]
+        .spacing(10)
+        .align_x(Alignment::Center)
         .width(Length::Fill)
         .height(Length::Fill)
-        .spacing(5);
+        .into()
+    } else {
+        scrollable(rows)
+            .width(Length::Fill)
+            .height(Length::Fill)
+            .style(theme::scrollable_style)
+            .into()
+    };
 
-    col!(trow, statics_scrollable).spacing(5)
+    let tools = row![
+        icon_button_tooltip(
+            "refresh",
+            sz::ICON,
+            Message::Statics(StaticsMessage::Reload),
+            "Reload statics",
+        ),
+        buttons::primary_small("Add static", Message::OpenDialog(DialogState::AddStatic),),
+    ]
+    .spacing(8)
+    .align_y(Alignment::Center);
+
+    let toolbar = panel_header("grid_view", "Dances & announcements", "", tools.into());
+
+    let panel = col![toolbar, list].width(Length::Fill).height(Length::Fill);
+
+    card_panel(panel).into()
 }
 
-pub fn build_static_row<'a>(
-    static_info: &StaticInfo,
-    name: String,
-    color: impl Into<Color>,
-    color_picker_open: bool,
-) -> Row<'a, Message> {
-    let swatch_color = static_info.color.unwrap_or(Color::TRANSPARENT);
-    let mut name_clone = name.clone();
-    let mut name_clone1 = name.clone();
+const COL_FAV: f32 = 26.0;
+const COL_COLOR: f32 = 26.0;
+const COL_CAPTION: f32 = 70.0;
 
-    let color_swatch = crate::ui::widgets::color_swatch::color_swatch(
+fn build_static_row<'a>(
+    config_window: &'a ConfigWindow,
+    dance_interpreter: &'a DanceInterpreter,
+    static_info: &'a StaticInfo,
+    name: String,
+    idx: usize,
+    is_match: bool,
+) -> Element<'a, Message> {
+    let is_current = matches!(
+        dance_interpreter.data_provider.get_current_source(),
+        ItemSource::Static(current) if *current == name
+    );
+
+    let star_icon = if static_info.is_favorite {
+        material_symbol("star", true).style(theme::text_style(|tk| tk.star))
+    } else {
+        material_symbol("star", false)
+    };
+    let star = button(star_icon)
+        .padding(4)
+        .style(theme::btn_ghost)
+        .on_press(Message::Statics(StaticsMessage::ToggleFavorite(
+            name.clone(),
+        )));
+
+    // Color swatch / color picker.
+    let swatch_color = static_info
+        .color
+        .unwrap_or_else(|| theme::Tokens::dark().muted);
+    let color_picker_open = config_window.color_picker_open.as_ref() == Some(&name);
+    let swatch = color_swatch::color_swatch(
         swatch_color,
         Message::Statics(StaticsMessage::ToggleColorPicker(name.clone())),
     );
 
     let color_element: Element<'a, Message> = if color_picker_open {
+        let close_name = name.clone();
+        let submit_name = name.clone();
+        let preview_name = name.clone();
         iced_aw::ColorPicker::new(
             true,
             swatch_color,
-            color_swatch,
-            Message::Statics(StaticsMessage::ToggleColorPicker(name.clone())),
-            move |c| Message::Statics(StaticsMessage::UpdateColor(name_clone.clone(), c)),
+            swatch,
+            Message::Statics(StaticsMessage::ToggleColorPicker(close_name)),
+            move |c| Message::Statics(StaticsMessage::UpdateColor(submit_name.clone(), c)),
         )
         .on_color_change(move |c| {
-            Message::Statics(StaticsMessage::PreviewColor(name_clone1.clone(), c))
+            Message::Statics(StaticsMessage::PreviewColor(preview_name.clone(), c))
         })
         .into()
     } else {
-        color_swatch
+        swatch
     };
 
-    name_clone = name.clone();
-    name_clone1 = name.clone();
+    // Name (inline editable via double-click; submitting an existing name
+    // opens the merge dialog).
+    let editing_this = config_window.static_editing.as_deref() == Some(name.as_str());
+    let name_field: Element<'a, Message> = if editing_this {
+        text_input("Static name", &config_window.edit_draft)
+            .id(static_edit_input_id(&name))
+            .size(sz::ROW)
+            .on_input(|v| Message::Statics(StaticsMessage::DraftChanged(v)))
+            .on_submit(Message::Statics(StaticsMessage::EndEdit))
+            .style(theme::input_plain)
+            .padding(0)
+            .into()
+    } else {
+        mouse_area(editable_text(
+            &static_info.name,
+            "Static name",
+            sz::ROW,
+            |tk| tk.text_soft,
+            |tk| tk.faint,
+        ))
+        .on_double_click(Message::Statics(StaticsMessage::BeginEdit(name.clone())))
+        .into()
+    };
 
-    row![
-        if static_info.is_favorite {
-            material_symbol_message_button_colored(
-                "star",
-                static_info.is_favorite,
-                Message::Statics(StaticsMessage::ToggleFavorite(name.clone())),
-                color,
-            )
-        } else {
-            material_symbol_message_button(
-                "star",
-                static_info.is_favorite,
-                Message::Statics(StaticsMessage::ToggleFavorite(name.clone())),
-            )
-        },
-        Space::new().width(5),
-        color_element,
-        DynamicTextInput::<'_, Message>::new("Static Name", &static_info.name)
-            .width(Length::Fill)
-            .on_change(move |v| Message::Statics(StaticsMessage::UpdateName(name_clone.clone(), v)))
-            .on_submit(Message::Statics(StaticsMessage::SubmitName(
-                name_clone1.clone()
-            ))),
+    let show_now = button(
         row![
-            Space::new().width(Length::Fill).height(Length::Shrink),
-            with_tooltip(
-                material_symbol_message_button(
-                    "smart_display",
-                    false,
-                    Message::ItemChanged(ItemChange::StaticAbsolute(name.clone()))
-                ),
-                "Show now"
-            ),
-            with_tooltip(
-                material_symbol_message_button(
-                    "delete",
-                    false,
-                    Message::Dialog(DialogMessage::RequestDelete(ItemSource::Static(
-                        name.clone()
-                    )))
-                ),
-                "Delete static"
-            ),
+            material_symbol_sized("play_arrow", false, sz::ICON_XXS),
+            text("Show now").size(sz::SMALL),
         ]
-        .spacing(5)
-        .align_y(Alignment::Center)
-        .width(Length::Fill),
+        .spacing(6)
+        .align_y(Alignment::Center),
+    )
+    .padding([5, 10])
+    .style(theme::btn_secondary)
+    .on_press(Message::ItemChanged(ItemChange::StaticAbsolute(
+        name.clone(),
+    )));
+
+    let delete = delete_button(ItemSource::Static(name.clone()), "Delete static");
+
+    // How many playlist songs use this dance.
+    let usage = dance_interpreter
+        .data_provider
+        .playlist()
+        .iter()
+        .filter(|item| item.song.dance == *name)
+        .count();
+    let usage_label = match usage {
+        0 => "Unused".to_string(),
+        1 => "1 song".to_string(),
+        n => format!("{n} songs"),
+    };
+
+    let content = row![
+        container(star).width(Length::Fixed(COL_FAV)),
+        container(color_element).width(Length::Fixed(COL_COLOR)),
+        container(name_field).width(Length::Fill),
+        container(
+            text(usage_label)
+                .size(sz::TINY)
+                .style(theme::text_style(|tk| tk.faint))
+        )
+        .width(Length::Fixed(COL_CAPTION))
+        .align_x(Alignment::End),
+        show_now,
+        delete,
     ]
-    .align_y(Alignment::Center)
     .spacing(10)
+    .align_y(Alignment::Center)
+    .padding(pad4(0.0, 19.0, 0.0, 14.0))
+    .width(Length::Fill);
+
+    let look = RowLook::table(idx, is_current, is_match);
+
+    // The current static's bar takes its dance color when it has one.
+    let static_color = static_info.color;
+    row_shell(content, look, move |t| {
+        static_color.unwrap_or_else(|| theme::Tokens::of(t).accent_bar)
+    })
 }

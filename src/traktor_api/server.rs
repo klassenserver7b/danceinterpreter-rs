@@ -39,7 +39,7 @@ struct TraktorServer {
 }
 
 impl TraktorServer {
-    pub fn new(output: UnboundedSender<ServerMessage>) -> Self {
+    fn new(output: UnboundedSender<ServerMessage>) -> Self {
         TraktorServer {
             output,
 
@@ -69,12 +69,12 @@ impl TraktorServer {
             .await;
     }
 
-    pub async fn send_ready(&mut self, app_input_sender: UnboundedSender<AppMessage>) {
+    async fn send_ready(&mut self, app_input_sender: UnboundedSender<AppMessage>) {
         self.send_message(ServerMessage::Ready(app_input_sender))
             .await
     }
 
-    pub fn reconnect(&mut self, debug_logging: bool) {
+    fn reconnect(&mut self, debug_logging: bool) {
         self.session_id = Uuid::new_v4().to_string();
         self.debug_logging = debug_logging;
 
@@ -225,7 +225,7 @@ impl TraktorServer {
 }
 
 impl TraktorServer {
-    pub fn routes(
+    fn routes(
         state: Arc<Mutex<Self>>,
     ) -> impl Filter<Extract = (impl warp::Reply,), Error = warp::Rejection> + Clone + use<> {
         Self::is_started(state.clone())

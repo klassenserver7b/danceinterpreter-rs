@@ -1,158 +1,82 @@
-use crate::ui::config_window::ConfigWindow;
-use crate::ui::config_window::sidebar::SidebarMessage;
-use crate::ui::widgets::buttons::{
-    label_message_button_fill, label_message_button_fill_opt, label_message_button_shrink,
-    material_symbol_sized_message_button,
-};
-use crate::ui::widgets::labeled_message_checkbox;
-use crate::ui::with_tooltip;
-use crate::{
-    DanceInterpreter, DialogMessage, Message, SearchMessage, SongWindowMessage, StaticsMessage,
-};
-use iced::alignment::Vertical;
-use iced::border::Radius;
-use iced::widget::space::horizontal;
-use iced::widget::{Space, Stack, pick_list, row, stack, text};
-use iced::{Border, Length, Renderer, Theme};
-use iced_aw::style::Status;
-use iced_aw::style::menu_bar::primary;
-use iced_aw::{Menu, menu, menu_bar, menu_items, number_input};
+//! Top bar: sidebar toggles, breadcrumb and the "open song window" action.
 
-pub fn build<'a>(
-    config_window: &'a ConfigWindow,
-    dance_interpreter: &'a DanceInterpreter,
-) -> Stack<'a, Message, Theme, Renderer> {
-    let menu_tpl = |items| Menu::new(items).max_width(160.0).offset(15.0).spacing(5.0);
-    let menu_tpl_wide = |items| Menu::new(items).max_width(256.0).offset(15.0).spacing(5.0);
+use crate::Message;
+use crate::ui::config_window::{ConfigWindow, View};
+use crate::ui::theme::{self, pad4, sz};
+use crate::ui::widgets::{buttons, divider, icon_button_tooltip, push_right};
+use iced::widget::{Column, column as col, container, row, text};
+use iced::{Alignment, Element, Length, Theme};
 
-    #[rustfmt::skip]
-        let mb = menu_bar!
-        (
-            (
-                label_message_button_shrink("File", Message::Noop),
-                menu_tpl(
-                    menu_items!(
-                        (label_message_button_fill("Open Playlist File", Message::OpenPlaylist)),
-                        (label_message_button_fill("Exit", Message::WindowClosed(config_window.id))),
-                    )
-                )
-                .spacing(5.0)
-            ),
-            (
-                label_message_button_shrink("Edit", Message::Noop),
-                menu_tpl_wide(
-                    menu_items!(
-                        (labeled_message_checkbox("Autoscroll", config_window.enable_autoscroll, Message::EnableAutoscroll)),
-                        (labeled_message_checkbox(
-                            "Follow system theme",
-                            config_window.follow_system_theme,
-                            Message::EnableFollowSystemTheme
-                        )),
-                        (labeled_message_checkbox(
-                            "Search",
-                            config_window.search_visible,
-                            |_| Message::Search(SearchMessage::Toggle)
-                        )),
-                        (row![
-                            text("Theme").width(Length::Shrink),
-                            Space::new().width(Length::Fill),
-                            pick_list(
-                                Theme::ALL,
-                                Some(config_window.theme.clone()),
-                                Message::SetConfigTheme
-                            )
-                        ]
-                        .align_y(Vertical::Center)
-                        .spacing(5.0)
-                        .width(Length::Fill)),
-                        (label_message_button_fill("Reload Statics", Message::Statics(StaticsMessage::Reload))),
-                        (label_message_button_fill(format!("Add blank {}", if config_window.is_statics_view {"static"} else {"song"}), Message::AddBlankEntry)),
-                        (label_message_button_fill("Undo Delete (Ctrl+Z)", Message::Dialog(DialogMessage::UndoDelete))),
-                    )
-                )
-                .spacing(5.0)
-            ),
-            (
-                label_message_button_shrink("SongWindow", Message::Noop),
-                menu_tpl(
-                    menu_items!(
-                        (row![
-                            text("Scale").width(Length::Fill),
-                            number_input(&dance_interpreter.song_window.scale, 0.5..=3.0 , |val| Message::SongWindow(SongWindowMessage::ChangeScale(val)))
-                                .step(0.1)
-                                .width(Length::Fill)
-                        ].align_y(Vertical::Center)
-                        .spacing(5.0)
-                        .width(Length::Fill)),
-                        (labeled_message_checkbox("Show Thumbnails", dance_interpreter.song_window.enable_image, |v| Message::SongWindow(SongWindowMessage::EnableImage(v)))),
-                        (labeled_message_checkbox("Show Next Dance", dance_interpreter.song_window.enable_next_dance, |v| Message::SongWindow(SongWindowMessage::EnableNextDance(v)))),
-                    )
-                )
-                .spacing(5.0)
-            )
-        )
-        .spacing(5.0)
-        .draw_path(menu::DrawPath::Backdrop)
-            .style(|theme:&Theme, status: Status | menu::Style{
-                path_border: Border{
-                    radius: Radius::new(6.0),
-                    ..Default::default()
-                },
-                ..primary(theme, status)
-            });
+pub fn build(config_window: &ConfigWindow) -> Element<'_, Message> {
+    let view_name = match config_window.view {
+        View::Playlist => "Playlist",
+        View::Statics => "Statics",
+    };
 
-    let playlist_button = label_message_button_fill_opt(
-        "Playlist",
-        if config_window.is_statics_view {
-            Some(Message::ToggleStaticsView)
+    let nav_toggle = icon_button_tooltip(
+        if config_window.nav_open() {
+            "menu_open"
         } else {
-            None
+            "menu"
         },
-    )
-    .width(Length::Shrink);
-
-    let statics_button = label_message_button_fill_opt(
-        "Statics",
-        if !config_window.is_statics_view {
-            Some(Message::ToggleStaticsView)
-        } else {
-            None
-        },
-    )
-    .width(Length::Shrink);
-
-    let view_buttons = row![
-        Space::new().width(Length::Fill),
-        with_tooltip(playlist_button, "Show Playlist"),
-        with_tooltip(statics_button, "Show Statics"),
-        Space::new().width(Length::Fill)
-    ]
-    .width(Length::Fill)
-    .spacing(5);
-
-    let sidebar_button = with_tooltip(
-        material_symbol_sized_message_button(
-            if config_window.sidebar.state.value() {
-                "right_panel_close"
-            } else {
-                "right_panel_open"
-            },
-            false,
-            20.0,
-            Message::Sidebar(SidebarMessage::Toggle),
-        )
-        .padding([0, 4]),
-        if config_window.sidebar.state.value() {
-            "Collapse Traktor Panel"
-        } else {
-            "Expand Traktor Panel"
-        },
+        sz::ICON,
+        Message::ToggleNavSidebar,
+        "Toggle navigation sidebar (Ctrl+B)",
     );
 
-    stack![
-        row![mb, horizontal()].width(Length::Fill),
-        row![horizontal(), view_buttons, horizontal()].width(Length::Fill),
-        row![horizontal(), sidebar_button].width(Length::Fill)
-    ]
+    let breadcrumb = text(view_name)
+        .size(sz::SMALL)
+        .font(theme::body_font(iced::font::Weight::Medium))
+        .style(theme::text_style(|tk| tk.text_soft));
+
+    let open_playlist =
+        buttons::ghost_labelled("folder", "Open playlist", None, Message::OpenPlaylist);
+
+    let open_song_window = buttons::ghost_labelled(
+        "desktop_windows",
+        "Open song window",
+        Some("open_in_new"),
+        Message::FocusSongWindow,
+    );
+
+    // The icon mirrors the nav toggle: a plain panel while collapsed, and
+    // while the rail is expanded the close glyph — same panel, arrow exactly
+    // reversed, pointing in the collapse direction.
+    let rail_toggle = icon_button_tooltip(
+        if config_window.rail_open() {
+            "right_panel_close"
+        } else {
+            "view_sidebar"
+        },
+        sz::ICON,
+        Message::ToggleInfoRail,
+        "Toggle info column (Ctrl+J)",
+    );
+
+    container(
+        row![
+            container(
+                row![nav_toggle, breadcrumb]
+                    .spacing(10)
+                    .align_y(Alignment::Center)
+            ),
+            push_right(
+                row![rail_toggle, open_playlist, open_song_window]
+                    .spacing(10)
+                    .align_y(Alignment::Center),
+            ),
+        ]
+        .width(Length::Fill)
+        .align_y(Alignment::Center),
+    )
+    .padding(pad4(18.0, theme::PAGE_GUTTER, 18.0, theme::PAGE_GUTTER))
     .width(Length::Fill)
+    .align_y(Alignment::Center)
+    .style(theme::page_bg)
+    .into()
+}
+
+/// Vertical stack helper used by the shell (bar + hairline).
+pub fn bar_with_divider(bar: Element<Message>) -> Column<Message, Theme, iced::Renderer> {
+    col![bar, divider()]
 }

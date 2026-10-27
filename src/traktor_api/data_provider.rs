@@ -1,3 +1,4 @@
+use crate::dataloading::dataprovider::PlaylistItem;
 use crate::dataloading::songinfo::SongInfo;
 use crate::traktor_api::{
     AppMessage, ChannelState, DeckContentState, DeckState, MixerState, ServerMessage, State,
@@ -45,12 +46,6 @@ impl Display for TraktorSyncMode {
     }
 }
 
-impl Display for TraktorSyncAction {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{:?}", self)
-    }
-}
-
 #[derive(Debug, Clone)]
 pub enum TraktorMessage {
     ServerMessage(Box<ServerMessage>),
@@ -74,6 +69,19 @@ pub enum ConnectionState {
     Connected,
 }
 
+impl ConnectionState {
+    /// Short status text for the LED in the Traktor card; the LED color
+    /// carries the connected/disconnected nuance.
+    pub fn summary(&self) -> &'static str {
+        match self {
+            ConnectionState::Connected => "Traktor & Cover Loader",
+            ConnectionState::Traktor => "Traktor",
+            ConnectionState::CoverLoader => "Cover Loader",
+            ConnectionState::Disconnected => "No clients",
+        }
+    }
+}
+
 pub struct TraktorDataProvider {
     pub address: String,
     pub submitted_address: String,
@@ -86,7 +94,6 @@ pub struct TraktorDataProvider {
 
     channel: Option<UnboundedSender<AppMessage>>,
 
-    time_offset_ms: i64,
     pub state: Option<State>,
     covers: HashMap<String, image::Handle>,
     pub cover_loader_addr: Option<SocketAddr>,
@@ -99,7 +106,6 @@ pub struct TraktorDataProvider {
     should_scroll: bool,
 
     pub debug_logging: bool,
-    log: Vec<String>,
 }
 
 impl Default for TraktorDataProvider {
@@ -115,7 +121,6 @@ impl Default for TraktorDataProvider {
             sync: false,
             sync_mode: TraktorSyncMode::Relative,
 
-            time_offset_ms: 0,
             state: None,
             covers: HashMap::new(),
 
@@ -129,7 +134,6 @@ impl Default for TraktorDataProvider {
             cover_loader_addr: None,
 
             debug_logging: false,
-            log: Vec::new(),
         }
     }
 }
@@ -144,18 +148,7 @@ impl TraktorDataProvider {
         self.enabled && self.channel.as_ref().is_some_and(|c| !c.is_closed())
     }
 
-    #[allow(dead_code)]
-    pub fn get_log(&self) -> &[String] {
-        &self.log
-    }
-
-    #[allow(dead_code)]
-    pub fn clear_log(&mut self) {
-        self.log.clear();
-    }
-
     pub fn reconnect(&mut self) {
-        self.time_offset_ms = 0;
         self.state = None;
         self.sync_x_fader_is_left = true;
         self.update_song_info(&[]);
@@ -221,7 +214,7 @@ impl TraktorDataProvider {
         }
     }
 
-    fn update_song_info(&mut self, playlist: &[SongInfo]) {
+    fn update_song_info(&mut self, playlist: &[PlaylistItem]) {
         let old_song_info = self.cached_song_info.take();
         self.cached_next_song_info = None;
 
@@ -266,9 +259,7 @@ impl TraktorDataProvider {
 
         match self.sync_mode {
             TraktorSyncMode::AbsoluteByNumber => {
-                let current_index = playlist
-                    .iter()
-                    .position(|s| content.number == s.track_number);
+                let current_index = Self::find_by_number(playlist, content.number);
 
                 self.cached_sync_action = match current_index {
                     None => TraktorSyncAction::Relative(0),
@@ -276,9 +267,7 @@ impl TraktorDataProvider {
                 };
             }
             TraktorSyncMode::AbsoluteByName => {
-                let current_index = playlist
-                    .iter()
-                    .position(|s| Self::songs_name_match(&current_song_info, s));
+                let current_index = Self::find_by_name(playlist, &current_song_info);
 
                 self.cached_sync_action = match current_index {
                     None => TraktorSyncAction::Relative(0),
@@ -293,7 +282,7 @@ impl TraktorDataProvider {
         &self,
         fallback: bool,
         current_channel: &ChannelState,
-        playlist: &[SongInfo],
+        playlist: &[PlaylistItem],
     ) -> Option<SongInfo> {
         let mode = if !fallback {
             self.next_mode
@@ -340,18 +329,14 @@ impl TraktorDataProvider {
                 deck.map(|d| self.copy_song_info_from_deck(&d.content, playlist))
             }
             TraktorNextMode::PlaylistByNumber => {
-                let current_index = playlist
-                    .iter()
-                    .position(|s| current_song_info.track_number == s.track_number);
+                let current_index = Self::find_by_number(playlist, current_song_info.track_number);
 
-                current_index.and_then(|ci| playlist.get(ci + 1).cloned())
+                current_index.and_then(|ci| playlist.get(ci + 1).map(|item| item.song.clone()))
             }
             TraktorNextMode::PlaylistByName => {
-                let current_index = playlist
-                    .iter()
-                    .position(|s| Self::songs_name_match(current_song_info, s));
+                let current_index = Self::find_by_name(playlist, current_song_info);
 
-                current_index.and_then(|ci| playlist.get(ci + 1).cloned())
+                current_index.and_then(|ci| playlist.get(ci + 1).map(|item| item.song.clone()))
             }
         }
     }
@@ -359,7 +344,7 @@ impl TraktorDataProvider {
     fn copy_song_info_from_deck(
         &self,
         content: &DeckContentState,
-        playlist: &[SongInfo],
+        playlist: &[PlaylistItem],
     ) -> SongInfo {
         let mut song_info = SongInfo::new(
             content.number,
@@ -370,13 +355,26 @@ impl TraktorDataProvider {
         );
 
         if song_info.album_art.is_none() {
-            song_info.album_art = playlist
-                .iter()
-                .find(|s| Self::songs_name_match(&song_info, s))
-                .and_then(|s| s.album_art.clone());
+            song_info.album_art = Self::find_by_name(playlist, &song_info)
+                .and_then(|ci| playlist.get(ci))
+                .and_then(|item| item.song.album_art.clone());
         }
 
         song_info
+    }
+
+    /// Index of the first playlist row carrying `number`, if any.
+    fn find_by_number(playlist: &[PlaylistItem], number: u32) -> Option<usize> {
+        playlist
+            .iter()
+            .position(|item| number == item.song.track_number)
+    }
+
+    /// Index of the first playlist row matching `song` by artist + title.
+    fn find_by_name(playlist: &[PlaylistItem], song: &SongInfo) -> Option<usize> {
+        playlist
+            .iter()
+            .position(|item| Self::songs_name_match(song, &item.song))
     }
 
     pub fn songs_name_match(a: &SongInfo, b: &SongInfo) -> bool {
@@ -401,23 +399,13 @@ impl TraktorDataProvider {
         files
     }
 
-    pub fn process_message(&mut self, message: ServerMessage, playlist: &[SongInfo]) {
+    pub fn process_message(&mut self, message: ServerMessage, playlist: &[PlaylistItem]) {
         match message {
             ServerMessage::Ready(channel) => {
                 self.channel = Some(channel);
-
-                self.time_offset_ms = 0;
-                self.state = None;
-                self.sync_x_fader_is_left = true;
-                self.update_song_info(playlist);
-
                 self.reconnect();
             }
-            ServerMessage::Connect {
-                time_offset_ms,
-                initial_state,
-            } => {
-                self.time_offset_ms = time_offset_ms;
+            ServerMessage::Connect { initial_state, .. } => {
                 self.sync_x_fader_is_left = initial_state.mixer.x_fader < 0.5;
                 self.state = Some(*initial_state);
                 self.update_song_info(playlist);
@@ -471,11 +459,7 @@ impl TraktorDataProvider {
                 let loaded_files = self.get_loaded_files();
                 self.covers.retain(|path, _| loaded_files.contains(path));
             }
-            ServerMessage::Log(msg) => {
-                if self.debug_logging {
-                    self.log.push(msg);
-                }
-            }
+            ServerMessage::Log(_) => {}
             ServerMessage::ClientChanged(addr) => {
                 self.cover_loader_addr = addr;
             }
@@ -492,14 +476,9 @@ impl TraktorDataProvider {
         should_scroll
     }
 
-    pub fn get_current_index(&self, playlist: &[SongInfo]) -> Option<usize> {
-        let traktor_song = self.get_song_info()?;
-
-        playlist
-            .iter()
-            .enumerate()
-            .find(|(_i, s)| TraktorDataProvider::songs_name_match(s, traktor_song))
-            .map(|(i, _s)| i)
+    pub fn get_current_index(&self, playlist: &[PlaylistItem]) -> Option<usize> {
+        self.get_song_info()
+            .and_then(|traktor_song| Self::find_by_name(playlist, traktor_song))
     }
 
     fn send_message(&mut self, message: AppMessage) {

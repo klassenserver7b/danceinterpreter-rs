@@ -1,6 +1,7 @@
-// canvas_toggle.rs
+//! Canvas-drawn toggle for the DJ panel (power, restart).
 
 use crate::Message;
+use crate::ui::theme::Tokens;
 use iced::advanced::graphics::core::event::Event;
 use iced::mouse::Cursor;
 use iced::widget::canvas::{Cache, Frame, Geometry, Path};
@@ -9,35 +10,35 @@ use iced::{Element, Length, Point, Rectangle, Renderer, Theme, mouse, window};
 use std::rc::Rc;
 use std::time::Instant;
 
-type DrawFunction<'a> = Rc<dyn Fn(&Theme, &mut Frame, Rectangle, Cursor, bool) + 'a>;
+type DrawFunction<'a> = Rc<dyn Fn(&Theme, &mut Frame, bool) + 'a>;
 type ToggleFunction<'a> = Rc<dyn Fn(bool) -> Message + 'a>;
 
 const ANIM_SECS: f32 = 0.28;
 
+/// A canvas-drawn toggle with an optional ripple press animation.
 #[derive(Clone)]
 pub struct CanvasToggle<'a> {
     is_checked: bool,
     on_toggle: Option<ToggleFunction<'a>>,
     on_draw: Option<DrawFunction<'a>>,
     cache: &'a Cache,
-    width: Length,
-    height: Length,
 }
 
 impl<'a> CanvasToggle<'a> {
+    /// Canvas size (square) in px.
     const DEFAULT_SIZE: f32 = 75.0;
 
+    /// Creates a toggle showing `is_checked`, drawn through `cache`.
     pub fn new(is_checked: bool, cache: &'a Cache) -> Self {
         Self {
             is_checked,
             on_toggle: None,
             on_draw: None,
             cache,
-            width: Length::Fixed(Self::DEFAULT_SIZE),
-            height: Length::Fixed(Self::DEFAULT_SIZE),
         }
     }
 
+    /// Sets the message builder invoked on press (`true` = checked).
     pub fn on_toggle<F>(mut self, f: F) -> Self
     where
         F: 'a + Fn(bool) -> Message,
@@ -46,30 +47,21 @@ impl<'a> CanvasToggle<'a> {
         self
     }
 
+    /// Sets the draw function: `(theme, frame, is_checked)`.
     pub fn on_draw<F>(mut self, f: F) -> Self
     where
-        F: 'a + Fn(&Theme, &mut Frame, Rectangle, Cursor, bool) + 'a,
+        F: 'a + Fn(&Theme, &mut Frame, bool) + 'a,
     {
         self.on_draw = Some(Rc::new(f));
-        self
-    }
-
-    pub fn width(mut self, width: f32) -> Self {
-        self.width = Length::Fixed(width);
-        self
-    }
-
-    pub fn height(mut self, height: f32) -> Self {
-        self.height = Length::Fixed(height);
         self
     }
 }
 
 impl<'a> From<CanvasToggle<'a>> for Canvas<CanvasToggle<'a>, Message, Theme, Renderer> {
     fn from(value: CanvasToggle<'a>) -> Self {
-        let w = value.width;
-        let h = value.height;
-        Canvas::new(value).width(w).height(h)
+        Canvas::new(value)
+            .width(Length::Fixed(CanvasToggle::DEFAULT_SIZE))
+            .height(Length::Fixed(CanvasToggle::DEFAULT_SIZE))
     }
 }
 
@@ -122,7 +114,7 @@ impl<'a> canvas::Program<Message> for CanvasToggle<'a> {
         renderer: &Renderer,
         theme: &Theme,
         bounds: Rectangle,
-        cursor: Cursor,
+        _cursor: Cursor,
     ) -> Vec<Geometry<Renderer>> {
         let Some(on_draw) = &self.on_draw else {
             return Vec::new();
@@ -132,14 +124,14 @@ impl<'a> canvas::Program<Message> for CanvasToggle<'a> {
         // the canvas is only redrawn when the parent invalidates it.
         if state.is_none() {
             let geo = self.cache.draw(renderer, bounds.size(), |frame| {
-                on_draw(theme, frame, bounds, cursor, self.is_checked);
+                on_draw(theme, frame, self.is_checked);
             });
             return vec![geo];
         }
 
         // --- animated frame: draw base + ripple overlay on a fresh Frame ---
         let mut frame = Frame::new(renderer, bounds.size());
-        on_draw(theme, &mut frame, bounds, cursor, self.is_checked);
+        on_draw(theme, &mut frame, self.is_checked);
 
         if let Some(started) = state {
             let progress = (started.elapsed().as_secs_f32() / ANIM_SECS).clamp(0.0, 1.0);
@@ -149,13 +141,12 @@ impl<'a> canvas::Program<Message> for CanvasToggle<'a> {
             let cy = size.height / 2.0;
             let dim = size.width.min(size.height);
 
-            // Ripple expands from 0 → bg_r and fades from 0.45 → 0
-            let max_r = dim * 0.46;
+            // Ripple expands from 0 → bg radius and fades from 0.45 → 0
+            let max_r = dim * super::BG_RADIUS;
             let r = max_r * progress;
             let alpha = (1.0 - progress) * 0.45;
 
-            // Use the secondary color so the ripple feels intentional
-            let mut ripple_color = theme.extended_palette().secondary.base.color;
+            let mut ripple_color = Tokens::of(theme).accent_soft;
             ripple_color.a = alpha;
 
             let ripple = Path::new(|b| b.circle(Point::new(cx, cy), r));

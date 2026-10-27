@@ -1,0 +1,187 @@
+//! Bottom quick-show bar: blank / DJ live / favorite statics — the
+//! operator's one-click show control during an event.
+
+use crate::dataloading::dataprovider::{ItemChange, ItemSource};
+use crate::ui::config_window::View;
+use crate::ui::theme::{self, sz};
+use crate::ui::widgets::{dot, kbd, material_symbol, material_symbol_sized};
+use crate::ui::with_tooltip;
+use crate::{DanceInterpreter, Message};
+use iced::widget::scrollable::{Direction, Scrollbar};
+use iced::widget::{button, container, row, scrollable, text};
+use iced::{Alignment, Color, Element, Length, Theme};
+
+/// Total height the show bar occupies at the window bottom (77px bar plus
+/// margin); floating overlays such as the toast keep this much clearance.
+pub const DOCK_CLEARANCE: f32 = 92.0;
+
+/// Height of the show bar's pills and of the label band.
+pub const PILL_HEIGHT: f32 = 33.0;
+
+pub fn build(dance_interpreter: &DanceInterpreter) -> Element<'_, Message> {
+    let current = dance_interpreter.data_provider.get_current_source().clone();
+
+    let label = row![
+        material_symbol("graphic_eq", false)
+            .size(17.0)
+            .style(theme::text_style(|tk| tk.accent_soft)),
+        text("Quick show")
+            .size(sz::CAPTION)
+            .font(theme::body_font(iced::font::Weight::Medium))
+            .style(theme::text_style(|tk| tk.text)),
+    ]
+    .spacing(10)
+    .align_y(Alignment::Center);
+
+    let blank = quick_button(
+        Some("crop_free"),
+        "Blank",
+        Some(kbd("End", theme::kbd_style).into()),
+        matches!(&current, ItemSource::Blank),
+        Message::ItemChanged(ItemChange::Blank),
+    );
+
+    let dj_live = quick_button(
+        Some("graphic_eq"),
+        "DJ live",
+        None,
+        matches!(&current, ItemSource::Traktor),
+        Message::ItemChanged(ItemChange::Traktor),
+    );
+
+    let mut buttons_row = row![label, blank, dj_live]
+        .spacing(8)
+        .align_y(Alignment::Center);
+
+    // Divider between sources and favorite statics.
+    let divider = container(iced::widget::Space::new())
+        .width(Length::Fixed(1.0))
+        .height(Length::Fixed(24.0))
+        .style(|t: &Theme| container::Style::default().background(theme::Tokens::of(t).border));
+
+    buttons_row = buttons_row.push(divider);
+
+    for (name, static_info) in dance_interpreter
+        .data_provider
+        .statics()
+        .iter()
+        .filter(|(_, s)| s.is_favorite)
+    {
+        let active = matches!(&current, ItemSource::Static(current_name) if *current_name == *name);
+        // Dark-based fallback (not theme-aware) per the approved prototype.
+        let color = static_info
+            .color
+            .unwrap_or_else(|| theme::Tokens::dark().muted);
+
+        let dot = dot(5.0, move |_| color);
+
+        let btn = button(
+            row![dot, text(&static_info.name).size(sz::TINY)]
+                .spacing(7)
+                .height(Length::Fill)
+                .align_y(Alignment::Center),
+        )
+        .padding([0, 11])
+        .height(Length::Fixed(PILL_HEIGHT))
+        .style(move |t: &Theme, s: button::Status| pill_style(t, s, active))
+        .on_press(Message::ItemChanged(ItemChange::StaticAbsolute(
+            name.clone(),
+        )));
+
+        buttons_row = buttons_row.push(with_tooltip(
+            btn,
+            format!("Show {} static", static_info.name),
+        ));
+    }
+
+    let manage = with_tooltip(
+        button(
+            container(
+                material_symbol_sized("add", false, sz::ICON)
+                    .style(theme::text_style(|tk| tk.muted)),
+            )
+            .height(Length::Fill)
+            .align_y(Alignment::Center),
+        )
+        .padding([0, 10])
+        .height(Length::Fixed(PILL_HEIGHT))
+        .style(theme::btn_outline)
+        .on_press(Message::SetView(View::Statics)),
+        "Manage favorite statics",
+    );
+
+    buttons_row = buttons_row.push(manage);
+
+    let scroll = scrollable(buttons_row)
+        .direction(Direction::Horizontal(
+            Scrollbar::new().width(6.0).scroller_width(6.0),
+        ))
+        .width(Length::Fill)
+        .height(Length::Shrink)
+        .style(theme::scrollable_style);
+
+    container(scroll)
+        .padding([15, 28])
+        .height(Length::Fixed(77.0))
+        .width(Length::Fill)
+        .align_y(Alignment::Center)
+        .style(theme::showbar_bg)
+        .into()
+}
+
+/// A quick-show pill button with optional icon and keyboard hint.
+fn quick_button<'a>(
+    icon: Option<&'a str>,
+    label: &'a str,
+    hint: Option<Element<'a, Message>>,
+    active: bool,
+    message: Message,
+) -> Element<'a, Message> {
+    let mut content = row![]
+        .spacing(7)
+        .height(Length::Fill)
+        .align_y(Alignment::Center);
+
+    if let Some(icon) = icon {
+        content = content.push(
+            material_symbol_sized(icon, false, sz::ICON_SM)
+                .style(theme::text_style(move |tk| pill_text(tk, active))),
+        );
+    }
+
+    content = content.push(
+        text(label)
+            .size(sz::TINY)
+            .style(theme::text_style(move |tk| pill_text(tk, active))),
+    );
+
+    if let Some(hint) = hint {
+        content = content.push(hint);
+    }
+
+    let btn = button(content)
+        .padding([0, 11])
+        .height(Length::Fixed(PILL_HEIGHT))
+        .style(move |t: &Theme, s: button::Status| pill_style(t, s, active));
+
+    if active {
+        // The active item is already on screen; pressing again is a no-op.
+        btn.into()
+    } else {
+        btn.on_press(message).into()
+    }
+}
+
+/// Pill button style: active variant while this source is on screen.
+fn pill_style(t: &Theme, s: button::Status, active: bool) -> button::Style {
+    if active {
+        theme::btn_active(t, s)
+    } else {
+        theme::btn_secondary(t, s)
+    }
+}
+
+/// Pill text/icon color.
+fn pill_text(tk: &theme::Tokens, active: bool) -> Color {
+    if active { tk.active_text } else { tk.btn2_text }
+}
