@@ -14,6 +14,13 @@ use iced::widget::{
 use iced::{Alignment, Element, Length, Theme};
 use iced_aw::number_input;
 
+/// Max width of modal cards (design px).
+const DIALOG_MAX_WIDTH: f32 = 440.0;
+/// Vertical spacing between title, body and actions in a modal card.
+const DIALOG_SPACING: f32 = 18.0;
+/// Padding around a modal card's content (design px).
+const DIALOG_PAD: f32 = 25.0;
+
 #[derive(Debug, Clone)]
 pub enum DialogState {
     Delete(ItemSource),
@@ -105,12 +112,12 @@ pub fn build_dialog<'a>(
             body,
             actions,
         ]
-        .spacing(18)
+        .spacing(DIALOG_SPACING)
         .width(Length::Fill),
     )
-    .padding(25)
+    .padding(DIALOG_PAD)
     .width(Length::Fill)
-    .max_width(440.0)
+    .max_width(DIALOG_MAX_WIDTH)
     .style(theme::modal_card);
 
     let backdrop = mouse_area(
@@ -148,7 +155,9 @@ fn dialog_actions<'a>(
 
 /// A labeled settings row with a bottom hairline.
 fn setting_row<'a>(label: &'a str, control: Element<'a, Message>) -> Element<'a, Message> {
-    container(
+    // The hairline is a real 1px element: a width-0 container border paints
+    // nothing, so the row would silently lose its separator.
+    col![
         row![
             text(label)
                 .size(sz::BASE)
@@ -157,18 +166,11 @@ fn setting_row<'a>(label: &'a str, control: Element<'a, Message>) -> Element<'a,
             control,
         ]
         .align_y(Alignment::Center)
-        .spacing(20),
-    )
-    .padding([13, 0])
+        .spacing(20)
+        .padding([13, 0]),
+        super::top_bar::divider(),
+    ]
     .width(Length::Fill)
-    .style(|t: &Theme| {
-        let tk = theme::Tokens::of(t);
-        container::Style::default().border(iced::Border {
-            color: tk.border_soft,
-            width: 0.0,
-            radius: 0.0.into(),
-        })
-    })
     .into()
 }
 
@@ -327,11 +329,7 @@ fn build_settings<'a>(
     ]
     .spacing(0);
 
-    (
-        "Settings".to_string(),
-        body,
-        Space::new().height(Length::Fixed(0.0)).into(),
-    )
+    ("Settings".to_string(), body, col![].into())
 }
 
 fn build_help() -> (
@@ -375,22 +373,20 @@ fn build_help() -> (
         );
     }
 
-    (
-        "Keyboard shortcuts".to_string(),
-        body,
-        Space::new().height(Length::Fixed(0.0)).into(),
-    )
+    ("Keyboard shortcuts".to_string(), body, col![].into())
 }
 
 fn build_add_static<'a>(
     config_window: &'a ConfigWindow,
 ) -> (String, Column<'a, Message, Theme>, Element<'a, Message>) {
+    let submit = Message::Statics(StaticsMessage::AddNamed(
+        config_window.add_static_name.clone(),
+    ));
+
     let name_input = text_input("Static name", &config_window.add_static_name)
         .size(sz::BASE)
         .on_input(|v| Message::Dialog(DialogMessage::ChangeAddStaticName(v)))
-        .on_submit(Message::Statics(StaticsMessage::AddNamed(
-            config_window.add_static_name.clone(),
-        )))
+        .on_submit(submit.clone())
         .style(theme::input_boxed)
         .padding([7, 9]);
 
@@ -404,12 +400,7 @@ fn build_add_static<'a>(
 
     let actions = dialog_actions([
         buttons::secondary("Cancel", Message::Dialog(DialogMessage::Close)),
-        buttons::primary(
-            "Add static",
-            Message::Statics(StaticsMessage::AddNamed(
-                config_window.add_static_name.clone(),
-            )),
-        ),
+        buttons::primary("Add static", submit),
     ]);
 
     ("Add static".to_string(), body, actions)
