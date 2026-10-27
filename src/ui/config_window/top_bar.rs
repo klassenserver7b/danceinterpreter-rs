@@ -39,11 +39,12 @@ pub fn build<'a>(config_window: &'a ConfigWindow) -> Element<'a, Message> {
         Message::FocusSongWindow,
     );
 
-    // The icon mirrors the nav toggle: a plain panel while collapsed, the
-    // open-panel glyph while the rail is expanded.
+    // The icon mirrors the nav toggle: a plain panel while collapsed, and
+    // while the rail is expanded the close glyph — same panel, arrow exactly
+    // reversed, pointing in the collapse direction.
     let rail_toggle = icon_button_tooltip(
         if config_window.rail_open() {
-            "right_panel_open"
+            "right_panel_close"
         } else {
             "view_sidebar"
         },
