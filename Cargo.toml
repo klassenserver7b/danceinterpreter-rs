@@ -14,7 +14,7 @@ iced = { version = "0.14.0", features = ["linux-theme-detection", "image", "wayl
 iced_aw = { version = "0.14.1", features = ["default", "color_picker"] }
 #iced_anim = { version = "0.3.1", features = ["derive", "widgets"] }
 #iced_drop = { version = "0.2.39", features = ["helpers"] }
-rfd = "0.17"
+rfd = "0.18"
 dirs = "7.0"
 warp = { version = "0.4", features = ["websocket", "server"] }
 tokio = { version = "1.53" }
