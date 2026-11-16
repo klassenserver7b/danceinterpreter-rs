@@ -27,7 +27,7 @@ pin_project! {
 }
 
 impl<Fut: Future, DropFn: FnOnce()> DroppingOnce<Fut, DropFn> {
-    pub fn new(future: Fut, drop_fn: DropFn) -> Self {
+    pub const fn new(future: Fut, drop_fn: DropFn) -> Self {
         Self {
             future: Some(future),
             drop_fn: Some(drop_fn),

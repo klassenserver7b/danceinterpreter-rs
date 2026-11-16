@@ -16,7 +16,7 @@ pub fn draw(theme: &Theme, frame: &mut Frame, enabled: bool) {
     let gap_half = GAP_HALF_DEG.to_radians();
     let top = -PI / 2.0; // top of circle (-90°)
     let start = top + gap_half; // right side of gap  ≈ -55°
-    let end = top - gap_half + 2.0 * PI; // left side of gap   ≈ 235° (going all the way around)
+    let end = 2.0f32.mul_add(PI, top - gap_half); // left side of gap   ≈ 235° (going all the way around)
 
     let arc = Path::new(|b| {
         b.arc(canvas::path::Arc {
@@ -31,7 +31,7 @@ pub fn draw(theme: &Theme, frame: &mut Frame, enabled: bool) {
     // Power line (vertical, through the gap)
     // Runs from ~20% inside the radius up to the circumference.
     let line = Path::new(|b| {
-        b.move_to(Point::new(center.x, center.y - arc_r * 0.18));
+        b.move_to(Point::new(center.x, f32::mul_add(arc_r, -0.18, center.y)));
         b.line_to(Point::new(center.x, center.y - arc_r));
     });
     stroke_icon(frame, &line, &base, 1.0);

@@ -1,6 +1,6 @@
 use iced::widget::image;
 
-#[derive(Default, Clone, Debug, PartialEq)]
+#[derive(Default, Clone, Debug, PartialEq, Eq)]
 pub struct SongInfo {
     pub track_number: u32,
     pub title: String,
@@ -10,14 +10,14 @@ pub struct SongInfo {
 }
 
 impl SongInfo {
-    pub fn new(
+    pub const fn new(
         track_number: u32,
         title: String,
         artist: String,
         dance: String,
         album_art: Option<image::Handle>,
     ) -> Self {
-        SongInfo {
+        Self {
             track_number,
             title,
             artist,

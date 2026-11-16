@@ -40,7 +40,7 @@ pub enum SkipReason {
 
 impl PlaylistLoad {
     /// Entries the playlist declares in total (loaded + skipped).
-    pub fn total(&self) -> usize {
+    pub const fn total(&self) -> usize {
         self.songs.len() + self.skipped.len()
     }
 }
@@ -49,8 +49,8 @@ impl SkipReason {
     /// Short human-readable cause for logs and toasts.
     pub fn describe(&self) -> String {
         match self {
-            SkipReason::Inaccessible => "not accessible".to_string(),
-            SkipReason::Unreadable(err) => format!("unreadable: {err}"),
+            Self::Inaccessible => "not accessible".to_string(),
+            Self::Unreadable(err) => format!("unreadable: {err}"),
         }
     }
 }

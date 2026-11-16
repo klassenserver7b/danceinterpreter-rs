@@ -258,7 +258,7 @@ where
         self.updated = Instant::now();
     }
 
-    fn sync(&self, other: &mut Filtered<T>) {
+    fn sync(&self, other: &mut Self) {
         if other.updated != self.updated {
             *other = self.clone();
         }
@@ -499,7 +499,7 @@ where
     /// Publishes [`Self::on_input`] for every text change the embedded input
     /// produced and re-filters the option list for the new query.
     fn handle_text_changed(
-        &mut self,
+        &self,
         local_messages: Vec<TextInputEvent>,
         tree: &mut widget::Tree,
         shell: &mut Shell<'_, Message>,
@@ -729,7 +729,7 @@ fn text_input_focused<Renderer: text::Renderer>(tree: &widget::Tree) -> bool {
 
 /// Moves the menu's hovered option by `delta` (-1 or 1), wrapping around the
 /// option list; an unset hover starts at the first option.
-fn cycle_hovered<T>(menu: &mut Menu<T>, count: usize, delta: isize) {
+const fn cycle_hovered<T>(menu: &mut Menu<T>, count: usize, delta: isize) {
     let next = match menu.hovered_option {
         Some(index) if count > 0 => {
             let step = delta.rem_euclid(count as isize) as usize;

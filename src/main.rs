@@ -200,7 +200,7 @@ impl DanceInterpreter {
         });
         let (song_window, sw_opened) = Self::open_window(window::Settings {
             platform_specific: Self::get_platform_specific(),
-            icon: icon.clone(),
+            icon,
             ..Default::default()
         });
 
@@ -421,14 +421,15 @@ impl DanceInterpreter {
             Some(image::ImageFormat::Png),
         );
 
-        if let Ok(icon) = icon {
-            Task::batch([
-                window::set_icon(self.song_window.id, icon.clone()),
-                window::set_icon(self.config_window.id, icon),
-            ])
-        } else {
-            ().into()
-        }
+        icon.map_or_else(
+            |_| ().into(),
+            |icon| {
+                Task::batch([
+                    window::set_icon(self.song_window.id, icon.clone()),
+                    window::set_icon(self.config_window.id, icon),
+                ])
+            },
+        )
     }
 
     pub fn title(&self, window_id: window::Id) -> String {
@@ -1163,7 +1164,7 @@ impl DanceInterpreter {
         }
     }
 
-    fn scroll_to_first_search_match(&mut self) -> Task<Message> {
+    fn scroll_to_first_search_match(&self) -> Task<Message> {
         if self.config_window.search_query.is_empty() {
             return ().into();
         }
@@ -1218,11 +1219,9 @@ impl DanceInterpreter {
     }
 
     fn try_scroll_to_song(&mut self) -> Task<Message> {
-        if let Some(index) = self.data_provider.take_scroll_index() {
-            self.snap_to_index(index)
-        } else {
-            ().into()
-        }
+        self.data_provider
+            .take_scroll_index()
+            .map_or_else(|| ().into(), |index| self.snap_to_index(index))
     }
 
     fn theme(&self, window_id: window::Id) -> Theme {

@@ -483,7 +483,7 @@ fn build_dance_cell<'a>(
 /// the value (or the placeholder when empty) in the given colors, never
 /// interactive itself; the double-click wrapper lives with the row.
 /// Truncates with a trailing `…` when the value does not fit its cell.
-pub(crate) fn editable_text<'a>(
+pub fn editable_text<'a>(
     value: &'a str,
     placeholder: &'static str,
     size: f32,

@@ -182,6 +182,6 @@ fn pill_style(t: &Theme, s: button::Status, active: bool) -> button::Style {
 }
 
 /// Pill text/icon color.
-fn pill_text(tk: &theme::Tokens, active: bool) -> Color {
+const fn pill_text(tk: &theme::Tokens, active: bool) -> Color {
     if active { tk.active_text } else { tk.btn2_text }
 }

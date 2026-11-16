@@ -166,18 +166,22 @@ fn build_up_next(dance_interpreter: &DanceInterpreter) -> Element<'_, Message> {
 
     let tag = if queued { "QUEUED" } else { "PLAYLIST" };
 
-    let (dance, title, artist) = match &next {
-        Some(d) => (
-            d.headline.clone(),
-            d.subline_upper.clone(),
-            d.subline_lower.clone(),
-        ),
-        None => (
-            "End of playlist".to_string(),
-            "Enjoy the evening".to_string(),
-            String::new(),
-        ),
-    };
+    let (dance, title, artist) = next.as_ref().map_or_else(
+        || {
+            (
+                "End of playlist".to_string(),
+                "Enjoy the evening".to_string(),
+                String::new(),
+            )
+        },
+        |d| {
+            (
+                d.headline.clone(),
+                d.subline_upper.clone(),
+                d.subline_lower.clone(),
+            )
+        },
+    );
 
     let dance_color = provider.get_dance_color(&dance);
 

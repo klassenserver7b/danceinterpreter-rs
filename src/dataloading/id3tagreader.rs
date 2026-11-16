@@ -13,7 +13,7 @@ pub fn read_song_info_from_filepath(file: impl AsRef<Path>) -> Result<SongInfo> 
         // use front cover if available
         .find(|pic| pic.picture_type == PictureType::CoverFront)
         // otherwise try to use any picture
-        .or(tag.pictures().next())
+        .or_else(|| tag.pictures().next())
         .cloned();
 
     Ok(SongInfo::new(

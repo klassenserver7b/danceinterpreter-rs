@@ -107,18 +107,22 @@ fn brand() -> Element<'static, Message> {
 }
 
 fn session_card(config_window: &ConfigWindow) -> Element<'_, Message> {
-    let (title, subtitle) = match &config_window.playlist_file {
-        Some(path) => (
-            path.file_name()
-                .map(|n| n.to_string_lossy().to_string())
-                .unwrap_or_else(|| "Playlist loaded".to_string()),
-            "Event playlist".to_string(),
-        ),
-        None => (
-            "No playlist loaded".to_string(),
-            "Drop or open an .m3u".to_string(),
-        ),
-    };
+    let (title, subtitle) = config_window.playlist_file.as_ref().map_or_else(
+        || {
+            (
+                "No playlist loaded".to_string(),
+                "Drop or open an .m3u".to_string(),
+            )
+        },
+        |path| {
+            (
+                path.file_name()
+                    .map(|n| n.to_string_lossy().to_string())
+                    .unwrap_or_else(|| "Playlist loaded".to_string()),
+                "Event playlist".to_string(),
+            )
+        },
+    );
 
     container(
         col![

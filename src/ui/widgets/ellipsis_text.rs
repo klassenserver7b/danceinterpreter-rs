@@ -91,7 +91,7 @@ where
     }
 
     /// Sets the [`Shaping`] strategy of the [`EllipsisText`].
-    pub fn shaping(mut self, shaping: Shaping) -> Self {
+    pub const fn shaping(mut self, shaping: Shaping) -> Self {
         self.shaping = shaping;
         self
     }

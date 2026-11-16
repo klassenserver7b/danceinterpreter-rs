@@ -72,12 +72,12 @@ pub enum ConnectionState {
 impl ConnectionState {
     /// Short status text for the LED in the Traktor card; the LED color
     /// carries the connected/disconnected nuance.
-    pub fn summary(&self) -> &'static str {
+    pub const fn summary(&self) -> &'static str {
         match self {
-            ConnectionState::Connected => "Traktor & Cover Loader",
-            ConnectionState::Traktor => "Traktor",
-            ConnectionState::CoverLoader => "Cover Loader",
-            ConnectionState::Disconnected => "No clients",
+            Self::Connected => "Traktor & Cover Loader",
+            Self::Traktor => "Traktor",
+            Self::CoverLoader => "Cover Loader",
+            Self::Disconnected => "No clients",
         }
     }
 }
@@ -186,7 +186,7 @@ impl TraktorDataProvider {
         self.cached_next_song_info.as_ref()
     }
 
-    pub fn get_connection_state(&self) -> ConnectionState {
+    pub const fn get_connection_state(&self) -> ConnectionState {
         if !self.enabled {
             ConnectionState::Disconnected
         } else if self.cover_loader_addr.is_some() && self.state.is_some() {
@@ -261,18 +261,15 @@ impl TraktorDataProvider {
             TraktorSyncMode::AbsoluteByNumber => {
                 let current_index = Self::find_by_number(playlist, content.number);
 
-                self.cached_sync_action = match current_index {
-                    None => TraktorSyncAction::Relative(0),
-                    Some(ci) => TraktorSyncAction::PlaylistAbsolute(ci),
-                };
+                self.cached_sync_action = current_index.map_or(TraktorSyncAction::Relative(0), TraktorSyncAction::PlaylistAbsolute);
             }
             TraktorSyncMode::AbsoluteByName => {
                 let current_index = Self::find_by_name(playlist, &current_song_info);
 
-                self.cached_sync_action = match current_index {
-                    None => TraktorSyncAction::Relative(0),
-                    Some(ci) => TraktorSyncAction::PlaylistAbsolute(ci),
-                };
+                self.cached_sync_action = current_index
+                    .map_or(TraktorSyncAction::Relative(0), |ci| {
+                        TraktorSyncAction::PlaylistAbsolute(ci)
+                    });
             }
             _ => {}
         };
@@ -466,11 +463,11 @@ impl TraktorDataProvider {
         }
     }
 
-    pub fn take_sync_action(&mut self) -> TraktorSyncAction {
+    pub const fn take_sync_action(&mut self) -> TraktorSyncAction {
         mem::replace(&mut self.cached_sync_action, TraktorSyncAction::Relative(0))
     }
 
-    pub fn take_should_scroll(&mut self) -> bool {
+    pub const fn take_should_scroll(&mut self) -> bool {
         let should_scroll = self.should_scroll;
         self.should_scroll = false;
         should_scroll
@@ -489,7 +486,7 @@ impl TraktorDataProvider {
         }
     }
 
-    pub fn enabled(&self) -> bool {
+    pub const fn enabled(&self) -> bool {
         self.enabled
     }
 }

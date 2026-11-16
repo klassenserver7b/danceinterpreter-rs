@@ -48,17 +48,17 @@ pub enum Backdrop {
 impl Backdrop {
     /// Options for the settings pick list, in display order. Must stay in
     /// sync with [`TABLE`], which carries the per-preset data.
-    pub const ALL: &'static [Backdrop] = &[
-        Backdrop::Black,
-        Backdrop::DarkGray,
-        Backdrop::Gray,
-        Backdrop::DarkRed,
-        Backdrop::DarkOrange,
-        Backdrop::DarkMagenta,
-        Backdrop::DarkPurple,
-        Backdrop::DarkBlue,
-        Backdrop::DarkCyan,
-        Backdrop::DarkGreen,
+    pub const ALL: &'static [Self] = &[
+        Self::Black,
+        Self::DarkGray,
+        Self::Gray,
+        Self::DarkRed,
+        Self::DarkOrange,
+        Self::DarkMagenta,
+        Self::DarkPurple,
+        Self::DarkBlue,
+        Self::DarkCyan,
+        Self::DarkGreen,
     ];
 
     pub fn color(self) -> iced::Color {

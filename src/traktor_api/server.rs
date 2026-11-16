@@ -40,7 +40,7 @@ struct TraktorServer {
 
 impl TraktorServer {
     fn new(output: UnboundedSender<ServerMessage>) -> Self {
-        TraktorServer {
+        Self {
             output,
 
             debug_logging: false,
@@ -111,7 +111,7 @@ impl TraktorServer {
         }
     }
 
-    async fn handle_connect(&mut self) -> warp::reply::Json {
+    async fn handle_connect(&self) -> warp::reply::Json {
         warp::reply::json(&ConnectionResponse {
             session_id: self.session_id.to_owned(),
             debug_logging: self.debug_logging,
@@ -136,12 +136,12 @@ impl TraktorServer {
             })
             .await;
 
-            let mut messages = self
+            let messages = self
                 .queue
                 .drain(..)
                 .map(ServerMessage::Update)
                 .collect::<Vec<_>>();
-            self.send_messages(messages.drain(..)).await;
+            self.send_messages(messages).await;
 
             self.is_initialized = true;
         }
@@ -234,7 +234,7 @@ impl TraktorServer {
                     .or(Self::route_init(state.clone()))
                     .or(Self::route_update(state.clone()))
                     .or(Self::route_log(state.clone()))
-                    .or(Self::route_cover(state.clone())),
+                    .or(Self::route_cover(state)),
             )
             .map(|_, reply| reply)
     }
@@ -384,9 +384,8 @@ impl TraktorServer {
     fn route_cover(
         state: Arc<Mutex<Self>>,
     ) -> impl Filter<Extract = (impl warp::Reply,), Error = warp::Rejection> + Clone {
-        warp::path!("cover").and(
-            Self::route_cover_upload(state.clone()).or(Self::route_cover_socket(state.clone())),
-        )
+        warp::path!("cover")
+            .and(Self::route_cover_upload(state.clone()).or(Self::route_cover_socket(state)))
     }
 
     fn route_cover_upload(

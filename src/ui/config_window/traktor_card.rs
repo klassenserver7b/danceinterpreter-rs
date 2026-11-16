@@ -292,7 +292,7 @@ fn get_formatted_network_interfaces(data_provider: &DataProvider) -> Vec<String>
     let original_addr = data_provider
         .traktor_provider
         .get_socket_addr()
-        .unwrap_or(TRAKTOR_SERVER_DEFAULT_ADDR.parse().unwrap());
+        .unwrap_or_else(|| TRAKTOR_SERVER_DEFAULT_ADDR.parse().unwrap());
     let original_port = original_addr.port();
 
     get_network_interfaces()

@@ -26,7 +26,7 @@ pub const PAGE_GUTTER: f32 = 31.0;
 pub const INPUT_PAD: [f32; 2] = [5.0, 8.0];
 
 /// Body font (DM Sans) with the given weight.
-pub fn body_font(weight: Weight) -> Font {
+pub const fn body_font(weight: Weight) -> Font {
     Font {
         family: Family::Name(FONT_BODY),
         weight,
@@ -36,7 +36,7 @@ pub fn body_font(weight: Weight) -> Font {
 }
 
 /// Heading font (Manrope) with the given weight.
-pub fn head_font(weight: Weight) -> Font {
+pub const fn head_font(weight: Weight) -> Font {
     Font {
         family: Family::Name(FONT_HEAD),
         weight,
@@ -104,7 +104,7 @@ pub fn text_style(
     }
 }
 
-fn rgb(r: u8, g: u8, b: u8) -> Color {
+const fn rgb(r: u8, g: u8, b: u8) -> Color {
     Color::from_rgb8(r, g, b)
 }
 
@@ -112,15 +112,15 @@ fn rgb(r: u8, g: u8, b: u8) -> Color {
 fn mix(a: Color, b: Color, t: f32) -> Color {
     let k = t.clamp(0.0, 1.0);
     Color::from_rgba(
-        a.r + (b.r - a.r) * k,
-        a.g + (b.g - a.g) * k,
-        a.b + (b.b - a.b) * k,
+        (b.r - a.r).mul_add(k, a.r),
+        (b.g - a.g).mul_add(k, a.g),
+        (b.b - a.b).mul_add(k, a.b),
         a.a,
     )
 }
 
 /// A copy of `color` with a different alpha (for hover / zebra overlays).
-pub fn with_alpha(color: Color, a: f32) -> Color {
+pub const fn with_alpha(color: Color, a: f32) -> Color {
     Color { a, ..color }
 }
 
@@ -511,11 +511,11 @@ impl Tokens {
 }
 
 fn luminance(c: Color) -> f32 {
-    0.2126 * c.r + 0.7152 * c.g + 0.0722 * c.b
+    0.0722f32.mul_add(c.b, 0.7152f32.mul_add(c.g, 0.2126 * c.r))
 }
 
 /// Four-sided padding (iced only implements `From` for scalars and pairs).
-pub fn pad4(top: f32, right: f32, bottom: f32, left: f32) -> iced::Padding {
+pub const fn pad4(top: f32, right: f32, bottom: f32, left: f32) -> iced::Padding {
     iced::Padding {
         top,
         right,
@@ -598,7 +598,7 @@ pub struct RowLook {
 impl RowLook {
     /// Standard table-row look: zebra striping, current highlight, and a
     /// search-match wash for non-current rows.
-    pub fn table(idx: usize, is_current: bool, is_match: bool) -> Self {
+    pub const fn table(idx: usize, is_current: bool, is_match: bool) -> Self {
         Self {
             zebra: idx % 2 == 1,
             current: is_current,

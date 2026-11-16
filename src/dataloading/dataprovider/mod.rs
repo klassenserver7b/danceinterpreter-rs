@@ -18,7 +18,7 @@ pub enum DeletedItem {
     },
 }
 
-#[derive(Default, Debug, PartialEq, Clone)]
+#[derive(Default, Debug, PartialEq, Eq, Clone)]
 pub enum ItemSource {
     #[default]
     Blank,
@@ -44,7 +44,7 @@ pub enum SongDataEdit {
     Dance(String),
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum SubmitStaticResult {
     Success,
     Unchanged,
@@ -55,7 +55,7 @@ pub enum SubmitStaticResult {
 
 use indexmap::IndexMap;
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PlaylistItem {
     pub song: SongInfo,
     pub played: bool,
@@ -393,7 +393,7 @@ impl DataProvider {
         }
     }
 
-    pub fn clear_pending_scroll(&mut self) {
+    pub const fn clear_pending_scroll(&mut self) {
         self.should_scroll = false;
         self.traktor_provider.take_should_scroll();
     }
@@ -562,14 +562,15 @@ impl DataProvider {
 
     #[cfg(not(test))]
     fn default_statics_path() -> PathBuf {
-        if let Some(mut path) = dirs::config_dir() {
-            path.push("danceinterpreter");
-            let _ = std::fs::create_dir_all(&path);
-            path.push("statics.json");
-            path
-        } else {
-            PathBuf::from("./statics.json")
-        }
+        dirs::config_dir().map_or_else(
+            || PathBuf::from("./statics.json"),
+            |mut path| {
+                path.push("danceinterpreter");
+                let _ = std::fs::create_dir_all(&path);
+                path.push("statics.json");
+                path
+            },
+        )
     }
 
     pub fn load_statics(&mut self) {
@@ -582,21 +583,21 @@ impl DataProvider {
         self.save_statics();
     }
 
-    pub fn statics(&self) -> &IndexMap<String, StaticInfo> {
+    pub const fn statics(&self) -> &IndexMap<String, StaticInfo> {
         &self.statics
     }
 
-    pub fn playlist(&self) -> &Vec<PlaylistItem> {
+    pub const fn playlist(&self) -> &Vec<PlaylistItem> {
         &self.playlist
     }
 
     /// The currently displayed item source.
-    pub fn get_current_source(&self) -> &ItemSource {
+    pub const fn get_current_source(&self) -> &ItemSource {
         &self.current
     }
 
     /// The explicitly queued next item, if any.
-    pub fn get_queued_next(&self) -> Option<&ItemSource> {
+    pub const fn get_queued_next(&self) -> Option<&ItemSource> {
         self.next.as_ref()
     }
 }

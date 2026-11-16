@@ -20,7 +20,7 @@ pub fn draw(theme: &Theme, frame: &mut Frame, enabled: bool) {
     let arc_start = top - gap / 2.0;
     let arc_cut_start = bot - gap / 4.0;
     let arc_cut_end = bot + gap / 4.0;
-    let arc_end = top - 1.25 * gap + 2.0 * PI; // 300°  (clockwise, long way round)
+    let arc_end = 2.0f32.mul_add(PI, 1.25f32.mul_add(-gap, top)); // 300°  (clockwise, long way round)
 
     let arc = Path::new(|b| {
         b.arc(canvas::path::Arc {
@@ -39,7 +39,7 @@ pub fn draw(theme: &Theme, frame: &mut Frame, enabled: bool) {
     stroke_icon(frame, &arc, &base, 1.0);
 
     // The 16.0 factor is arc/arrow geometry (rad→px nudge), not a font size.
-    let end_x = center.x - gap * 16.0;
+    let end_x = gap.mul_add(-16.0, center.x);
     let end_y = center.y - arc_r;
 
     // Two wings ±45° from the back direction
@@ -49,8 +49,8 @@ pub fn draw(theme: &Theme, frame: &mut Frame, enabled: bool) {
     let arrow_size = dim * ARROW_FRAC;
 
     let tip = Point::new(end_x, end_y);
-    let p1 = Point::new(end_x - w1.0 * arrow_size, end_y + w1.1 * arrow_size);
-    let p2 = Point::new(end_x - w2.0 * arrow_size, end_y + w2.1 * arrow_size);
+    let p1 = Point::new(f32::mul_add(w1.0, -arrow_size, end_x), f32::mul_add(w1.1, arrow_size, end_y));
+    let p2 = Point::new(f32::mul_add(w2.0, -arrow_size, end_x), f32::mul_add(w2.1, arrow_size, end_y));
 
     let arrowhead = Path::new(|b| {
         b.move_to(p1);
