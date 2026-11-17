@@ -86,7 +86,7 @@ impl<'de> Deserialize<'de> for State {
 
         let flattened_state: FlattenedState = Deserialize::deserialize(deserializer)?;
 
-        Ok(State {
+        Ok(Self {
             mixer: flattened_state.mixer,
             channels: [
                 flattened_state.channel0,

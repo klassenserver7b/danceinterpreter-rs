@@ -12,8 +12,8 @@ pub struct StaticInfo {
 
 impl StaticInfo {
     #[allow(dead_code)]
-    pub fn new(name: String) -> Self {
-        StaticInfo {
+    pub const fn new(name: String) -> Self {
+        Self {
             name,
             is_favorite: false,
             color: None,

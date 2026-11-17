@@ -1,9 +1,10 @@
+use iced::Element;
 use iced::widget::{container, text, tooltip};
-use iced::{Element, Theme};
 
 pub mod config_window;
 pub mod song_window;
-pub mod widget;
+pub mod theme;
+
 pub mod widgets;
 
 /// Wraps a widget in a tooltip with a readable styled container.
@@ -13,11 +14,9 @@ pub fn with_tooltip<'a, Message: 'a>(
 ) -> Element<'a, Message> {
     tooltip(
         content,
-        container(text(label)).padding([4, 8]).style(|t: &Theme| {
-            container::Style::default()
-                .background(t.extended_palette().background.strong.color)
-                .border(iced::border::rounded(4))
-        }),
+        container(text(label).size(theme::sz::SMALL))
+            .padding([4, 8])
+            .style(theme::tooltip_style),
         tooltip::Position::Bottom,
     )
     .gap(4)
