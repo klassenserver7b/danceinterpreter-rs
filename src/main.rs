@@ -1,3 +1,4 @@
+#![warn(clippy::nursery)]
 mod async_utils;
 mod dataloading;
 mod macros;

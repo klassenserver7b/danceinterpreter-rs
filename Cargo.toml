@@ -34,6 +34,8 @@ tokio-tungstenite = "0.30.0"
 reqwest = { version = "0.13", features = ["json"] }
 futures-util = "0.3"
 
+[lints.clippy]
+nursery = { level = "warn", priority = -1 }
 
 [features]
 default = ["mdns"]

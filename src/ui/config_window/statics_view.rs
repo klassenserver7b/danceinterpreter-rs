@@ -110,9 +110,10 @@ fn build_static_row<'a>(
         )));
 
     // Color swatch / color picker.
+    // Theme-aware fallback: muted grey from the active theme.
     let swatch_color = static_info
         .color
-        .unwrap_or_else(|| theme::Tokens::dark().muted);
+        .unwrap_or_else(|| theme::Tokens::of(&config_window.theme).muted);
     let color_picker_open = config_window.color_picker_open.as_ref() == Some(&name);
     let swatch = color_swatch::color_swatch(
         swatch_color,

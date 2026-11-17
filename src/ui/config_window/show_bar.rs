@@ -68,10 +68,10 @@ pub fn build(dance_interpreter: &DanceInterpreter) -> Element<'_, Message> {
         .filter(|(_, s)| s.is_favorite)
     {
         let active = matches!(&current, ItemSource::Static(current_name) if *current_name == *name);
-        // Dark-based fallback (not theme-aware) per the approved prototype.
+        // Theme-aware fallback: muted grey from the active theme.
         let color = static_info
             .color
-            .unwrap_or_else(|| theme::Tokens::dark().muted);
+            .unwrap_or_else(|| theme::Tokens::of(&dance_interpreter.config_window.theme).muted);
 
         let dot = dot(5.0, move |_| color);
 
