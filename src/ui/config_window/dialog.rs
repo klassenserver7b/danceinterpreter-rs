@@ -7,13 +7,15 @@ use crate::dataloading::dataprovider::ItemSource;
 use crate::ui::config_window::ConfigWindow;
 use crate::ui::song_window::Backdrop;
 use crate::ui::theme::{self, pad4, sz};
-use crate::ui::widgets::{buttons, eyebrow, heading, icon_button_tooltip, kbd, push_right};
+use crate::ui::widgets::{
+    buttons, eyebrow, heading, icon_button_tooltip, kbd, pick_list, push_right,
+};
 use crate::{
     DanceInterpreter, DialogMessage, Message, SongWindowMessage, StaticsMessage, TraktorMessage,
 };
 use iced::widget::{
-    Button, Column, column as col, container, mouse_area, opaque, pick_list, row, scrollable,
-    space::Space, stack, text, text_input, toggler,
+    Button, Column, column as col, container, mouse_area, opaque, row, scrollable, space::Space,
+    stack, text, text_input, toggler,
 };
 use iced::{Alignment, Element, Length, Theme};
 use iced_aw::number_input;
@@ -324,11 +326,7 @@ fn build_settings<'a>(
     let theme_pick = pick_list(THEME_OPTIONS, selected, |option| {
         Message::SetConfigTheme(option.theme)
     })
-    .width(Length::Fixed(160.0))
-    .text_size(sz::BASE)
-    .padding(theme::INPUT_PAD)
-    .style(theme::pick_list_style)
-    .menu_style(theme::pick_list_menu_style);
+    .width(Length::Fixed(160.0));
 
     let scale_input = number_input(&dance_interpreter.song_window.scale, 0.5..=3.0, |val| {
         Message::SongWindow(SongWindowMessage::ChangeScale(val))
@@ -348,11 +346,7 @@ fn build_settings<'a>(
         Some(dance_interpreter.song_window.backdrop),
         |backdrop| Message::SongWindow(SongWindowMessage::SetBackdrop(backdrop)),
     )
-    .width(Length::Fixed(160.0))
-    .text_size(sz::BASE)
-    .padding(theme::INPUT_PAD)
-    .style(theme::pick_list_style)
-    .menu_style(theme::pick_list_menu_style);
+    .width(Length::Fixed(160.0));
 
     let switch = |checked: bool, msg: fn(bool) -> Message| {
         toggler(checked)
@@ -549,11 +543,7 @@ fn build_playlist_chooser<'a>(
     let pick = pick_list(options, selected, |option| {
         Message::Dialog(DialogMessage::SelectPlaylist(option.path))
     })
-    .width(Length::Fill)
-    .text_size(sz::BASE)
-    .padding(theme::INPUT_PAD)
-    .style(theme::pick_list_style)
-    .menu_style(theme::pick_list_menu_style);
+    .width(Length::Fill);
 
     let body = col![
         text("The sandbox access covers everything inside the chosen folder. Which playlist should be loaded?")

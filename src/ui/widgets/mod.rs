@@ -6,6 +6,7 @@ use crate::ui::with_tooltip;
 use iced::advanced::text::Shaping;
 use iced::widget::{Text, container, text};
 use iced::{Alignment, Color, Element, Font, Length, Pixels, Renderer, Theme};
+use std::borrow::Borrow;
 
 /// Button builders (primary, secondary, ghosts).
 pub mod buttons;
@@ -226,4 +227,26 @@ pub fn row_shell<'a, Message: 'a>(
     .width(Length::Fill)
     .style(move |t: &Theme| theme::row(t, look))
     .into()
+}
+
+/// Standard-styled pick list: applies the app's shared text size, padding,
+/// pick-list style and menu style in one call, so the four duplicated call
+/// sites in `config_window/dialog.rs` differ only in data. Chain `.width(...)`
+/// (and anything else) on the returned builder.
+pub fn pick_list<'a, T, L, V, Message>(
+    options: L,
+    selected: Option<V>,
+    on_selected: impl Fn(T) -> Message + 'a,
+) -> iced::widget::PickList<'a, T, L, V, Message, iced::Theme, iced::Renderer>
+where
+    T: ToString + PartialEq + Clone + 'a,
+    L: Borrow<[T]> + 'a,
+    V: Borrow<T> + 'a,
+    Message: Clone,
+{
+    iced::widget::pick_list(options, selected, on_selected)
+        .text_size(theme::sz::BASE)
+        .padding(theme::INPUT_PAD)
+        .style(theme::pick_list_style)
+        .menu_style(theme::pick_list_menu_style)
 }
