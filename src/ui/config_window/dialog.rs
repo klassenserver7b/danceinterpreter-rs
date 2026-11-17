@@ -200,15 +200,15 @@ fn section_label(label: &'static str) -> Element<'static, Message> {
 }
 
 /// Settings pick list entry: wraps an iced theme with a friendly label.
-/// The builtin "Dark" theme carries our sage-green design, so it is
-/// labeled "Green".
+/// The builtin "Dark" theme carries our hand-tuned blue design, so it is
+/// labeled "Slate".
 #[derive(Debug, Clone, PartialEq)]
 struct ThemeOption(Theme);
 
 impl std::fmt::Display for ThemeOption {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_str(match &self.0 {
-            Theme::Dark => "Green",
+            Theme::Dark => "Slate",
             Theme::Light => "Light",
             Theme::Dracula => "Dracula",
             Theme::Nord => "Nord",
@@ -235,8 +235,9 @@ impl std::fmt::Display for ThemeOption {
     }
 }
 
-/// Theme options in pick-list order: the default first, then the green
-/// design theme, light, and the remaining iced built-ins.
+/// Theme options in pick-list order: Dracula (legacy purple), then the
+/// hand-tuned gray/blue theme (the default), light, and the remaining iced
+/// built-ins.
 const THEME_OPTIONS: &[ThemeOption] = &[
     ThemeOption(Theme::Dracula),
     ThemeOption(Theme::Dark),

@@ -97,8 +97,10 @@ impl<'a> canvas::Program<Message> for CanvasToggle<'a> {
             }
         }
 
-        if matches!(event, Event::Mouse(mouse::Event::ButtonPressed(mouse::Button::Left)))
-            && cursor.is_over(bounds)
+        if matches!(
+            event,
+            Event::Mouse(mouse::Event::ButtonPressed(mouse::Button::Left))
+        ) && cursor.is_over(bounds)
             && let Some(on_toggle) = &self.on_toggle
         {
             *state = Some(Instant::now());

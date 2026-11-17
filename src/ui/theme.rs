@@ -1,7 +1,7 @@
 //! Design system for the redesigned Danceinterpreter UI.
 //!
 //! The look is ported from the approved design prototype (`docs/src/App.tsx`
-//! plus `docs/src/index.css`): a calm, sage-green "music studio" theme with
+//! plus `docs/src/index.css`): a calm, gray-blue "music studio" theme with
 //! `Manrope` for headings and `DM Sans` for body text (bundled as static
 //! instances, see `resources/main/fonts/`).
 
@@ -126,7 +126,7 @@ pub const fn with_alpha(color: Color, a: f32) -> Color {
 
 /// All colors used by the redesign, resolved for the active theme.
 ///
-/// `Theme::Dark` / `Theme::Light` map to the hand-tuned sage palettes; every
+/// `Theme::Dark` / `Theme::Light` map to the hand-tuned blue palettes; every
 /// other theme picked in the settings dialog derives its full token set from
 /// the iced palette ([`Tokens::from_palette`]), so the picker re-colors the
 /// whole UI instead of only iced's built-in widgets.
@@ -149,7 +149,7 @@ pub struct Tokens {
     pub muted_head: Color,
     pub faint: Color,
 
-    // Accent (sage green)
+    // Accent (blue)
     pub accent: Color,
     pub accent_border: Color,
     pub accent_text: Color,
@@ -218,9 +218,6 @@ pub struct Tokens {
     // Inputs
     /// Wash behind focused inline inputs.
     pub input_focus_bg: Color,
-
-    // Shadows
-    pub shadow: Color,
 }
 
 impl Tokens {
@@ -233,172 +230,168 @@ impl Tokens {
         }
     }
 
-    /// The hand-tuned dark sage palette (`Theme::Dark`).
+    /// The hand-tuned dark palette (`Theme::Dark`).
     pub fn dark() -> Self {
         Self {
             is_light: false,
-            bg: rgb(0x0C, 0x0F, 0x0D),
-            panel: rgb(0x16, 0x1A, 0x18),
-            panel_deep: rgb(0x11, 0x15, 0x13),
-            panel_head: rgb(0x14, 0x18, 0x15),
-            border: rgb(0x38, 0x3E, 0x3A),
-            border_soft: rgb(0x2E, 0x34, 0x31),
+            bg: rgb(0x0D, 0x11, 0x17),
+            panel: rgb(0x16, 0x1B, 0x22),
+            panel_deep: rgb(0x11, 0x15, 0x1C),
+            panel_head: rgb(0x13, 0x17, 0x1F),
+            border: rgb(0x30, 0x36, 0x3D),
+            border_soft: rgb(0x21, 0x26, 0x2D),
 
-            text: rgb(0xF3, 0xF5, 0xF3),
-            text_soft: rgb(0xCB, 0xD4, 0xCD),
-            muted: rgb(0x9C, 0xA7, 0x9F),
-            muted_head: rgb(0x8E, 0x9C, 0x91),
-            faint: rgb(0x80, 0x8C, 0x83),
+            text: rgb(0xE6, 0xED, 0xF3),
+            text_soft: rgb(0xC9, 0xD1, 0xD9),
+            muted: rgb(0x8B, 0x94, 0x9E),
+            muted_head: rgb(0x76, 0x81, 0x8B),
+            faint: rgb(0x6E, 0x76, 0x80),
 
-            accent: rgb(0xB9, 0xD1, 0xA7),
-            accent_border: rgb(0xA9, 0xC4, 0x96),
-            accent_text: rgb(0x18, 0x22, 0x19),
-            accent_soft: rgb(0xB2, 0xD2, 0xA1),
-            accent_bar: rgb(0xB1, 0xCE, 0x96),
-            accent_nav_bg: rgb(0x28, 0x31, 0x2A),
-            accent_nav_text: rgb(0xD3, 0xE3, 0xC7),
-            dance_headline: rgb(0xD2, 0xE2, 0xC7),
-            focus: rgb(0xAF, 0xD3, 0xA9),
+            accent: rgb(0x58, 0xA6, 0xFF),
+            accent_border: rgb(0x79, 0xB8, 0xFF),
+            accent_text: rgb(0x05, 0x1D, 0x40),
+            accent_soft: rgb(0xB2, 0xD2, 0xF0),
+            accent_bar: rgb(0x79, 0xC0, 0xFF),
+            accent_nav_bg: rgb(0x1C, 0x2A, 0x3A),
+            accent_nav_text: rgb(0xA8, 0xC8, 0xE8),
+            dance_headline: rgb(0xC9, 0xD1, 0xD9),
+            focus: rgb(0x79, 0xB8, 0xFF),
 
-            switch_on: rgb(0xB7, 0xCF, 0x9F),
-            switch_on_knob: rgb(0x27, 0x32, 0x21),
-            switch_off: rgb(0x42, 0x4E, 0x44),
-            switch_knob: rgb(0xA3, 0xB1, 0x9E),
+            switch_on: rgb(0x58, 0xA6, 0xFF),
+            switch_on_knob: rgb(0x05, 0x1D, 0x40),
+            switch_off: rgb(0x30, 0x36, 0x3D),
+            switch_knob: rgb(0x8B, 0x94, 0x9E),
 
-            btn2_bg: rgb(0x23, 0x2C, 0x21),
-            btn2_border: rgb(0x43, 0x50, 0x41),
-            btn2_text: rgb(0xD2, 0xDF, 0xCB),
-            active_bg: rgb(0x41, 0x50, 0x39),
-            active_border: rgb(0x9A, 0xB5, 0x82),
-            active_text: rgb(0xE6, 0xF1, 0xDD),
-            outline_bg: rgb(0x16, 0x1A, 0x18),
-            outline_border: rgb(0x45, 0x4E, 0x45),
-            outline_text: rgb(0xDF, 0xE5, 0xDF),
+            btn2_bg: rgb(0x21, 0x26, 0x2D),
+            btn2_border: rgb(0x30, 0x36, 0x3D),
+            btn2_text: rgb(0xC9, 0xD1, 0xD9),
+            active_bg: rgb(0x1C, 0x2A, 0x3A),
+            active_border: rgb(0x58, 0xA6, 0xFF),
+            active_text: rgb(0xE6, 0xED, 0xF3),
+            outline_bg: rgb(0x0D, 0x11, 0x17),
+            outline_border: rgb(0x30, 0x36, 0x3D),
+            outline_text: rgb(0xE6, 0xED, 0xF3),
             ghost_hover: color!(0xFFFFFF, 0.05),
-            danger: rgb(0xC2, 0x5E, 0x4C),
+            danger: rgb(0xF8, 0x51, 0x49),
             danger_text: Color::WHITE,
 
             row_zebra: color!(0xFFFFFF, 0.004),
-            row_current_bg: rgb(0x29, 0x36, 0x29),
-            row_current_border: rgb(0x43, 0x54, 0x3D),
-            match_bg: rgb(0x23, 0x2D, 0x23),
-            match_border: rgb(0x86, 0xA2, 0x71),
+            row_current_bg: rgb(0x1C, 0x2A, 0x3A),
+            row_current_border: rgb(0x58, 0xA6, 0xFF),
+            match_bg: rgb(0x16, 0x1B, 0x22),
+            match_border: rgb(0x30, 0x36, 0x3D),
             selection: Color {
                 a: 0.3,
-                ..rgb(0xB9, 0xD1, 0xA7)
+                ..rgb(0x58, 0xA6, 0xFF)
             },
 
-            tag_border: rgb(0x5A, 0x68, 0x53),
-            tag_text: rgb(0xAC, 0xBA, 0xA2),
+            tag_border: rgb(0x30, 0x36, 0x3D),
+            tag_text: rgb(0x8B, 0x94, 0x9E),
 
-            dot_green: rgb(0xB2, 0xD2, 0xA1),
-            led_connected: rgb(0x7F, 0xB0, 0x69),
-            led_partial: rgb(0xD4, 0xBD, 0x7E),
-            led_off: rgb(0x58, 0x64, 0x5A),
-            star: rgb(0xD4, 0xBD, 0x7E),
+            dot_green: rgb(0x3F, 0xB9, 0x50),
+            led_connected: rgb(0x3F, 0xB9, 0x50),
+            led_partial: rgb(0xD2, 0x99, 0x22),
+            led_off: rgb(0x6E, 0x76, 0x80),
+            star: rgb(0xE3, 0xB3, 0x41),
 
-            toast_bg: rgb(0x2C, 0x3B, 0x28),
-            toast_border: rgb(0x65, 0x7D, 0x58),
-            toast_text: rgb(0xE2, 0xED, 0xD8),
+            toast_bg: rgb(0x16, 0x1B, 0x22),
+            toast_border: rgb(0x30, 0x36, 0x3D),
+            toast_text: rgb(0xE6, 0xED, 0xF3),
 
-            modal_border: rgb(0x40, 0x50, 0x39),
-            backdrop: color!(0x050805, 0.72),
+            modal_border: rgb(0x30, 0x36, 0x3D),
+            backdrop: color!(0x05, 0x12, 0x26, 0.72),
 
-            kbd_border: rgb(0x4E, 0x5C, 0x47),
-            kbd_bg: rgb(0x22, 0x2C, 0x20),
-            kbd_text: rgb(0xC3, 0xD0, 0xBC),
+            kbd_border: rgb(0x30, 0x36, 0x3D),
+            kbd_bg: rgb(0x16, 0x1B, 0x22),
+            kbd_text: rgb(0xC9, 0xD1, 0xD9),
 
             input_focus_bg: color!(0xFFFFFF, 0.04),
-
-            shadow: Color::from_rgba(0.0, 0.0, 0.0, 0.35),
         }
     }
 
-    /// The hand-tuned light sage palette (`Theme::Light`).
+    /// The hand-tuned light palette (`Theme::Light`).
     pub fn light() -> Self {
         Self {
             is_light: true,
-            bg: rgb(0xF2, 0xF4, 0xF0),
+            bg: rgb(0xF6, 0xF8, 0xFA),
             panel: rgb(0xFF, 0xFF, 0xFF),
-            panel_deep: rgb(0xEA, 0xEE, 0xE7),
-            panel_head: rgb(0xEF, 0xF2, 0xEC),
-            border: rgb(0xC6, 0xCF, 0xC5),
-            border_soft: rgb(0xD9, 0xE0, 0xD6),
+            panel_deep: rgb(0xEF, 0xF2, 0xF5),
+            panel_head: rgb(0xF6, 0xF8, 0xFA),
+            border: rgb(0xD0, 0xD7, 0xDE),
+            border_soft: rgb(0xE4, 0xE9, 0xEF),
 
-            text: rgb(0x1A, 0x21, 0x1B),
-            text_soft: rgb(0x39, 0x45, 0x3B),
-            muted: rgb(0x55, 0x64, 0x5A),
-            muted_head: rgb(0x61, 0x70, 0x66),
-            faint: rgb(0x7B, 0x88, 0x80),
+            text: rgb(0x1F, 0x23, 0x28),
+            text_soft: rgb(0x57, 0x60, 0x6A),
+            muted: rgb(0x6E, 0x77, 0x81),
+            muted_head: rgb(0x81, 0x89, 0x93),
+            faint: rgb(0x8C, 0x95, 0x9F),
 
-            accent: rgb(0xB9, 0xD1, 0xA7),
-            accent_border: rgb(0x9C, 0xB8, 0x87),
-            accent_text: rgb(0x18, 0x22, 0x19),
-            accent_soft: rgb(0x7F, 0xA8, 0x68),
-            accent_bar: rgb(0x7B, 0xA2, 0x65),
-            accent_nav_bg: rgb(0xE3, 0xEC, 0xDA),
-            accent_nav_text: rgb(0x2C, 0x3D, 0x24),
-            dance_headline: rgb(0x3D, 0x5A, 0x33),
-            focus: rgb(0x7F, 0xA8, 0x68),
+            accent: rgb(0x09, 0x69, 0xDA),
+            accent_border: rgb(0x54, 0xAE, 0xFF),
+            accent_text: Color::WHITE,
+            accent_soft: rgb(0x09, 0x69, 0xDA),
+            accent_bar: rgb(0x54, 0xAE, 0xFF),
+            accent_nav_bg: rgb(0xDD, 0xF2, 0xFF),
+            accent_nav_text: rgb(0x09, 0x69, 0xDA),
+            dance_headline: rgb(0x57, 0x60, 0x6A),
+            focus: rgb(0x54, 0xAE, 0xFF),
 
-            switch_on: rgb(0xA9, 0xC4, 0x96),
-            switch_on_knob: rgb(0x2C, 0x3D, 0x24),
-            switch_off: rgb(0xD6, 0xDD, 0xD2),
-            switch_knob: rgb(0x7A, 0x86, 0x7A),
+            switch_on: rgb(0x09, 0x69, 0xDA),
+            switch_on_knob: rgb(0x05, 0x1D, 0x40),
+            switch_off: rgb(0xD0, 0xD7, 0xDE),
+            switch_knob: rgb(0x81, 0x89, 0x93),
 
-            btn2_bg: rgb(0xEE, 0xF1, 0xEC),
-            btn2_border: rgb(0xBE, 0xC9, 0xBF),
-            btn2_text: rgb(0x36, 0x42, 0x39),
-            active_bg: rgb(0xD5, 0xE3, 0xC8),
-            active_border: rgb(0x86, 0xA2, 0x71),
-            active_text: rgb(0x22, 0x30, 0x1B),
+            btn2_bg: rgb(0xF6, 0xF8, 0xFA),
+            btn2_border: rgb(0xD0, 0xD7, 0xDE),
+            btn2_text: rgb(0x57, 0x60, 0x6A),
+            active_bg: rgb(0xDD, 0xF2, 0xFF),
+            active_border: rgb(0x09, 0x69, 0xDA),
+            active_text: rgb(0x1F, 0x23, 0x28),
             outline_bg: rgb(0xFF, 0xFF, 0xFF),
-            outline_border: rgb(0xBE, 0xC9, 0xBF),
-            outline_text: rgb(0x36, 0x42, 0x39),
-            ghost_hover: color!(0x1A211B, 0.06),
-            danger: rgb(0xB0, 0x56, 0x3F),
+            outline_border: rgb(0xD0, 0xD7, 0xDE),
+            outline_text: rgb(0x1F, 0x23, 0x28),
+            ghost_hover: color!(0x1F2328, 0.06),
+            danger: rgb(0xCF, 0x22, 0x00),
             danger_text: Color::WHITE,
 
-            row_zebra: color!(0x1A211B, 0.0),
-            row_current_bg: rgb(0xE4, 0xEE, 0xD9),
-            row_current_border: rgb(0xB2, 0xC7, 0x9E),
-            match_bg: rgb(0xEE, 0xF4, 0xE6),
-            match_border: rgb(0x86, 0xA2, 0x71),
+            row_zebra: color!(0x1F2328, 0.0),
+            row_current_bg: rgb(0xDD, 0xF2, 0xFF),
+            row_current_border: rgb(0x09, 0x69, 0xDA),
+            match_bg: rgb(0xF6, 0xF8, 0xFA),
+            match_border: rgb(0xD0, 0xD7, 0xDE),
             selection: Color {
                 a: 0.3,
-                ..rgb(0xB9, 0xD1, 0xA7)
+                ..rgb(0x09, 0x69, 0xDA)
             },
 
-            tag_border: rgb(0xB2, 0xBF, 0xAF),
-            tag_text: rgb(0x57, 0x67, 0x52),
+            tag_border: rgb(0xD0, 0xD7, 0xDE),
+            tag_text: rgb(0x6E, 0x77, 0x81),
 
-            dot_green: rgb(0x6F, 0x9A, 0x5C),
-            led_connected: rgb(0x5C, 0x9A, 0x48),
-            led_partial: rgb(0xC9, 0xA2, 0x3E),
-            led_off: rgb(0xA6, 0xB0, 0xA6),
-            star: rgb(0xB8, 0x92, 0x3E),
+            dot_green: rgb(0x1A, 0x7F, 0x37),
+            led_connected: rgb(0x1A, 0x7F, 0x37),
+            led_partial: rgb(0x9A, 0x67, 0x07),
+            led_off: rgb(0x8C, 0x95, 0x9F),
+            star: rgb(0x9A, 0x67, 0x07),
 
-            toast_bg: rgb(0xE6, 0xEF, 0xDD),
-            toast_border: rgb(0x7E, 0x9A, 0x6E),
-            toast_text: rgb(0x2A, 0x44, 0x24),
+            toast_bg: rgb(0xF6, 0xF8, 0xFA),
+            toast_border: rgb(0xD0, 0xD7, 0xDE),
+            toast_text: rgb(0x1F, 0x23, 0x28),
 
-            modal_border: rgb(0xB2, 0xC7, 0x9E),
-            backdrop: color!(0x0F120F, 0.45),
+            modal_border: rgb(0xD0, 0xD7, 0xDE),
+            backdrop: color!(0x1F2328, 0.45),
 
-            kbd_border: rgb(0xBE, 0xC9, 0xBF),
-            kbd_bg: rgb(0xE9, 0xED, 0xE6),
-            kbd_text: rgb(0x40, 0x4E, 0x45),
+            kbd_border: rgb(0xD0, 0xD7, 0xDE),
+            kbd_bg: rgb(0xF6, 0xF8, 0xFA),
+            kbd_text: rgb(0x57, 0x60, 0x6A),
 
-            input_focus_bg: color!(0x242C26, 0.04),
-
-            shadow: Color::from_rgba(0.0, 0.0, 0.0, 0.25),
+            input_focus_bg: color!(0x1F2328, 0.04),
         }
     }
 
     /// Derives every token from an iced [`Palette`] so that any theme picked
     /// in the settings dialog re-colors the whole UI.
     ///
-    /// The derivation reuses the roles of the sage design: panels are the
+    /// The derivation reuses the roles of the design: panels are the
     /// background lifted toward white (light themes) or the text color (dark
     /// themes), borders are faint background→text blends, secondary text
     /// steps from text toward the background, and the accent family tints
@@ -504,8 +497,6 @@ impl Tokens {
             kbd_text: dim(0.18),
 
             input_focus_bg: with_alpha(text, 0.04),
-
-            shadow: with_alpha(Color::BLACK, if is_light { 0.25 } else { 0.35 }),
         }
     }
 }
@@ -656,11 +647,6 @@ pub fn toast_card(theme: &Theme) -> container::Style {
             width: 1.0,
             radius: Radius::from(r::LG),
         })
-        .shadow(iced::Shadow {
-            color: t.shadow,
-            offset: iced::Vector::new(0.0, 8.0),
-            blur_radius: 35.0,
-        })
 }
 
 /// Neutral dance chip: a faint text-tinted pill, like the prototype
@@ -762,7 +748,7 @@ fn shift(status: button::Status, is_light: bool, base: Color, factor: f32) -> Op
     }
 }
 
-/// Filled sage-green primary button.
+/// Filled primary button.
 pub fn btn_primary(theme: &Theme, status: button::Status) -> button::Style {
     let t = Tokens::of(theme);
     button::Style {
@@ -1027,7 +1013,7 @@ pub fn pick_list_menu_style(theme: &Theme) -> iced::widget::overlay::menu::Style
     }
 }
 
-/// Toggler (switch) with the sage-green "on" state.
+/// Toggler (switch) with the blue "on" state.
 pub fn toggler_style(theme: &Theme, status: toggler::Status) -> toggler::Style {
     let t = Tokens::of(theme);
     let active = match status {
@@ -1061,10 +1047,5 @@ pub fn tooltip_style(theme: &Theme) -> container::Style {
             color: t.border,
             width: 1.0,
             radius: Radius::from(r::SM),
-        })
-        .shadow(iced::Shadow {
-            color: t.shadow,
-            offset: iced::Vector::new(0.0, 3.0),
-            blur_radius: 10.0,
         })
 }

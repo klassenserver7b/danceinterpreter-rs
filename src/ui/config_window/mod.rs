@@ -171,7 +171,7 @@ impl Window for ConfigWindow {
 
             enable_autoscroll: true,
             view: View::Playlist,
-            theme: Theme::Dracula,
+            theme: Theme::Dark,
 
             nav_anim: Animation::new(true)
                 .duration(SLIDE_DURATION)

@@ -261,7 +261,10 @@ impl TraktorDataProvider {
             TraktorSyncMode::AbsoluteByNumber => {
                 let current_index = Self::find_by_number(playlist, content.number);
 
-                self.cached_sync_action = current_index.map_or(TraktorSyncAction::Relative(0), TraktorSyncAction::PlaylistAbsolute);
+                self.cached_sync_action = current_index.map_or(
+                    TraktorSyncAction::Relative(0),
+                    TraktorSyncAction::PlaylistAbsolute,
+                );
             }
             TraktorSyncMode::AbsoluteByName => {
                 let current_index = Self::find_by_name(playlist, &current_song_info);

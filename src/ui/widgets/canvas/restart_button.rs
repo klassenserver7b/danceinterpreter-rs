@@ -49,8 +49,14 @@ pub fn draw(theme: &Theme, frame: &mut Frame, enabled: bool) {
     let arrow_size = dim * ARROW_FRAC;
 
     let tip = Point::new(end_x, end_y);
-    let p1 = Point::new(f32::mul_add(w1.0, -arrow_size, end_x), f32::mul_add(w1.1, arrow_size, end_y));
-    let p2 = Point::new(f32::mul_add(w2.0, -arrow_size, end_x), f32::mul_add(w2.1, arrow_size, end_y));
+    let p1 = Point::new(
+        f32::mul_add(w1.0, -arrow_size, end_x),
+        f32::mul_add(w1.1, arrow_size, end_y),
+    );
+    let p2 = Point::new(
+        f32::mul_add(w2.0, -arrow_size, end_x),
+        f32::mul_add(w2.1, arrow_size, end_y),
+    );
 
     let arrowhead = Path::new(|b| {
         b.move_to(p1);
