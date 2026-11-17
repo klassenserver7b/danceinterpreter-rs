@@ -537,16 +537,32 @@ pub fn card(theme: &Theme) -> container::Style {
         })
 }
 
+/// Theme-aware hairline border of the given colour and radius. Use this
+/// instead of hand-rolling `container::Style::default().border(...)` in the
+/// view layer so border widths and radii stay consistent.
+pub fn bordered(
+    theme: &Theme,
+    color: fn(&Tokens) -> Color,
+    radius: impl Into<Radius>,
+) -> container::Style {
+    let t = Tokens::of(theme);
+    container::Style::default().border(Border {
+        color: color(&t),
+        width: 1.0,
+        radius: radius.into(),
+    })
+}
+
 /// Inset card: deep panel with a hairline border (search box shells, status
 /// cards, source rows).
-pub fn inset_card(theme: &Theme, radius: impl Into<Radius>) -> container::Style {
+pub fn inset_card(theme: &Theme) -> container::Style {
     let t = Tokens::of(theme);
     container::Style::default()
         .background(t.panel_deep)
         .border(Border {
             color: t.border,
             width: 1.0,
-            radius: radius.into(),
+            radius: Radius::from(r::SM),
         })
 }
 

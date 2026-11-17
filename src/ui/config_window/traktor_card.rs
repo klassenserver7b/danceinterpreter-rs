@@ -187,7 +187,7 @@ fn connection_card(dance_interpreter: &DanceInterpreter) -> Element<'_, Message>
     container(column)
         .padding(10)
         .width(Length::Fill)
-        .style(|t: &Theme| theme::inset_card(t, theme::r::MD))
+        .style(|t: &Theme| theme::inset_card(t))
         .into()
 }
 

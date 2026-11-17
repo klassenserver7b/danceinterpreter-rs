@@ -138,14 +138,7 @@ fn session_card(config_window: &ConfigWindow) -> Element<'_, Message> {
         .width(Length::Fill),
     )
     .padding([10, 12])
-    .style(|t: &Theme| {
-        let tk = theme::Tokens::of(t);
-        container::Style::default().border(iced::Border {
-            color: tk.border,
-            width: 1.0,
-            radius: theme::r::XL.into(),
-        })
-    })
+    .style(|t: &Theme| theme::bordered(t, |tk| tk.border, theme::r::XL))
     .width(Length::Fill)
     .into()
 }
@@ -157,16 +150,7 @@ fn count_badge(count: usize) -> Element<'static, Message> {
             .style(theme::text_style(|tk| tk.muted)),
     )
     .padding([1, 6])
-    .style(|t: &Theme| {
-        let tk = theme::Tokens::of(t);
-        container::Style::default()
-            .background(tk.kbd_bg)
-            .border(iced::Border {
-                color: Color::TRANSPARENT,
-                width: 0.0,
-                radius: theme::r::XS.into(),
-            })
-    })
+    .style(|t: &Theme| theme::bordered(t, |_| Color::TRANSPARENT, theme::r::XS))
     .into()
 }
 

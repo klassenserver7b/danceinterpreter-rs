@@ -349,14 +349,7 @@ impl ConfigWindow {
 pub fn source_tag(text: &str) -> Element<'_, Message> {
     container(text_micro(text).style(theme::text_style(|tk| tk.tag_text)))
         .padding([2, 5])
-        .style(|t: &Theme| {
-            let tk = theme::Tokens::of(t);
-            container::Style::default().border(iced::Border {
-                color: tk.tag_border,
-                width: 1.0,
-                radius: theme::r::XS.into(),
-            })
-        })
+        .style(|t: &Theme| theme::bordered(t, |tk| tk.tag_border, theme::r::XS))
         .into()
 }
 

@@ -137,7 +137,7 @@ fn build_search(config_window: &ConfigWindow) -> Element<'_, Message> {
 
     container(search_row)
         .padding([0, 8])
-        .style(|t: &Theme| theme::inset_card(t, theme::r::SM))
+        .style(|t: &Theme| theme::inset_card(t))
         .height(Length::Fixed(SEARCH_HEIGHT))
         .align_y(Alignment::Center)
         .into()
@@ -553,14 +553,7 @@ fn build_quick_add(config_window: &ConfigWindow) -> Element<'_, Message> {
     container(content)
         .padding([12, 14])
         .width(Length::Fill)
-        .style(|t: &Theme| {
-            let tk = theme::Tokens::of(t);
-            container::Style::default().border(iced::Border {
-                color: tk.border_soft,
-                width: 1.0,
-                radius: 0.0.into(),
-            })
-        })
+        .style(|t: &Theme| theme::bordered(t, |tk| tk.border_soft, 0.0))
         .into()
 }
 
