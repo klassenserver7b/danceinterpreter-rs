@@ -199,82 +199,131 @@ fn section_label(label: &'static str) -> Element<'static, Message> {
         .into()
 }
 
-/// Settings pick list entry: wraps an iced theme with a friendly label.
-/// The builtin "Dark" theme carries our hand-tuned blue design, so it is
-/// labeled "Slate".
+/// Theme options in pick-list order: Dracula (legacy purple), then the
+/// hand-tuned gray/blue theme (the default), light, and the remaining iced
+/// built-ins. The single source of truth for the settings pick list —
+/// adding a theme is a one-line change here.
+/// A theme option for the settings pick list: the iced theme variant plus
+/// its friendly label. `Display` renders the label so the pick list menu
+/// shows it directly.
 #[derive(Debug, Clone, PartialEq)]
-struct ThemeOption(Theme);
+struct ThemeOption {
+    theme: Theme,
+    label: &'static str,
+}
 
 impl std::fmt::Display for ThemeOption {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str(match &self.0 {
-            Theme::Dark => "Slate",
-            Theme::Light => "Light",
-            Theme::Dracula => "Dracula",
-            Theme::Nord => "Nord",
-            Theme::SolarizedDark => "Solarized Dark",
-            Theme::SolarizedLight => "Solarized Light",
-            Theme::GruvboxDark => "Gruvbox Dark",
-            Theme::GruvboxLight => "Gruvbox Light",
-            Theme::CatppuccinLatte => "Catppuccin Latte",
-            Theme::CatppuccinFrappe => "Catppuccin Frappé",
-            Theme::CatppuccinMacchiato => "Catppuccin Macchiato",
-            Theme::CatppuccinMocha => "Catppuccin Mocha",
-            Theme::TokyoNight => "Tokyo Night",
-            Theme::TokyoNightStorm => "Tokyo Night Storm",
-            Theme::TokyoNightLight => "Tokyo Night Light",
-            Theme::KanagawaWave => "Kanagawa Wave",
-            Theme::KanagawaDragon => "Kanagawa Dragon",
-            Theme::KanagawaLotus => "Kanagawa Lotus",
-            Theme::Moonfly => "Moonfly",
-            Theme::Nightfly => "Nightfly",
-            Theme::Oxocarbon => "Oxocarbon",
-            Theme::Ferra => "Ferra",
-            Theme::Custom(_) => "Custom",
-        })
+        f.write_str(self.label)
     }
 }
 
 /// Theme options in pick-list order: Dracula (legacy purple), then the
 /// hand-tuned gray/blue theme (the default), light, and the remaining iced
-/// built-ins.
+/// built-ins. The single source of truth for the settings pick list —
+/// adding a theme is a one-line change here.
 const THEME_OPTIONS: &[ThemeOption] = &[
-    ThemeOption(Theme::Dracula),
-    ThemeOption(Theme::Dark),
-    ThemeOption(Theme::Light),
-    ThemeOption(Theme::Nord),
-    ThemeOption(Theme::SolarizedDark),
-    ThemeOption(Theme::SolarizedLight),
-    ThemeOption(Theme::GruvboxDark),
-    ThemeOption(Theme::GruvboxLight),
-    ThemeOption(Theme::CatppuccinLatte),
-    ThemeOption(Theme::CatppuccinFrappe),
-    ThemeOption(Theme::CatppuccinMacchiato),
-    ThemeOption(Theme::CatppuccinMocha),
-    ThemeOption(Theme::TokyoNight),
-    ThemeOption(Theme::TokyoNightStorm),
-    ThemeOption(Theme::TokyoNightLight),
-    ThemeOption(Theme::KanagawaWave),
-    ThemeOption(Theme::KanagawaDragon),
-    ThemeOption(Theme::KanagawaLotus),
-    ThemeOption(Theme::Moonfly),
-    ThemeOption(Theme::Nightfly),
-    ThemeOption(Theme::Oxocarbon),
-    ThemeOption(Theme::Ferra),
+    ThemeOption {
+        theme: Theme::Dracula,
+        label: "Dracula",
+    },
+    ThemeOption {
+        theme: Theme::Dark,
+        label: "Slate",
+    },
+    ThemeOption {
+        theme: Theme::Light,
+        label: "Light",
+    },
+    ThemeOption {
+        theme: Theme::Nord,
+        label: "Nord",
+    },
+    ThemeOption {
+        theme: Theme::SolarizedDark,
+        label: "Solarized Dark",
+    },
+    ThemeOption {
+        theme: Theme::SolarizedLight,
+        label: "Solarized Light",
+    },
+    ThemeOption {
+        theme: Theme::GruvboxDark,
+        label: "Gruvbox Dark",
+    },
+    ThemeOption {
+        theme: Theme::GruvboxLight,
+        label: "Gruvbox Light",
+    },
+    ThemeOption {
+        theme: Theme::CatppuccinLatte,
+        label: "Catppuccin Latte",
+    },
+    ThemeOption {
+        theme: Theme::CatppuccinFrappe,
+        label: "Catppuccin Frappé",
+    },
+    ThemeOption {
+        theme: Theme::CatppuccinMacchiato,
+        label: "Catppuccin Macchiato",
+    },
+    ThemeOption {
+        theme: Theme::CatppuccinMocha,
+        label: "Catppuccin Mocha",
+    },
+    ThemeOption {
+        theme: Theme::TokyoNight,
+        label: "Tokyo Night",
+    },
+    ThemeOption {
+        theme: Theme::TokyoNightStorm,
+        label: "Tokyo Night Storm",
+    },
+    ThemeOption {
+        theme: Theme::TokyoNightLight,
+        label: "Tokyo Night Light",
+    },
+    ThemeOption {
+        theme: Theme::KanagawaWave,
+        label: "Kanagawa Wave",
+    },
+    ThemeOption {
+        theme: Theme::KanagawaDragon,
+        label: "Kanagawa Dragon",
+    },
+    ThemeOption {
+        theme: Theme::KanagawaLotus,
+        label: "Kanagawa Lotus",
+    },
+    ThemeOption {
+        theme: Theme::Moonfly,
+        label: "Moonfly",
+    },
+    ThemeOption {
+        theme: Theme::Nightfly,
+        label: "Nightfly",
+    },
+    ThemeOption {
+        theme: Theme::Oxocarbon,
+        label: "Oxocarbon",
+    },
+    ThemeOption {
+        theme: Theme::Ferra,
+        label: "Ferra",
+    },
 ];
 
 fn build_settings<'a>(
     config_window: &'a ConfigWindow,
     dance_interpreter: &'a DanceInterpreter,
 ) -> (String, Column<'a, Message, Theme>, Element<'a, Message>) {
-    let theme_pick = pick_list(
-        THEME_OPTIONS,
-        THEME_OPTIONS
-            .iter()
-            .find(|option| option.0 == config_window.theme)
-            .cloned(),
-        |option| Message::SetConfigTheme(option.0),
-    )
+    let selected = THEME_OPTIONS
+        .iter()
+        .find(|option| option.theme == config_window.theme)
+        .cloned();
+    let theme_pick = pick_list(THEME_OPTIONS, selected, |option| {
+        Message::SetConfigTheme(option.theme)
+    })
     .width(Length::Fixed(160.0))
     .text_size(sz::BASE)
     .padding(theme::INPUT_PAD)
