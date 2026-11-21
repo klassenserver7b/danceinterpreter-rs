@@ -71,7 +71,7 @@ impl TraktorServer {
 
     async fn send_ready(&mut self, app_input_sender: UnboundedSender<AppMessage>) {
         self.send_message(ServerMessage::Ready(app_input_sender))
-            .await
+            .await;
     }
 
     fn reconnect(&mut self, debug_logging: bool) {
@@ -156,7 +156,7 @@ impl TraktorServer {
     ) -> impl warp::Reply + use<> {
         if session_id == self.session_id {
             if let StateUpdate::DeckContent(id, content) = &update {
-                self.deck_files[*id as usize] = content.file_path.clone()
+                self.deck_files[*id as usize] = content.file_path.clone();
             }
             self.on_update_deck_files().await;
 
@@ -498,7 +498,7 @@ async fn server_main(
     {
         service = advertise_server(addr);
         if service.is_err() {
-            drop(service)
+            drop(service);
         }
     }
 

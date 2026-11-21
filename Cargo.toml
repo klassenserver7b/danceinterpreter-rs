@@ -36,6 +36,7 @@ futures-util = "0.3"
 
 [lints.clippy]
 nursery = { level = "warn", priority = -1 }
+semicolon_if_nothing_returned = { level = "forbid", priority = 1 }
 
 [features]
 default = ["mdns"]
