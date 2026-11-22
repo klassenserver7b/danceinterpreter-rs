@@ -71,7 +71,7 @@ impl<'a> From<CanvasToggle<'a>> for Element<'a, Message, Theme, Renderer> {
     }
 }
 
-impl<'a> canvas::Program<Message> for CanvasToggle<'a> {
+impl canvas::Program<Message> for CanvasToggle<'_> {
     // State now holds the instant of the last click for the ripple animation.
     type State = Option<Instant>;
 

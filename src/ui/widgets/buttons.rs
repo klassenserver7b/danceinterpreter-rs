@@ -4,7 +4,7 @@
 //! avoid repeating padding / alignment / icon boilerplate.
 
 use crate::Message;
-use crate::ui::theme::{self, sz};
+use crate::ui::theme::{self, text_size};
 use crate::ui::widgets::material_symbol_sized;
 use iced::alignment::Vertical;
 use iced::widget::text::IntoFragment;
@@ -12,7 +12,7 @@ use iced::widget::{Button, button, row, text};
 use iced::{Length, Pixels, Renderer, Theme};
 
 fn label_text<'a>(label: impl IntoFragment<'a>) -> iced::widget::Text<'a, Theme, Renderer> {
-    text(label).size(sz::BASE).align_y(Vertical::Center)
+    text(label).size(text_size::BASE).align_y(Vertical::Center)
 }
 
 /// Shared body of the labelled button builders.
@@ -76,14 +76,18 @@ pub fn ghost_labelled<'a>(
     message: Message,
 ) -> Button<'a, Message> {
     let mut content = row![
-        material_symbol_sized(icon_id, false, sz::ICON),
-        text(label).size(sz::SMALL).align_y(Vertical::Center),
+        material_symbol_sized(icon_id, false, text_size::ICON),
+        text(label).size(text_size::SMALL).align_y(Vertical::Center),
     ]
     .spacing(8)
     .align_y(Vertical::Center);
 
     if let Some(trailing_icon) = trailing_icon {
-        content = content.push(material_symbol_sized(trailing_icon, false, sz::ICON_XXS));
+        content = content.push(material_symbol_sized(
+            trailing_icon,
+            false,
+            text_size::ICON_XXS,
+        ));
     }
 
     button(content)

@@ -36,13 +36,13 @@ pub enum TraktorSyncAction {
 
 impl Display for TraktorNextMode {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{:?}", self)
+        write!(f, "{self:?}")
     }
 }
 
 impl Display for TraktorSyncMode {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{:?}", self)
+        write!(f, "{self:?}")
     }
 }
 
@@ -72,7 +72,7 @@ pub enum ConnectionState {
 impl ConnectionState {
     /// Short status text for the LED in the Traktor card; the LED color
     /// carries the connected/disconnected nuance.
-    pub const fn summary(&self) -> &'static str {
+    pub const fn summary(self) -> &'static str {
         match self {
             Self::Connected => "Traktor & Cover Loader",
             Self::Traktor => "Traktor",
@@ -82,6 +82,7 @@ impl ConnectionState {
     }
 }
 
+#[allow(clippy::struct_excessive_bools)]
 pub struct TraktorDataProvider {
     pub address: String,
     pub submitted_address: String,
@@ -200,7 +201,7 @@ impl TraktorDataProvider {
         }
     }
 
-    fn get_deck_score(&self, deck: &DeckState, channel: &ChannelState, mixer: &MixerState) -> f64 {
+    fn get_deck_score(deck: &DeckState, channel: &ChannelState, mixer: &MixerState) -> f64 {
         if !deck.content.is_loaded || deck.play_state.speed == 0.0 || channel.volume == 0.0 {
             return 0.0;
         }
@@ -227,7 +228,7 @@ impl TraktorDataProvider {
         };
 
         let scores = (0..4)
-            .map(|i| self.get_deck_score(&state.decks[i], &state.channels[i], &state.mixer))
+            .map(|i| Self::get_deck_score(&state.decks[i], &state.channels[i], &state.mixer))
             .collect::<Vec<f64>>();
 
         let Some(max) = scores
@@ -274,8 +275,8 @@ impl TraktorDataProvider {
                         TraktorSyncAction::PlaylistAbsolute(ci)
                     });
             }
-            _ => {}
-        };
+            TraktorSyncMode::Relative => {}
+        }
     }
 
     fn try_get_next_with_mode(
@@ -284,10 +285,10 @@ impl TraktorDataProvider {
         current_channel: &ChannelState,
         playlist: &[PlaylistItem],
     ) -> Option<SongInfo> {
-        let mode = if !fallback {
-            self.next_mode
-        } else {
+        let mode = if fallback {
             self.next_mode_fallback
+        } else {
+            self.next_mode
         };
 
         if !self.is_ready() {
@@ -348,9 +349,9 @@ impl TraktorDataProvider {
     ) -> SongInfo {
         let mut song_info = SongInfo::new(
             content.number,
-            content.title.to_owned(),
-            content.artist.to_owned(),
-            content.genre.to_owned(),
+            content.title.clone(),
+            content.artist.clone(),
+            content.genre.clone(),
             self.covers.get(&content.file_path).cloned(),
         );
 
@@ -392,7 +393,7 @@ impl TraktorDataProvider {
             .iter()
             .map(|d| &d.content.file_path)
             .filter(|&f| !f.is_empty())
-            .map(|f| f.to_owned())
+            .map(ToOwned::to_owned)
             .collect();
         files.dedup();
 

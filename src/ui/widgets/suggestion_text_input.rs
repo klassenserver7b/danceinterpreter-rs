@@ -58,7 +58,7 @@ where
             .on_input(TextInputEvent::TextChanged)
             .class(Theme::default_input());
 
-        let selection = selection.map(T::to_string).unwrap_or_default();
+        let selection = selection.map_or_default(T::to_string);
 
         Self {
             state,
@@ -187,7 +187,7 @@ where
     /// Creates a new [`State`] for a [`SuggestionTextInput`] with the given list of options
     /// and selected value.
     pub fn with_selection(options: Vec<T>, selection: Option<&T>) -> Self {
-        let value = selection.map(T::to_string).unwrap_or_default();
+        let value = selection.map_or_default(T::to_string);
 
         // Pre-build "matcher" strings ahead of time so that search is fast
         let option_matchers = build_matchers(&options);
@@ -266,7 +266,7 @@ where
 }
 
 struct Menu<T> {
-    menu: menu::State,
+    state: menu::State,
     hovered_option: Option<usize>,
     new_selection: Option<T>,
     filtered_options: Filtered<T>,
@@ -340,7 +340,7 @@ where
 
     fn state(&self) -> widget::tree::State {
         widget::tree::State::new(Menu::<T> {
-            menu: menu::State::new(),
+            state: menu::State::new(),
             filtered_options: Filtered::new(Vec::new()),
             hovered_option: Some(0),
             new_selection: None,
@@ -437,7 +437,7 @@ where
     ) -> Option<overlay::Element<'b, Message, Theme, Renderer>> {
         if text_input_focused::<Renderer>(tree) {
             let Menu {
-                menu,
+                state: menu,
                 filtered_options,
                 hovered_option,
                 ..
@@ -625,7 +625,7 @@ where
 
             // Clear the value and reset the options and menu
             state.reset(self.state.options.clone());
-            menu.menu = menu::State::default();
+            menu.state = menu::State::default();
 
             // Notify the selection
             shell.publish((self.on_selected)(selection));
@@ -732,7 +732,7 @@ fn text_input_focused<Renderer: text::Renderer>(tree: &widget::Tree) -> bool {
 const fn cycle_hovered<T>(menu: &mut Menu<T>, count: usize, delta: isize) {
     let next = match menu.hovered_option {
         Some(index) if count > 0 => {
-            let step = delta.rem_euclid(count as isize) as usize;
+            let step = delta.rem_euclid(count.cast_signed()) as usize;
             (index + step) % count
         }
         _ => 0,

@@ -5,7 +5,7 @@ use crate::dataloading::dataprovider::{ItemChange, ItemSource};
 use crate::ui::config_window::search::data_matches_search_query;
 use crate::ui::config_window::{ConfigWindow, EditField, edit_input_id};
 use crate::ui::theme::RowLook;
-use crate::ui::theme::{self, sz};
+use crate::ui::theme::{self, text_size};
 use crate::ui::widgets::{
     ACCENT_BAR_W, EllipsisText, buttons, card_panel, delete_button, dot, eyebrow, heading,
     icon_button_tooltip, icon_muted, material_symbol, material_symbol_sized, panel_header,
@@ -77,7 +77,7 @@ fn build_toolbar<'a>(
         // its spot expands into the bar on press (Toggle focuses the input).
         tools = tools.push(icon_button_tooltip(
             "search",
-            sz::ICON,
+            text_size::ICON,
             Message::Search(SearchMessage::Toggle),
             "Find a song (Ctrl+F)",
         ));
@@ -85,14 +85,14 @@ fn build_toolbar<'a>(
 
     tools = tools.push(icon_button_tooltip(
         "upload_file",
-        sz::ICON,
+        text_size::ICON,
         Message::AddAudioFiles,
         "Add audio files",
     ));
 
     tools = tools.push(icon_button_tooltip(
         "undo",
-        sz::ICON,
+        text_size::ICON,
         Message::Dialog(DialogMessage::UndoDelete),
         "Undo delete",
     ));
@@ -107,14 +107,14 @@ fn build_toolbar<'a>(
 
 fn build_search(config_window: &ConfigWindow) -> Element<'_, Message> {
     let input = text_input("Find a song, artist, dance…", &config_window.search_query)
-        .size(sz::TINY)
+        .size(text_size::TINY)
         .width(Length::Fixed(SEARCH_WIDTH))
         .id(config_window.search_input_id.clone())
         .on_input(|v| Message::Search(SearchMessage::Changed(v)))
         .style(theme::input_boxed)
         .padding(theme::INPUT_PAD);
 
-    let mut search_row = row![icon_muted("search", sz::ICON_SM), input,]
+    let mut search_row = row![icon_muted("search", text_size::ICON_SM), input,]
         .spacing(6)
         .align_y(Alignment::Center);
 
@@ -122,7 +122,7 @@ fn build_search(config_window: &ConfigWindow) -> Element<'_, Message> {
     if !config_window.search_query.is_empty() {
         search_row = search_row.push(icon_button_tooltip(
             "backspace",
-            sz::ICON_XS,
+            text_size::ICON_XS,
             Message::Search(SearchMessage::Clear),
             "Clear search",
         ));
@@ -131,7 +131,7 @@ fn build_search(config_window: &ConfigWindow) -> Element<'_, Message> {
     search_row = search_row.push(buttons::ghost_icon(
         "close",
         false,
-        sz::ICON_XS,
+        text_size::ICON_XS,
         Message::Search(SearchMessage::Toggle),
     ));
 
@@ -184,7 +184,7 @@ fn build_rows<'a>(
         .iter()
         .enumerate()
     {
-        let is_match = data_matches_search_query(&config_window.search_query, (&item.song).into());
+        let is_match = data_matches_search_query(&config_window.search_query, &(&item.song).into());
         rows = rows.push(build_song_row(
             dance_interpreter,
             &item.song,
@@ -234,7 +234,7 @@ fn build_song_row<'a>(
             EditField::Title,
             "Title",
             edit_draft,
-            sz::ROW,
+            text_size::ROW,
             theme::input_plain,
         )
         .into()
@@ -242,7 +242,7 @@ fn build_song_row<'a>(
         mouse_area(editable_text(
             &song.title,
             "Title",
-            sz::ROW,
+            text_size::ROW,
             |tk| tk.text_soft,
             |tk| tk.faint,
         ))
@@ -256,7 +256,7 @@ fn build_song_row<'a>(
             EditField::Artist,
             "Artist",
             edit_draft,
-            sz::BASE,
+            text_size::BASE,
             theme::input_plain_dim,
         )
         .into()
@@ -264,7 +264,7 @@ fn build_song_row<'a>(
         mouse_area(editable_text(
             &song.artist,
             "Artist",
-            sz::BASE,
+            text_size::BASE,
             |tk| tk.muted,
             |tk| tk.faint,
         ))
@@ -289,13 +289,13 @@ fn build_song_row<'a>(
     let actions = row![
         icon_button_tooltip(
             "play_arrow",
-            sz::ICON_XS,
+            text_size::ICON_XS,
             Message::ItemChanged(ItemChange::PlaylistAbsolute(idx)),
             "Show now"
         ),
         icon_button_tooltip(
             "skip_next",
-            sz::ICON_XS,
+            text_size::ICON_XS,
             Message::SetNextItem(ItemSource::Playlist(idx)),
             "Queue as next"
         ),
@@ -330,16 +330,16 @@ fn build_number_cell(
     is_played: bool,
 ) -> Element<'static, Message> {
     if is_traktor && !is_current {
-        material_symbol_sized("agriculture", false, sz::ICON_SM)
+        material_symbol_sized("agriculture", false, text_size::ICON_SM)
             .style(theme::text_style(|tk| tk.led_partial))
             .into()
     } else if is_current {
-        material_symbol_sized("graphic_eq", false, sz::ICON)
+        material_symbol_sized("graphic_eq", false, text_size::ICON)
             .style(theme::text_style(|tk| tk.accent_soft))
             .into()
     } else {
         text(format!("{:02}", idx + 1))
-            .size(sz::TINY)
+            .size(text_size::TINY)
             .style(theme::text_style(move |tk| {
                 if is_played { tk.faint } else { tk.muted }
             }))
@@ -348,6 +348,7 @@ fn build_number_cell(
 }
 
 /// The status cell: on-air / up-next / DJ-live / played / ready indicator.
+#[allow(clippy::fn_params_excessive_bools)]
 fn build_status(
     is_current: bool,
     is_next: bool,
@@ -358,7 +359,7 @@ fn build_status(
         row![
             dot(5.0, |t| theme::Tokens::of(t).accent_soft),
             text("On air")
-                .size(sz::SMALL)
+                .size(text_size::SMALL)
                 .style(theme::text_style(|tk| tk.accent_soft)),
         ]
         .spacing(6)
@@ -366,9 +367,9 @@ fn build_status(
         .into()
     } else if is_next {
         row![
-            material_symbol_sized("skip_next", false, sz::ICON_XXS),
+            material_symbol_sized("skip_next", false, text_size::ICON_XXS),
             text("Up next")
-                .size(sz::SMALL)
+                .size(text_size::SMALL)
                 .style(theme::text_style(|tk| tk.text_soft)),
         ]
         .spacing(4)
@@ -376,14 +377,14 @@ fn build_status(
         .into()
     } else if is_traktor {
         text("DJ live")
-            .size(sz::SMALL)
+            .size(text_size::SMALL)
             .style(theme::text_style(|tk| tk.led_partial))
             .into()
     } else if is_played {
         row![
-            material_symbol_sized("check", false, sz::ICON_XXS),
+            material_symbol_sized("check", false, text_size::ICON_XXS),
             text("Played")
-                .size(sz::SMALL)
+                .size(text_size::SMALL)
                 .style(theme::text_style(|tk| tk.faint)),
         ]
         .spacing(4)
@@ -391,7 +392,7 @@ fn build_status(
         .into()
     } else {
         text("Ready")
-            .size(sz::SMALL)
+            .size(text_size::SMALL)
             .style(theme::text_style(|tk| tk.faint))
             .into()
     }
@@ -432,7 +433,7 @@ fn build_dance_cell<'a>(
             EditField::Dance,
             "Unassigned",
             edit_draft,
-            sz::BASE,
+            text_size::BASE,
             move |t, status| {
                 let mut style = theme::input_plain(t, status);
                 style.value = match color {
@@ -449,8 +450,8 @@ fn build_dance_cell<'a>(
         mouse_area(editable_text(
             dance,
             "Unassigned",
-            sz::BASE,
-            move |tk: &theme::Tokens| color.map(|c| theme::readable(c, tk)).unwrap_or(tk.muted),
+            text_size::BASE,
+            move |tk: &theme::Tokens| color.map_or(tk.muted, |c| theme::readable(c, tk)),
             |tk| tk.faint,
         ))
         .on_double_click(Message::BeginSongEdit(idx, EditField::Dance))
@@ -461,7 +462,7 @@ fn build_dance_cell<'a>(
         row![
             dot(7.0, move |t| {
                 let tk = theme::Tokens::of(t);
-                color.map(|c| theme::readable(c, &tk)).unwrap_or(tk.muted)
+                color.map_or(tk.muted, |c| theme::readable(c, &tk))
             }),
             dance_field,
         ]
@@ -519,7 +520,7 @@ fn build_quick_add(config_window: &ConfigWindow) -> Element<'_, Message> {
     let quick_input =
         |placeholder: &'static str, value: &String, on_input: fn(String) -> QuickAddMessage| {
             text_input(placeholder, value)
-                .size(sz::ROW)
+                .size(text_size::ROW)
                 .on_input(move |v| Message::QuickAdd(on_input(v)))
                 .on_submit(submit.clone())
                 .style(theme::input_boxed)
@@ -527,7 +528,7 @@ fn build_quick_add(config_window: &ConfigWindow) -> Element<'_, Message> {
         };
 
     let content = row![
-        icon_muted("add", sz::ICON),
+        icon_muted("add", text_size::ICON),
         quick_input(
             "Add a song title…",
             &config_window.quick_title,
@@ -568,12 +569,12 @@ fn build_footer(dance_interpreter: &DanceInterpreter) -> Element<'static, Messag
 
     container(
         row![
-            text(format!("{} played · {} remaining", played, remaining))
-                .size(sz::TINY)
+            text(format!("{played} played · {remaining} remaining"))
+                .size(text_size::TINY)
                 .style(theme::text_style(|tk| tk.muted)),
             push_right(
                 text("Double-click a field to edit")
-                    .size(sz::TINY)
+                    .size(text_size::TINY)
                     .style(theme::text_style(|tk| tk.faint)),
             ),
         ]
@@ -625,10 +626,14 @@ fn build_empty_playlist_view(dance_interpreter: &DanceInterpreter) -> Element<'s
     );
 
     let content = col![
-        heading("No playlist loaded.", sz::H2, iced::font::Weight::Semibold)
-            .style(theme::text_style(|tk| tk.text)),
+        heading(
+            "No playlist loaded.",
+            text_size::H2,
+            iced::font::Weight::Semibold
+        )
+        .style(theme::text_style(|tk| tk.text)),
         text("Drop an .m3u or audio file anywhere in this window, or start below.")
-            .size(sz::SMALL)
+            .size(text_size::SMALL)
             .style(theme::text_style(|tk| tk.muted)),
         // The three cards share the available width equally, capped at
         // 3 × 200 + spacing.
@@ -669,11 +674,11 @@ fn empty_state_card(
                     .size(30.0)
                     .style(theme::text_style(|tk| tk.accent_soft)),
                 text(title)
-                    .size(sz::BASE)
+                    .size(text_size::BASE)
                     .font(theme::body_font(iced::font::Weight::Medium))
                     .style(theme::text_style(|tk| tk.text)),
                 text(subtitle)
-                    .size(sz::TINY)
+                    .size(text_size::TINY)
                     .style(theme::text_style(|tk| tk.muted)),
             ]
             .spacing(8)
@@ -700,7 +705,7 @@ fn empty_state_card(
             border: iced::Border {
                 color: tk.border,
                 width: 1.0,
-                radius: theme::r::XL.into(),
+                radius: theme::radius::XL.into(),
             },
             ..button::Style::default()
         }

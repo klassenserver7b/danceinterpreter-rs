@@ -168,6 +168,7 @@ impl Window for SongWindow {
 }
 
 impl SongWindow {
+    #[allow(clippy::too_many_lines)]
     pub fn view<'a>(&self, state: &'a DanceInterpreter) -> Element<'a, Message> {
         let backdrop_color = self.backdrop.color();
 

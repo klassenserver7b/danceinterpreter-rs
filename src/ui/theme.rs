@@ -5,6 +5,8 @@
 //! `Manrope` for headings and `DM Sans` for body text (bundled as static
 //! instances, see `resources/main/fonts/`).
 
+#![allow(clippy::unreadable_literal)]
+
 use iced::border::Radius;
 use iced::font::{Family, Style as FontStyle, Weight};
 use iced::widget::{button, container, pick_list, scrollable, text_input, toggler};
@@ -47,7 +49,7 @@ pub const fn head_font(weight: Weight) -> Font {
 
 /// Text sizes (design pixels). The smallest labels from the prototype were
 /// bumped by ~1px for projector-room legibility.
-pub mod sz {
+pub mod text_size {
     /// Body text, dialog copy.
     pub const BASE: f32 = 13.0;
     /// Section and dialog titles.
@@ -77,7 +79,7 @@ pub mod sz {
 }
 
 /// Corner radius scale (design pixels), mirroring the prototype.
-pub mod r {
+pub mod radius {
     /// Inline inputs, kbd hints.
     pub const XS: f32 = 3.0;
     /// Chips, boxed inputs, tooltips.
@@ -533,7 +535,7 @@ pub fn card(theme: &Theme) -> container::Style {
         .border(Border {
             color: t.border,
             width: 1.0,
-            radius: Radius::from(r::XL),
+            radius: Radius::from(radius::XL),
         })
 }
 
@@ -562,7 +564,7 @@ pub fn inset_card(theme: &Theme) -> container::Style {
         .border(Border {
             color: t.border,
             width: 1.0,
-            radius: Radius::from(r::SM),
+            radius: Radius::from(radius::SM),
         })
 }
 
@@ -643,7 +645,7 @@ pub fn modal_card(theme: &Theme) -> container::Style {
         .border(Border {
             color: t.modal_border,
             width: 1.0,
-            radius: Radius::from(r::MODAL),
+            radius: Radius::from(radius::MODAL),
         })
 }
 
@@ -661,7 +663,7 @@ pub fn toast_card(theme: &Theme) -> container::Style {
         .border(Border {
             color: t.toast_border,
             width: 1.0,
-            radius: Radius::from(r::LG),
+            radius: Radius::from(radius::LG),
         })
 }
 
@@ -677,7 +679,7 @@ pub fn chip() -> impl Fn(&Theme) -> container::Style {
             .border(Border {
                 color: with_alpha(t.text, 0.1),
                 width: 1.0,
-                radius: Radius::from(r::SM),
+                radius: Radius::from(radius::SM),
             })
     }
 }
@@ -696,7 +698,7 @@ pub fn panel_collapsible(theme: &Theme, width: f32) -> container::Style {
         .border(Border {
             color: t.border,
             width: 1.0,
-            radius: Radius::from(r::MODAL),
+            radius: Radius::from(radius::MODAL),
         })
 }
 
@@ -728,7 +730,7 @@ pub fn kbd_style(theme: &Theme) -> container::Style {
     .border(Border {
         color: t.kbd_border,
         width: 1.0,
-        radius: Radius::from(r::XS),
+        radius: Radius::from(radius::XS),
     })
 }
 
@@ -739,7 +741,7 @@ pub fn kbd_style(theme: &Theme) -> container::Style {
 /// Hover/press shift for a button background. Dark themes brighten the fill;
 /// light themes darken it (brightening washes out near-white fills there).
 /// `factor` is the brightness factor on dark themes (e.g. `1.06`).
-fn shift(status: button::Status, is_light: bool, base: Color, factor: f32) -> Option<Background> {
+fn shift(status: button::Status, is_light: bool, base: Color, factor: f32) -> Background {
     let tinted = if is_light {
         let k = 2.0 - factor;
         Color {
@@ -758,9 +760,9 @@ fn shift(status: button::Status, is_light: bool, base: Color, factor: f32) -> Op
     };
 
     match status {
-        button::Status::Hovered | button::Status::Pressed => Some(Background::Color(tinted)),
-        button::Status::Disabled => Some(Background::Color(Color { a: 0.4, ..base })),
-        _ => Some(Background::Color(base)),
+        button::Status::Hovered | button::Status::Pressed => Background::Color(tinted),
+        button::Status::Disabled => Background::Color(Color { a: 0.4, ..base }),
+        button::Status::Active => Background::Color(base),
     }
 }
 
@@ -768,12 +770,12 @@ fn shift(status: button::Status, is_light: bool, base: Color, factor: f32) -> Op
 pub fn btn_primary(theme: &Theme, status: button::Status) -> button::Style {
     let t = Tokens::of(theme);
     button::Style {
-        background: shift(status, t.is_light, t.accent, 1.06),
+        background: Some(shift(status, t.is_light, t.accent, 1.06)),
         text_color: t.accent_text,
         border: Border {
             color: t.accent_border,
             width: 1.0,
-            radius: Radius::from(r::MD),
+            radius: Radius::from(radius::MD),
         },
         ..button::Style::default()
     }
@@ -783,12 +785,12 @@ pub fn btn_primary(theme: &Theme, status: button::Status) -> button::Style {
 pub fn btn_secondary(theme: &Theme, status: button::Status) -> button::Style {
     let t = Tokens::of(theme);
     button::Style {
-        background: shift(status, t.is_light, t.btn2_bg, 1.08),
+        background: Some(shift(status, t.is_light, t.btn2_bg, 1.08)),
         text_color: t.btn2_text,
         border: Border {
             color: t.btn2_border,
             width: 1.0,
-            radius: Radius::from(r::MD),
+            radius: Radius::from(radius::MD),
         },
         ..button::Style::default()
     }
@@ -798,12 +800,12 @@ pub fn btn_secondary(theme: &Theme, status: button::Status) -> button::Style {
 pub fn btn_outline(theme: &Theme, status: button::Status) -> button::Style {
     let t = Tokens::of(theme);
     button::Style {
-        background: shift(status, t.is_light, t.outline_bg, 1.04),
+        background: Some(shift(status, t.is_light, t.outline_bg, 1.04)),
         text_color: t.outline_text,
         border: Border {
             color: t.outline_border,
             width: 1.0,
-            radius: Radius::from(r::MD),
+            radius: Radius::from(radius::MD),
         },
         ..button::Style::default()
     }
@@ -825,7 +827,7 @@ pub fn btn_ghost(theme: &Theme, status: button::Status) -> button::Style {
         border: Border {
             color: Color::TRANSPARENT,
             width: 0.0,
-            radius: Radius::from(r::MD),
+            radius: Radius::from(radius::MD),
         },
         ..button::Style::default()
     }
@@ -835,12 +837,12 @@ pub fn btn_ghost(theme: &Theme, status: button::Status) -> button::Style {
 pub fn btn_danger(theme: &Theme, status: button::Status) -> button::Style {
     let t = Tokens::of(theme);
     button::Style {
-        background: shift(status, t.is_light, t.danger, 1.08),
+        background: Some(shift(status, t.is_light, t.danger, 1.08)),
         text_color: t.danger_text,
         border: Border {
             color: t.danger,
             width: 1.0,
-            radius: Radius::from(r::MD),
+            radius: Radius::from(radius::MD),
         },
         ..button::Style::default()
     }
@@ -850,12 +852,12 @@ pub fn btn_danger(theme: &Theme, status: button::Status) -> button::Style {
 pub fn btn_active(theme: &Theme, status: button::Status) -> button::Style {
     let t = Tokens::of(theme);
     button::Style {
-        background: shift(status, t.is_light, t.active_bg, 1.06),
+        background: Some(shift(status, t.is_light, t.active_bg, 1.06)),
         text_color: t.active_text,
         border: Border {
             color: t.active_border,
             width: 1.0,
-            radius: Radius::from(r::MD),
+            radius: Radius::from(radius::MD),
         },
         ..button::Style::default()
     }
@@ -867,12 +869,12 @@ pub fn btn_nav(selected: bool) -> impl Fn(&Theme, button::Status) -> button::Sty
         let t = Tokens::of(theme);
         let base = if selected { t.accent_nav_bg } else { t.bg };
         button::Style {
-            background: shift(status, t.is_light, base, 1.08),
+            background: Some(shift(status, t.is_light, base, 1.08)),
             text_color: if selected { t.accent_nav_text } else { t.muted },
             border: Border {
                 color: Color::TRANSPARENT,
                 width: 0.0,
-                radius: Radius::from(r::MD),
+                radius: Radius::from(radius::MD),
             },
             ..button::Style::default()
         }
@@ -891,7 +893,7 @@ pub fn input_plain(theme: &Theme, status: text_input::Status) -> text_input::Sty
         border: Border {
             color: Color::TRANSPARENT,
             width: 0.0,
-            radius: Radius::from(r::XS),
+            radius: Radius::from(radius::XS),
         },
         icon: t.muted,
         placeholder: t.faint,
@@ -935,7 +937,7 @@ pub fn input_boxed(theme: &Theme, status: text_input::Status) -> text_input::Sty
         border: Border {
             color: border_color,
             width: 1.0,
-            radius: Radius::from(r::SM),
+            radius: Radius::from(radius::SM),
         },
         icon: t.muted,
         placeholder: t.faint,
@@ -960,14 +962,14 @@ pub fn scrollable_style(theme: &Theme, status: scrollable::Status) -> scrollable
         border: Border {
             color: Color::TRANSPARENT,
             width: 0.0,
-            radius: Radius::from(r::XS),
+            radius: Radius::from(radius::XS),
         },
         scroller: scrollable::Scroller {
             background: Background::Color(if active { t.accent_border } else { t.border }),
             border: Border {
                 color: Color::TRANSPARENT,
                 width: 0.0,
-                radius: Radius::from(r::XS),
+                radius: Radius::from(radius::XS),
             },
         },
     };
@@ -981,7 +983,7 @@ pub fn scrollable_style(theme: &Theme, status: scrollable::Status) -> scrollable
             border: Border {
                 color: t.border,
                 width: 1.0,
-                radius: Radius::from(r::PILL),
+                radius: Radius::from(radius::PILL),
             },
             shadow: iced::Shadow::default(),
             icon: t.text,
@@ -1007,7 +1009,7 @@ pub fn pick_list_style(theme: &Theme, status: pick_list::Status) -> pick_list::S
         border: Border {
             color: t.border,
             width: 1.0,
-            radius: Radius::from(r::SM),
+            radius: Radius::from(radius::SM),
         },
     }
 }
@@ -1020,7 +1022,7 @@ pub fn pick_list_menu_style(theme: &Theme) -> iced::widget::overlay::menu::Style
         border: Border {
             color: t.border,
             width: 1.0,
-            radius: Radius::from(r::LG),
+            radius: Radius::from(radius::LG),
         },
         text_color: t.text_soft,
         selected_text_color: t.accent_nav_text,
@@ -1062,6 +1064,6 @@ pub fn tooltip_style(theme: &Theme) -> container::Style {
         .border(Border {
             color: t.border,
             width: 1.0,
-            radius: Radius::from(r::SM),
+            radius: Radius::from(radius::SM),
         })
 }

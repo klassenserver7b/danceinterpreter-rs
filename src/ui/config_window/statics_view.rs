@@ -8,7 +8,7 @@ use crate::ui::config_window::search::data_matches_search_query;
 use crate::ui::config_window::static_edit_input_id;
 use crate::ui::config_window::{ConfigWindow, DialogState};
 use crate::ui::theme::RowLook;
-use crate::ui::theme::{self, pad4, sz};
+use crate::ui::theme::{self, pad4, text_size};
 use crate::ui::widgets::{
     buttons, card_panel, color_swatch, delete_button, heading, icon_button_tooltip,
     material_symbol, material_symbol_sized, panel_header, row_shell,
@@ -26,12 +26,12 @@ pub fn build<'a>(
     let mut rows: Column<'_, Message> = col![];
 
     for (i, (name, static_info)) in dance_interpreter.data_provider.statics().iter().enumerate() {
-        let is_match = data_matches_search_query(&config_window.search_query, static_info.into());
+        let is_match = data_matches_search_query(&config_window.search_query, &static_info.into());
         rows = rows.push(build_static_row(
             config_window,
             dance_interpreter,
             static_info,
-            name.clone(),
+            name,
             i,
             is_match,
         ));
@@ -40,10 +40,14 @@ pub fn build<'a>(
     let list: Element<'_, Message> = if dance_interpreter.data_provider.statics().is_empty() {
         col![
             Space::new().height(Length::Fill),
-            heading("No statics yet.", sz::H2, iced::font::Weight::Semibold)
-                .style(theme::text_style(|tk| tk.text)),
+            heading(
+                "No statics yet.",
+                text_size::H2,
+                iced::font::Weight::Semibold
+            )
+            .style(theme::text_style(|tk| tk.text)),
             text("Statics appear automatically from playlist dances. Add one below.")
-                .size(sz::SMALL)
+                .size(text_size::SMALL)
                 .style(theme::text_style(|tk| tk.muted)),
             buttons::primary_small("Add static", Message::OpenDialog(DialogState::AddStatic),),
             Space::new().height(Length::Fill),
@@ -64,7 +68,7 @@ pub fn build<'a>(
     let tools = row![
         icon_button_tooltip(
             "refresh",
-            sz::ICON,
+            text_size::ICON,
             Message::Statics(StaticsMessage::Reload),
             "Reload statics",
         ),
@@ -88,7 +92,7 @@ fn build_static_row<'a>(
     config_window: &'a ConfigWindow,
     dance_interpreter: &'a DanceInterpreter,
     static_info: &'a StaticInfo,
-    name: String,
+    name: &str,
     idx: usize,
     is_match: bool,
 ) -> Element<'a, Message> {
@@ -106,7 +110,7 @@ fn build_static_row<'a>(
         .padding(4)
         .style(theme::btn_ghost)
         .on_press(Message::Statics(StaticsMessage::ToggleFavorite(
-            name.clone(),
+            name.to_string(),
         )));
 
     // Color swatch / color picker.
@@ -114,16 +118,16 @@ fn build_static_row<'a>(
     let swatch_color = static_info
         .color
         .unwrap_or_else(|| theme::Tokens::of(&config_window.theme).muted);
-    let color_picker_open = config_window.color_picker_open.as_ref() == Some(&name);
+    let color_picker_open = config_window.color_picker_open.as_ref() == Some(&name.to_string());
     let swatch = color_swatch::color_swatch(
         swatch_color,
-        Message::Statics(StaticsMessage::ToggleColorPicker(name.clone())),
+        Message::Statics(StaticsMessage::ToggleColorPicker(name.to_string())),
     );
 
     let color_element: Element<'a, Message> = if color_picker_open {
-        let close_name = name.clone();
-        let submit_name = name.clone();
-        let preview_name = name.clone();
+        let close_name = name.to_string();
+        let submit_name = name.to_string();
+        let preview_name = name.to_string();
         iced_aw::ColorPicker::new(
             true,
             swatch_color,
@@ -141,11 +145,11 @@ fn build_static_row<'a>(
 
     // Name (inline editable via double-click; submitting an existing name
     // opens the merge dialog).
-    let editing_this = config_window.static_editing.as_deref() == Some(name.as_str());
+    let editing_this = config_window.static_editing.as_deref() == Some(name);
     let name_field: Element<'a, Message> = if editing_this {
         text_input("Static name", &config_window.edit_draft)
-            .id(static_edit_input_id(&name))
-            .size(sz::ROW)
+            .id(static_edit_input_id(name))
+            .size(text_size::ROW)
             .on_input(|v| Message::Statics(StaticsMessage::DraftChanged(v)))
             .on_submit(Message::Statics(StaticsMessage::EndEdit))
             .style(theme::input_plain)
@@ -155,18 +159,20 @@ fn build_static_row<'a>(
         mouse_area(editable_text(
             &static_info.name,
             "Static name",
-            sz::ROW,
+            text_size::ROW,
             |tk| tk.text_soft,
             |tk| tk.faint,
         ))
-        .on_double_click(Message::Statics(StaticsMessage::BeginEdit(name.clone())))
+        .on_double_click(Message::Statics(StaticsMessage::BeginEdit(
+            name.to_string(),
+        )))
         .into()
     };
 
     let show_now = button(
         row![
-            material_symbol_sized("play_arrow", false, sz::ICON_XXS),
-            text("Show now").size(sz::SMALL),
+            material_symbol_sized("play_arrow", false, text_size::ICON_XXS),
+            text("Show now").size(text_size::SMALL),
         ]
         .spacing(6)
         .align_y(Alignment::Center),
@@ -174,10 +180,10 @@ fn build_static_row<'a>(
     .padding([5, 10])
     .style(theme::btn_secondary)
     .on_press(Message::ItemChanged(ItemChange::StaticAbsolute(
-        name.clone(),
+        name.to_string(),
     )));
 
-    let delete = delete_button(ItemSource::Static(name.clone()), "Delete static");
+    let delete = delete_button(ItemSource::Static(name.to_string()), "Delete static");
 
     // How many playlist songs use this dance.
     let usage = dance_interpreter
@@ -198,7 +204,7 @@ fn build_static_row<'a>(
         container(name_field).width(Length::Fill),
         container(
             text(usage_label)
-                .size(sz::TINY)
+                .size(text_size::TINY)
                 .style(theme::text_style(|tk| tk.faint))
         )
         .width(Length::Fixed(COL_CAPTION))

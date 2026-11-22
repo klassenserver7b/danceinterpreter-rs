@@ -12,7 +12,7 @@ url = "2.5"
 percent-encoding = "2.3"
 iced = { version = "0.14.0", features = ["image", "svg", "wayland", "canvas", "tokio", "advanced"] }
 iced_aw = { version = "0.14.1", features = ["default", "color_picker"] }
-rfd = "0.17"
+rfd = "0.18"
 dirs = "7.0"
 warp = { version = "0.4", features = ["websocket", "server"] }
 tokio = { version = "1.53" }
@@ -36,6 +36,8 @@ futures-util = "0.3"
 
 [lints.clippy]
 nursery = { level = "warn", priority = -1 }
+pedantic = { level = "warn", priority = -1 }
+cast_precision_loss = { level = "allow" }
 semicolon_if_nothing_returned = { level = "forbid", priority = 1 }
 
 [features]

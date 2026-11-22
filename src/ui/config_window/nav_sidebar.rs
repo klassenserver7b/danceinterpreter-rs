@@ -3,7 +3,7 @@
 
 use crate::res_file;
 use crate::ui::config_window::{ConfigWindow, DialogState, View};
-use crate::ui::theme::{self, pad4, sz};
+use crate::ui::theme::{self, pad4, text_size};
 use crate::ui::widgets::{EllipsisText, kbd, material_symbol};
 use crate::{DanceInterpreter, Message};
 use iced::widget::{column as col, container, row, svg, text};
@@ -116,9 +116,10 @@ fn session_card(config_window: &ConfigWindow) -> Element<'_, Message> {
         },
         |path| {
             (
-                path.file_name()
-                    .map(|n| n.to_string_lossy().to_string())
-                    .unwrap_or_else(|| "Playlist loaded".to_string()),
+                path.file_name().map_or_else(
+                    || "Playlist loaded".to_string(),
+                    |n| n.to_string_lossy().to_string(),
+                ),
                 "Event playlist".to_string(),
             )
         },
@@ -127,18 +128,18 @@ fn session_card(config_window: &ConfigWindow) -> Element<'_, Message> {
     container(
         col![
             EllipsisText::new(title)
-                .size(sz::SMALL)
+                .size(text_size::SMALL)
                 .font(theme::body_font(iced::font::Weight::Semibold))
                 .style(theme::text_style(|tk| tk.text)),
             text(subtitle)
-                .size(sz::MICRO)
+                .size(text_size::MICRO)
                 .style(theme::text_style(|tk| tk.muted)),
         ]
         .spacing(3)
         .width(Length::Fill),
     )
     .padding([10, 12])
-    .style(|t: &Theme| theme::bordered(t, |tk| tk.border, theme::r::XL))
+    .style(|t: &Theme| theme::bordered(t, |tk| tk.border, theme::radius::XL))
     .width(Length::Fill)
     .into()
 }
@@ -146,11 +147,11 @@ fn session_card(config_window: &ConfigWindow) -> Element<'_, Message> {
 fn count_badge(count: usize) -> Element<'static, Message> {
     container(
         text(count.to_string())
-            .size(sz::MICRO)
+            .size(text_size::MICRO)
             .style(theme::text_style(|tk| tk.muted)),
     )
     .padding([1, 6])
-    .style(|t: &Theme| theme::bordered(t, |_| Color::TRANSPARENT, theme::r::XS))
+    .style(|t: &Theme| theme::bordered(t, |_| Color::TRANSPARENT, theme::radius::XS))
     .into()
 }
 
@@ -170,7 +171,7 @@ fn nav_item<'a>(
     let content = row![
         material_symbol(icon, false).style(theme::text_style(icon_color)),
         text(label)
-            .size(sz::BASE)
+            .size(text_size::BASE)
             .style(theme::text_style(icon_color)),
     ]
     .spacing(12)

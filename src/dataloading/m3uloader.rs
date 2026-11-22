@@ -138,7 +138,7 @@ pub fn discover_playlists(root: &Path) -> Vec<PathBuf> {
                 }
             } else if matches!(
                 path.extension().and_then(|ext| ext.to_str()),
-                Some("m3u") | Some("m3u8")
+                Some("m3u" | "m3u8")
             ) {
                 found.push(path);
             }

@@ -3,7 +3,7 @@
 use crate::Message;
 use crate::ui::config_window::Toast;
 use crate::ui::config_window::show_bar::DOCK_CLEARANCE;
-use crate::ui::theme::{self, pad4, sz};
+use crate::ui::theme::{self, pad4, text_size};
 use crate::ui::widgets::{EllipsisText, material_symbol, material_symbol_sized};
 use iced::alignment::Vertical;
 use iced::widget::{button, container, row};
@@ -20,11 +20,9 @@ pub fn task(text: impl Into<String>) -> Task<Message> {
 const BUBBLE_MAX_WIDTH: f32 = 560.0;
 
 /// Builds the floating toast overlay, if a toast is active.
-pub fn build(toast: &Option<Toast>) -> Option<Element<'_, Message>> {
-    let toast = toast.as_ref()?;
-
+pub fn build(toast: &Toast) -> Element<'_, Message> {
     let close = button(
-        material_symbol_sized("close", false, sz::ICON_XS)
+        material_symbol_sized("close", false, text_size::ICON_XS)
             .style(theme::text_style(|tk| tk.toast_text)),
     )
     .padding(2)
@@ -39,11 +37,11 @@ pub fn build(toast: &Option<Toast>) -> Option<Element<'_, Message>> {
     let bubble = container(
         row![
             material_symbol("check_circle", false)
-                .size(sz::ICON)
+                .size(text_size::ICON)
                 .style(theme::text_style(|tk| tk.toast_text)),
             EllipsisText::new(&toast.text)
                 .width(Length::Shrink)
-                .size(sz::CAPTION)
+                .size(text_size::CAPTION)
                 .style(theme::text_style(|tk| tk.toast_text)),
             close,
         ]
@@ -54,13 +52,11 @@ pub fn build(toast: &Option<Toast>) -> Option<Element<'_, Message>> {
     .max_width(BUBBLE_MAX_WIDTH)
     .style(theme::toast_card);
 
-    Some(
-        container(bubble)
-            .width(Length::Fill)
-            .height(Length::Fill)
-            .align_x(Alignment::Center)
-            .align_y(Vertical::Bottom)
-            .padding(pad4(0.0, 0.0, DOCK_CLEARANCE, 0.0))
-            .into(),
-    )
+    container(bubble)
+        .width(Length::Fill)
+        .height(Length::Fill)
+        .align_x(Alignment::Center)
+        .align_y(Vertical::Bottom)
+        .padding(pad4(0.0, 0.0, DOCK_CLEARANCE, 0.0))
+        .into()
 }

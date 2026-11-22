@@ -2,7 +2,7 @@
 
 use crate::Message;
 use crate::ui::config_window::{ConfigWindow, View};
-use crate::ui::theme::{self, pad4, sz};
+use crate::ui::theme::{self, pad4, text_size};
 use crate::ui::widgets::{buttons, divider, icon_button_tooltip, push_right};
 use iced::widget::{Column, column as col, container, row, text};
 use iced::{Alignment, Element, Length, Theme};
@@ -19,13 +19,13 @@ pub fn build(config_window: &ConfigWindow) -> Element<'_, Message> {
         } else {
             "menu"
         },
-        sz::ICON,
+        text_size::ICON,
         Message::ToggleNavSidebar,
         "Toggle navigation sidebar (Ctrl+B)",
     );
 
     let breadcrumb = text(view_name)
-        .size(sz::SMALL)
+        .size(text_size::SMALL)
         .font(theme::body_font(iced::font::Weight::Medium))
         .style(theme::text_style(|tk| tk.text_soft));
 
@@ -48,7 +48,7 @@ pub fn build(config_window: &ConfigWindow) -> Element<'_, Message> {
         } else {
             "view_sidebar"
         },
-        sz::ICON,
+        text_size::ICON,
         Message::ToggleInfoRail,
         "Toggle info column (Ctrl+J)",
     );

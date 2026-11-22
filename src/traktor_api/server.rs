@@ -44,7 +44,7 @@ impl TraktorServer {
             output,
 
             debug_logging: false,
-            session_id: "".to_owned(),
+            session_id: String::new(),
 
             is_initialized: false,
             queue: Vec::new(),
@@ -87,7 +87,7 @@ impl TraktorServer {
             .deck_files
             .iter()
             .filter(|&f| !f.is_empty())
-            .map(|f| f.to_owned())
+            .map(ToOwned::to_owned)
             .collect();
         required_images.dedup();
 
@@ -111,9 +111,9 @@ impl TraktorServer {
         }
     }
 
-    async fn handle_connect(&self) -> warp::reply::Json {
+    fn handle_connect(&self) -> warp::reply::Json {
         warp::reply::json(&ConnectionResponse {
-            session_id: self.session_id.to_owned(),
+            session_id: self.session_id.clone(),
             debug_logging: self.debug_logging,
         })
     }
@@ -122,11 +122,10 @@ impl TraktorServer {
         if request.session_id == self.session_id {
             let time_offset_ms = SystemTime::now()
                 .duration_since(UNIX_EPOCH)
-                .map(|d| (request.timestamp as i64) - (d.as_millis() as i64))
-                .unwrap_or(0);
+                .map_or(0, |d| request.timestamp - d.as_millis());
 
             for i in 0..4 {
-                self.deck_files[i] = request.state.decks[i].content.file_path.clone();
+                self.deck_files[i].clone_from(&request.state.decks[i].content.file_path);
             }
             self.on_update_deck_files().await;
 
@@ -146,7 +145,7 @@ impl TraktorServer {
             self.is_initialized = true;
         }
 
-        self.session_id.to_owned()
+        self.session_id.clone()
     }
 
     async fn handle_update(
@@ -156,7 +155,7 @@ impl TraktorServer {
     ) -> impl warp::Reply + use<> {
         if session_id == self.session_id {
             if let StateUpdate::DeckContent(id, content) = &update {
-                self.deck_files[*id as usize] = content.file_path.clone();
+                self.deck_files[*id as usize].clone_from(&content.file_path);
             }
             self.on_update_deck_files().await;
 
@@ -171,7 +170,7 @@ impl TraktorServer {
             }
         }
 
-        self.session_id.to_owned()
+        self.session_id.clone()
     }
 
     async fn handle_cover(&mut self, path: String, data: Bytes) -> StatusCode {
@@ -183,7 +182,7 @@ impl TraktorServer {
             return StatusCode::OK;
         }
 
-        println!("cover received for \"{}\"", path);
+        println!("cover received for \"{path}\"");
 
         self.pending_images.retain(|i| i != &path);
         if !self.loaded_images.contains(&path) {
@@ -236,7 +235,7 @@ impl TraktorServer {
                     .or(Self::route_log(state.clone()))
                     .or(Self::route_cover(state)),
             )
-            .map(|_, reply| reply)
+            .map(|(), reply| reply)
     }
 
     fn with_state(
@@ -271,7 +270,7 @@ impl TraktorServer {
     ) -> impl Filter<Extract = (impl warp::Reply,), Error = warp::Rejection> + Clone {
         warp::path!("connect")
             .and(Self::with_state(state))
-            .then(async |state: Arc<Mutex<Self>>| state.lock().await.handle_connect().await)
+            .then(async |state: Arc<Mutex<Self>>| state.lock().await.handle_connect())
     }
 
     fn route_init(
@@ -422,7 +421,7 @@ impl TraktorServer {
                                 ws_tx
                                     .send(message)
                                     .unwrap_or_else(|e| {
-                                        println!("websocket send error: {}", e);
+                                        println!("websocket send error: {e}");
                                     })
                                     .await;
                             }
@@ -435,10 +434,10 @@ impl TraktorServer {
                             match result {
                                 Ok(_) => {}
                                 Err(e) => {
-                                    println!("websocket error: {}", e);
+                                    println!("websocket error: {e}");
                                     break;
                                 }
-                            };
+                            }
                         }
 
                         state.lock().await.handle_socket_disconnect(socket_id).await;
@@ -475,10 +474,10 @@ async fn server_main(
     let state = Arc::new(Mutex::new(TraktorServer::new(output)));
     let routes = TraktorServer::routes(state.clone());
 
-    println!("starting traktor server on {}", addr);
+    println!("starting traktor server on {addr}");
 
     let Ok(listener) = tokio::net::TcpListener::bind(addr).await else {
-        println!("could not start traktor server on {}", addr);
+        println!("could not start traktor server on {addr}");
         return;
     };
 
@@ -512,10 +511,10 @@ async fn server_main(
 
 #[cfg(feature = "mdns")]
 fn advertise_server(addr: SocketAddr) -> Result<libmdns::Service, std::io::Error> {
-    let addr_vec = if !addr.ip().is_unspecified() {
-        [addr.ip()].to_vec()
-    } else {
+    let addr_vec = if addr.ip().is_unspecified() {
         Vec::new()
+    } else {
+        [addr.ip()].to_vec()
     };
     let responder = libmdns::Responder::new_with_ip_list(addr_vec)?;
     let svc = responder.register(
@@ -524,7 +523,7 @@ fn advertise_server(addr: SocketAddr) -> Result<libmdns::Service, std::io::Error
         addr.port(),
         &["path=/"],
     );
-    println!("advertising traktor server on {}", addr);
+    println!("advertising traktor server on {addr}");
     Ok(svc)
 }
 
@@ -536,11 +535,11 @@ pub fn run_server(addr: SocketAddr) -> impl Stream<Item = ServerMessage> {
     let runner = DroppingOnce::new(
         server_main(addr, output, input, input_send, cancelled),
         move || {
-            println!("stopping traktor server on {}", addr);
+            println!("stopping traktor server on {addr}");
             let _ = cancel.send(());
         },
     )
-    .filter_map(|_| async { None });
+    .filter_map(|()| async { None });
 
     stream::select(output_receive, runner)
 }

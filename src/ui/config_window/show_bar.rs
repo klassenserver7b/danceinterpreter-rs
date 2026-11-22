@@ -3,7 +3,7 @@
 
 use crate::dataloading::dataprovider::{ItemChange, ItemSource};
 use crate::ui::config_window::View;
-use crate::ui::theme::{self, sz};
+use crate::ui::theme::{self, text_size};
 use crate::ui::widgets::{dot, kbd, material_symbol, material_symbol_sized};
 use crate::ui::with_tooltip;
 use crate::{DanceInterpreter, Message};
@@ -26,7 +26,7 @@ pub fn build(dance_interpreter: &DanceInterpreter) -> Element<'_, Message> {
             .size(17.0)
             .style(theme::text_style(|tk| tk.accent_soft)),
         text("Quick show")
-            .size(sz::CAPTION)
+            .size(text_size::CAPTION)
             .font(theme::body_font(iced::font::Weight::Medium))
             .style(theme::text_style(|tk| tk.text)),
     ]
@@ -76,7 +76,7 @@ pub fn build(dance_interpreter: &DanceInterpreter) -> Element<'_, Message> {
         let dot = dot(5.0, move |_| color);
 
         let btn = button(
-            row![dot, text(&static_info.name).size(sz::TINY)]
+            row![dot, text(&static_info.name).size(text_size::TINY)]
                 .spacing(7)
                 .height(Length::Fill)
                 .align_y(Alignment::Center),
@@ -97,7 +97,7 @@ pub fn build(dance_interpreter: &DanceInterpreter) -> Element<'_, Message> {
     let manage = with_tooltip(
         button(
             container(
-                material_symbol_sized("add", false, sz::ICON)
+                material_symbol_sized("add", false, text_size::ICON)
                     .style(theme::text_style(|tk| tk.muted)),
             )
             .height(Length::Fill)
@@ -144,14 +144,14 @@ fn quick_button<'a>(
 
     if let Some(icon) = icon {
         content = content.push(
-            material_symbol_sized(icon, false, sz::ICON_SM)
+            material_symbol_sized(icon, false, text_size::ICON_SM)
                 .style(theme::text_style(move |tk| pill_text(tk, active))),
         );
     }
 
     content = content.push(
         text(label)
-            .size(sz::TINY)
+            .size(text_size::TINY)
             .style(theme::text_style(move |tk| pill_text(tk, active))),
     );
 

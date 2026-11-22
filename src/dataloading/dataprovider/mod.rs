@@ -63,6 +63,7 @@ pub struct PlaylistItem {
 
 /// Playback flags of a single playlist row, as the table renderer needs them.
 #[derive(Debug, Clone, Copy, Default)]
+#[allow(clippy::struct_excessive_bools)]
 pub struct RowPlayState {
     /// The row the audience display is showing.
     pub is_current: bool,
@@ -103,10 +104,10 @@ impl DataProvider {
             self.ensure_static(&dance);
         }
 
-        if !self.playlist.is_empty() {
-            self.current = ItemSource::Playlist(0);
-        } else {
+        if self.playlist.is_empty() {
             self.current = ItemSource::Blank;
+        } else {
+            self.current = ItemSource::Playlist(0);
         }
     }
 
@@ -131,11 +132,11 @@ impl DataProvider {
         traktor_song: Option<&SongInfo>,
     ) -> Option<DisplayableData> {
         match source {
-            ItemSource::Static(name) => self.statics.get(name).map(|s| s.into()),
+            ItemSource::Static(name) => self.statics.get(name).map(Into::into),
             ItemSource::Playlist(i) => self.playlist.get(*i).map(|item| (&item.song).into()),
             ItemSource::Other(song) => Some(song.into()),
             ItemSource::Blank => None,
-            ItemSource::Traktor => traktor_song.map(|s| s.into()),
+            ItemSource::Traktor => traktor_song.map(Into::into),
         }
     }
 
@@ -147,12 +148,13 @@ impl DataProvider {
             return self.displayable_for(next, self.traktor_provider.get_next_song_info());
         }
 
+        #[allow(clippy::match_same_arms)]
         match self.current {
             ItemSource::Static(_) => None,
             ItemSource::Playlist(i) => self.playlist.get(i + 1).map(|item| (&item.song).into()),
             ItemSource::Other(ref song) => Some(song.into()),
             ItemSource::Blank => None,
-            ItemSource::Traktor => self.traktor_provider.get_next_song_info().map(|s| s.into()),
+            ItemSource::Traktor => self.traktor_provider.get_next_song_info().map(Into::into),
         }
     }
 
@@ -245,7 +247,7 @@ impl DataProvider {
         let mut counter = 1;
         while self.statics.contains_key(&final_name) {
             counter += 1;
-            final_name = format!("{} {}", name, counter);
+            final_name = format!("{name} {counter}");
         }
         self.statics
             .insert(final_name.clone(), StaticInfo::new(final_name));
@@ -259,21 +261,21 @@ impl DataProvider {
         }
     }
 
-    pub fn delete_item(&mut self, song: ItemSource) {
-        if self.current == song {
+    pub fn delete_item(&mut self, song: &ItemSource) {
+        if &self.current == song {
             self.current = ItemSource::Blank;
         } else {
-            self.next.take_if(|next| *next == song);
+            self.next.take_if(|next| next == song);
         }
 
-        if let ItemSource::Playlist(i) = song {
+        if let ItemSource::Playlist(i) = *song {
             let item = self.playlist.remove(i);
             self.deleted_items.push(DeletedItem::Playlist {
                 index: i,
                 song: item.song,
                 played: item.played,
             });
-        } else if let ItemSource::Static(ref name) = song
+        } else if let ItemSource::Static(name) = song
             && let Some(static_info) = self.statics.shift_remove(name)
         {
             self.deleted_items.push(DeletedItem::Static {
@@ -403,8 +405,7 @@ impl DataProvider {
             is_played: self
                 .playlist
                 .get(playlist_index)
-                .map(|item| item.played)
-                .unwrap_or(false),
+                .is_some_and(|item| item.played),
             ..RowPlayState::default()
         };
 
@@ -447,9 +448,8 @@ impl DataProvider {
     }
 
     pub fn process_static_name_submit(&mut self, key: &str) -> SubmitStaticResult {
-        let static_info = match self.statics.get(key) {
-            Some(info) => info,
-            None => return SubmitStaticResult::NotFound,
+        let Some(static_info) = self.statics.get(key) else {
+            return SubmitStaticResult::NotFound;
         };
 
         let typed_name = static_info.name.clone();
@@ -575,8 +575,7 @@ impl DataProvider {
 
     pub fn load_statics(&mut self) {
         let statics: Vec<StaticInfo> = std::fs::read_to_string(Self::default_statics_path())
-            .map(|file_content| serde_json::from_str(&file_content).ok())
-            .unwrap_or_default()
+            .map_or_default(|file_content| serde_json::from_str(&file_content).ok())
             .unwrap_or_default();
 
         self.set_statics(statics);

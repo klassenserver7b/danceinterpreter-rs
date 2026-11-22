@@ -7,7 +7,7 @@ use crate::traktor_api::{
 };
 use crate::ui::config_window::led_color;
 use crate::ui::config_window::source_tag_right;
-use crate::ui::theme::{self, sz};
+use crate::ui::theme::{self, text_size};
 use crate::ui::widgets::canvas::canvas_toggle::CanvasToggle;
 use crate::ui::widgets::canvas::{power_button, restart_button};
 use crate::ui::widgets::suggestion_text_input::SuggestionTextInput;
@@ -49,9 +49,13 @@ pub fn build<'a>(
     };
 
     let header = row![
-        icon_muted("agriculture", sz::ICON_SM),
-        heading("Traktor", sz::PANEL_TITLE, iced::font::Weight::Semibold)
-            .style(theme::text_style(|tk| tk.text)),
+        icon_muted("agriculture", text_size::ICON_SM),
+        heading(
+            "Traktor",
+            text_size::PANEL_TITLE,
+            iced::font::Weight::Semibold
+        )
+        .style(theme::text_style(|tk| tk.text)),
         source_tag_right(state_tag),
     ]
     .spacing(8)
@@ -103,11 +107,11 @@ pub fn build<'a>(
         row![
             col![
                 text("Follow DJ playback")
-                    .size(sz::CAPTION)
+                    .size(text_size::CAPTION)
                     .font(theme::body_font(iced::font::Weight::Medium))
                     .style(theme::text_style(|tk| tk.text)),
                 text("Automatically update the display")
-                    .size(sz::TINY)
+                    .size(text_size::TINY)
                     .style(theme::text_style(|tk| tk.muted)),
             ]
             .spacing(3)
@@ -147,7 +151,7 @@ pub fn build<'a>(
 
     body = body.push(
         text("Traktor connects to this address through the QML API plugin bundled in traktor-api/. The cover-loader sidecar delivers cover art.")
-            .size(sz::MICRO)
+            .size(text_size::MICRO)
             .style(theme::text_style(|tk| tk.faint)),
     );
 
@@ -168,7 +172,7 @@ fn connection_card(dance_interpreter: &DanceInterpreter) -> Element<'_, Message>
     let status_row = row![
         led,
         text(connection.summary())
-            .size(sz::SMALL)
+            .size(text_size::SMALL)
             .style(theme::text_style(|tk| tk.text_soft)),
     ]
     .spacing(8)
@@ -179,7 +183,7 @@ fn connection_card(dance_interpreter: &DanceInterpreter) -> Element<'_, Message>
     if let Some(cover_loader) = provider.cover_loader_addr {
         column = column.push(
             text(format!("Cover loader \u{B7} {}", cover_loader.ip()))
-                .size(sz::MICRO)
+                .size(text_size::MICRO)
                 .style(theme::text_style(|tk| tk.faint)),
         );
     }
@@ -250,7 +254,7 @@ fn build_network_interface_combo_box<'a>(
     .on_option_hovered(|s| Message::Traktor(TraktorMessage::ChangeAddress(s)))
     .on_input(|s| Message::Traktor(TraktorMessage::ChangeAddress(s)))
     .on_close(Message::Traktor(TraktorMessage::SubmitAddress))
-    .size(sz::BASE)
+    .size(text_size::BASE)
     .padding([7, 9])
     .input_style(theme::input_boxed)
     .menu_style(theme::pick_list_menu_style)
@@ -292,6 +296,6 @@ fn get_formatted_network_interfaces(data_provider: &DataProvider) -> Vec<String>
 
     get_network_interfaces()
         .into_iter()
-        .map(|(_, addr)| format!("{}:{}", addr, original_port))
+        .map(|(_, addr)| format!("{addr}:{original_port}"))
         .collect()
 }

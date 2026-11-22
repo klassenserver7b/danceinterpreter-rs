@@ -6,7 +6,7 @@ use std::path::{Path, PathBuf};
 use crate::dataloading::dataprovider::ItemSource;
 use crate::ui::config_window::ConfigWindow;
 use crate::ui::song_window::Backdrop;
-use crate::ui::theme::{self, pad4, sz};
+use crate::ui::theme::{self, pad4, text_size};
 use crate::ui::widgets::{
     buttons, eyebrow, heading, icon_button_tooltip, kbd, pick_list, push_right,
 };
@@ -56,14 +56,11 @@ pub fn build_dialog<'a>(
                     .data_provider
                     .playlist()
                     .get(*i)
-                    .map(|item| item.song.title.clone())
-                    .unwrap_or_default(),
+                    .map_or_default(|item| item.song.title.clone()),
                 ItemSource::Static(name) => dance_interpreter
                     .data_provider
                     .statics()
-                    .get(name)
-                    .map(|s| s.name.clone())
-                    .unwrap_or_else(|| name.clone()),
+                    .get(name).map_or_else(|| name.clone(), |s| s.name.clone()),
                 _ => String::new(),
             };
 
@@ -71,18 +68,18 @@ pub fn build_dialog<'a>(
             let kind = if is_static { "static" } else { "song" };
 
             (
-                format!("Delete {}?", kind),
+                format!("Delete {kind}?"),
                 col![text(format!(
                     "Remove \u{201C}{}\u{201D} from the {}? You can undo with Ctrl+Z.",
                     target_name,
                     if is_static { "statics" } else { "playlist" }
                 ))
-                .size(sz::BASE)
+                .size(text_size::BASE)
                 .style(theme::text_style(|tk| tk.muted))],
                 dialog_actions([
                     buttons::secondary("Cancel", Message::Dialog(DialogMessage::Close)),
                     buttons::danger(
-                        format!("Delete {}", kind),
+                        format!("Delete {kind}"),
                         Message::Dialog(DialogMessage::ConfirmDelete),
                     ),
                 ]),
@@ -91,10 +88,9 @@ pub fn build_dialog<'a>(
         DialogState::MergeStatic { old_name, new_name } => (
             "Merge statics?".to_string(),
             col![text(format!(
-                "A static named \u{201C}{}\u{201D} already exists.\nMerge \u{201C}{}\u{201D} into it? All playlist songs will be re-tagged.",
-                new_name, old_name
+                "A static named \u{201C}{new_name}\u{201D} already exists.\nMerge \u{201C}{old_name}\u{201D} into it? All playlist songs will be re-tagged."
             ))
-            .size(sz::BASE)
+            .size(text_size::BASE)
             .style(theme::text_style(|tk| tk.muted))],
             dialog_actions([
                 buttons::secondary("Cancel", Message::Dialog(DialogMessage::Close)),
@@ -133,7 +129,7 @@ pub fn build_dialog<'a>(
     let card = container(
         col![
             row![
-                heading(title, sz::H2, iced::font::Weight::Medium)
+                heading(title, text_size::H2, iced::font::Weight::Medium)
                     .style(theme::text_style(|tk| tk.text)),
                 Space::new().width(Length::Fill),
                 icon_button_tooltip("close", 18.0, close, "Close"),
@@ -184,7 +180,7 @@ fn dialog_actions<'a>(
 fn setting_row<'a>(label: &'a str, control: Element<'a, Message>) -> Element<'a, Message> {
     row![
         text(label)
-            .size(sz::BASE)
+            .size(text_size::BASE)
             .style(theme::text_style(|tk| tk.text_soft))
             .width(Length::Fill),
         control,
@@ -377,7 +373,7 @@ fn build_settings<'a>(
         setting_row("Backdrop", backdrop_pick.into()),
         container(
             text("The backdrop fills the audience window behind the song info.")
-                .size(sz::TINY)
+                .size(text_size::TINY)
                 .style(theme::text_style(|tk| tk.faint)),
         )
         .padding(pad4(0.0, 0.0, 8.0, 0.0)),
@@ -432,7 +428,7 @@ fn build_help() -> (
             container(
                 row![
                     text(*action)
-                        .size(sz::BASE)
+                        .size(text_size::BASE)
                         .style(theme::text_style(|tk| tk.text_soft))
                         .width(Length::Fill),
                     kbd(*keys, theme::kbd_style),
@@ -452,7 +448,7 @@ fn build_help() -> (
 fn version_line() -> Element<'static, Message> {
     container(
         text(concat!("Danceinterpreter v", env!("CARGO_PKG_VERSION")))
-            .size(sz::MICRO)
+            .size(text_size::MICRO)
             .style(theme::text_style(|tk| tk.faint)),
     )
     .padding(pad4(14.0, 0.0, 0.0, 0.0))
@@ -467,7 +463,7 @@ fn build_add_static(
     ));
 
     let name_input = text_input("Static name", &config_window.add_static_name)
-        .size(sz::BASE)
+        .size(text_size::BASE)
         .on_input(|v| Message::Dialog(DialogMessage::ChangeAddStaticName(v)))
         .on_submit(submit.clone())
         .style(theme::input_boxed)
@@ -475,7 +471,7 @@ fn build_add_static(
 
     let body = col![
         text("A static is shown alone on the audience display \u{2014} a dance label or an announcement like \u{201C}Break\u{201D}.")
-            .size(sz::BASE)
+            .size(text_size::BASE)
             .style(theme::text_style(|tk| tk.muted)),
         name_input,
     ]
@@ -547,7 +543,7 @@ fn build_playlist_chooser<'a>(
 
     let body = col![
         text("The sandbox access covers everything inside the chosen folder. Which playlist should be loaded?")
-            .size(sz::BASE)
+            .size(text_size::BASE)
             .style(theme::text_style(|tk| tk.muted)),
         pick,
     ]

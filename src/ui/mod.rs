@@ -14,7 +14,7 @@ pub fn with_tooltip<'a, Message: 'a>(
 ) -> Element<'a, Message> {
     tooltip(
         content,
-        container(text(label).size(theme::sz::SMALL))
+        container(text(label).size(theme::text_size::SMALL))
             .padding([4, 8])
             .style(theme::tooltip_style),
         tooltip::Position::Bottom,

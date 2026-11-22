@@ -60,14 +60,14 @@ pub fn kbd<'a>(
     label: impl text::IntoFragment<'a>,
     style: fn(&Theme) -> container::Style,
 ) -> iced::widget::Container<'a, Message, Theme, Renderer> {
-    iced::widget::container(text(label).size(theme::sz::MICRO))
+    iced::widget::container(text(label).size(theme::text_size::MICRO))
         .padding([1, 5])
         .style(style)
 }
 
 /// Body text at the micro size (tags, eyebrows, hints).
 pub fn text_micro<'a>(label: impl text::IntoFragment<'a>) -> Text<'a, Theme, Renderer> {
-    text(label).size(theme::sz::MICRO)
+    text(label).size(theme::text_size::MICRO)
 }
 
 /// Small filled circle (status dots, dance color dots). `color` resolves the
@@ -116,11 +116,15 @@ pub fn panel_header<'a>(
 ) -> Element<'a, Message> {
     container(
         iced::widget::row![
-            icon_muted(icon, theme::sz::ICON_SM),
-            heading(title, theme::sz::PANEL_TITLE, iced::font::Weight::Semibold)
-                .style(theme::text_style(|tk| tk.text)),
+            icon_muted(icon, theme::text_size::ICON_SM),
+            heading(
+                title,
+                theme::text_size::PANEL_TITLE,
+                iced::font::Weight::Semibold
+            )
+            .style(theme::text_style(|tk| tk.text)),
             text(subtitle)
-                .size(theme::sz::TINY)
+                .size(theme::text_size::TINY)
                 .style(theme::text_style(|tk| tk.muted)),
             push_right(tools),
         ]
@@ -149,7 +153,7 @@ pub fn delete_button<'a>(
 ) -> Element<'a, Message> {
     icon_button_tooltip(
         "delete",
-        theme::sz::ICON_XS,
+        theme::text_size::ICON_XS,
         Message::Dialog(DialogMessage::RequestDelete(source)),
         tip,
     )
@@ -179,7 +183,7 @@ pub fn card_panel<'a, Message: 'a>(
 /// captions, dialog section labels).
 pub fn eyebrow<'a>(label: impl text::IntoFragment<'a>) -> Text<'a, Theme, Renderer> {
     text(label)
-        .size(theme::sz::MICRO)
+        .size(theme::text_size::MICRO)
         .font(theme::body_font(iced::font::Weight::Semibold))
         .style(theme::text_style(|tk| tk.muted_head))
 }
@@ -196,7 +200,7 @@ pub fn icon_muted(icon: &'static str, size: impl Into<Pixels>) -> Text<'static, 
 /// children of Shrink-height rows as "compressed", which collapses the
 /// accent bar's Fill height to 0 and leaves the content stuck to the top.
 /// With a fixed height the bar expands to the full stripe, inflating the
-/// line height that align_y then centers the content block in.
+/// line height that `align_y` then centers the content block in.
 ///
 /// `current_bar` resolves the bar color while [`theme::RowLook::current`] is
 /// set (the bar stays transparent otherwise), so every row's columns — and
@@ -237,7 +241,7 @@ pub fn pick_list<'a, T, L, V, Message>(
     options: L,
     selected: Option<V>,
     on_selected: impl Fn(T) -> Message + 'a,
-) -> iced::widget::PickList<'a, T, L, V, Message, iced::Theme, iced::Renderer>
+) -> iced::widget::PickList<'a, T, L, V, Message, Theme, Renderer>
 where
     T: ToString + PartialEq + Clone + 'a,
     L: Borrow<[T]> + 'a,
@@ -245,7 +249,7 @@ where
     Message: Clone,
 {
     iced::widget::pick_list(options, selected, on_selected)
-        .text_size(theme::sz::BASE)
+        .text_size(theme::text_size::BASE)
         .padding(theme::INPUT_PAD)
         .style(theme::pick_list_style)
         .menu_style(theme::pick_list_menu_style)

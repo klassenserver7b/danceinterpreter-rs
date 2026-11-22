@@ -320,7 +320,12 @@ impl DanceInterpreter {
         let skipped = load.skipped.len();
         self.data_provider.set_vec(load.songs);
         self.config_window.playlist_file = Some(path.to_path_buf());
-        println!("Loaded playlist {path:?} with {count} of {total} songs");
+        println!(
+            "Loaded playlist {} with {} of {} songs",
+            path.display(),
+            count,
+            total
+        );
         for skipped in &load.skipped {
             println!(
                 "  skipped {} -> {}: {}",
@@ -345,11 +350,11 @@ impl DanceInterpreter {
     }
 
     /// Loads a m3u and installs it as the current playlist.
-    fn load_playlist_from(&mut self, file: PathBuf) -> Task<Message> {
-        match load_tag_data_from_m3u(&file) {
-            Ok(load) => self.load_playlist_file(&file, load),
+    fn load_playlist_from(&mut self, file: &Path) -> Task<Message> {
+        match load_tag_data_from_m3u(file) {
+            Ok(load) => self.load_playlist_file(file, load),
             Err(err) => {
-                println!("Playlist load failed for {file:?}: {err}");
+                println!("Playlist load failed for {}: {}", file.display(), err);
                 toast::task(format!("Could not read playlist file: {err}"))
             }
         }
@@ -373,14 +378,14 @@ impl DanceInterpreter {
 
         match discover_playlists(&folder).as_slice() {
             [] => {
-                println!("No playlist found in granted folder {folder:?}");
+                println!("No playlist found in granted folder {}", folder.display());
                 let name = folder.file_name().map_or_else(
                     || folder.display().to_string(),
                     |name| name.to_string_lossy().into_owned(),
                 );
                 toast::task(format!("No .m3u playlist found in \u{201C}{name}\u{201D}"))
             }
-            [only] => self.load_playlist_from(only.clone()),
+            [only] => self.load_playlist_from(&only.clone()),
             candidates => {
                 self.config_window.playlist_candidates = candidates.to_vec();
                 self.config_window.playlist_granted_folder = folder;
@@ -453,10 +458,12 @@ impl DanceInterpreter {
         }
     }
 
+    #[allow(clippy::too_many_lines)]
     pub fn update(&mut self, message: Message) -> Task<Message> {
         self.config_window.traktor_power_cache.clear();
         self.config_window.traktor_restart_cache.clear();
 
+        #[allow(clippy::match_same_arms)]
         match message {
             Message::WindowOpened(_) => ().into(),
             Message::ModifiersChanged(modifiers) => {
@@ -587,7 +594,7 @@ impl DanceInterpreter {
                     return ().into();
                 };
 
-                self.load_playlist_from(file)
+                self.load_playlist_from(&file)
             }
 
             Message::AddBlankEntry => {
@@ -618,8 +625,7 @@ impl DanceInterpreter {
                         .data_provider
                         .statics()
                         .get(&name)
-                        .map(|s| s.name.clone())
-                        .unwrap_or_default();
+                        .map_or_default(|s| s.name.clone());
                     self.config_window.static_editing = Some(name.clone());
                     focus(static_edit_input_id(&name))
                 }
@@ -707,7 +713,7 @@ impl DanceInterpreter {
                 StaticsMessage::ConfirmMerge(old_name, new_name) => {
                     self.config_window.active_dialog = None;
                     match self.data_provider.merge_statics(&old_name, &new_name) {
-                        Ok(()) => toast::task(format!("Merged into \u{201C}{}\u{201D}", new_name)),
+                        Ok(()) => toast::task(format!("Merged into \u{201C}{new_name}\u{201D}")),
                         Err(err) => toast::task(format!("Merge failed: {err}")),
                     }
                 }
@@ -751,11 +757,11 @@ impl DanceInterpreter {
             Message::Search(msg) => match msg {
                 SearchMessage::Toggle => {
                     self.config_window.search_visible = !self.config_window.search_visible;
-                    if !self.config_window.search_visible {
+                    if self.config_window.search_visible {
+                        focus(self.config_window.search_input_id.clone())
+                    } else {
                         self.config_window.search_query.clear();
                         ().into()
-                    } else {
-                        focus(self.config_window.search_input_id.clone())
                     }
                 }
                 SearchMessage::Changed(query) => {
@@ -782,7 +788,7 @@ impl DanceInterpreter {
                         .or_else(|| self.config_window.playlist_candidates.first().cloned());
                     let close = self.close_active_dialog();
                     match selected {
-                        Some(file) => Task::batch([close, self.load_playlist_from(file)]),
+                        Some(file) => Task::batch([close, self.load_playlist_from(&file)]),
                         None => close,
                     }
                 }
@@ -798,21 +804,20 @@ impl DanceInterpreter {
                     if let Some(DialogState::Delete(item)) = self.config_window.active_dialog.take()
                     {
                         let name = match &item {
-                            ItemSource::Playlist(i) => self
-                                .data_provider
-                                .playlist()
-                                .get(*i)
-                                .map(|entry| entry.song.title.clone())
-                                .unwrap_or_else(|| "Song".to_string()),
+                            ItemSource::Playlist(i) => {
+                                self.data_provider.playlist().get(*i).map_or_else(
+                                    || "Song".to_string(),
+                                    |entry| entry.song.title.clone(),
+                                )
+                            }
                             ItemSource::Static(name) => name.clone(),
                             _ => "Item".to_string(),
                         };
 
                         self.cancel_song_edit();
-                        self.data_provider.delete_item(item);
+                        self.data_provider.delete_item(&item);
                         toast::task(format!(
-                            "Deleted \u{201C}{}\u{201D} \u{00B7} Ctrl+Z to undo",
-                            name
+                            "Deleted \u{201C}{name}\u{201D} \u{00B7} Ctrl+Z to undo"
                         ))
                     } else {
                         ().into()
@@ -834,7 +839,9 @@ impl DanceInterpreter {
                     let in_playlist = self.data_provider.playlist().iter().any(|item| {
                         item.song.title == song.title && item.song.artist == song.artist
                     });
-                    if !in_playlist {
+                    if in_playlist {
+                        toast::task("Track is already in the playlist")
+                    } else {
                         // `song` borrows the provider, which the append below
                         // mutates — hence the clone.
                         self.append_song_and_finalize(song.clone());
@@ -842,8 +849,6 @@ impl DanceInterpreter {
                             Task::done(Message::SnapTo(RelativeOffset::END)),
                             toast::task("Traktor track added"),
                         ])
-                    } else {
-                        toast::task("Track is already in the playlist")
                     }
                 } else {
                     toast::task("No track loaded in Traktor")
@@ -874,11 +879,13 @@ impl DanceInterpreter {
                 for file in &files {
                     match read_song_info_from_filepath(file) {
                         Ok(song) => {
-                            println!("Loaded song {file:?}");
+                            println!("Loaded song {}", file.display());
                             self.append_song_and_finalize(song);
                             added += 1;
                         }
-                        Err(err) => println!("Could not read audio file {file:?}: {err}"),
+                        Err(err) => {
+                            println!("Could not read audio file {}: {}", file.display(), err);
+                        }
                     }
                 }
 
@@ -899,14 +906,14 @@ impl DanceInterpreter {
                 Ok(playlist) => self.load_playlist_file(&path, playlist),
                 Err(_) => match read_song_info_from_filepath(&path) {
                     Ok(song_info) => {
-                        println!("Loaded song {path:?}");
+                        println!("Loaded song {}", path.display());
                         self.append_song_and_finalize(song_info);
                         toast::task("Song added to playlist")
                     }
                     Err(err) => {
                         // Surface the real cause (sandbox denial, unsupported
                         // container, corrupt tag) instead of a generic hint.
-                        println!("File drop failed for {path:?}: {err}");
+                        println!("File drop failed for {}: {}", path.display(), err);
                         let name = path.file_name().map_or_else(
                             || path.display().to_string(),
                             |n| n.to_string_lossy().into_owned(),
@@ -953,12 +960,11 @@ impl DanceInterpreter {
                     .data_provider
                     .playlist()
                     .get(idx)
-                    .map(|item| match field {
+                    .map_or_default(|item| match field {
                         EditField::Title => item.song.title.clone(),
                         EditField::Artist => item.song.artist.clone(),
                         EditField::Dance => item.song.dance.clone(),
-                    })
-                    .unwrap_or_default();
+                    });
                 self.config_window.editing = Some((idx, field));
                 focus(edit_input_id(idx, field))
             }
@@ -1002,7 +1008,7 @@ impl DanceInterpreter {
 
             Message::DeleteItem(song) => {
                 self.cancel_song_edit();
-                self.data_provider.delete_item(song);
+                self.data_provider.delete_item(&song);
                 ().into()
             }
 
@@ -1093,7 +1099,7 @@ impl DanceInterpreter {
 
                 TraktorMessage::ChangeAndSubmitAddress(addr) => {
                     let provider = &mut self.data_provider.traktor_provider;
-                    provider.address = addr.clone();
+                    provider.address.clone_from(&addr);
                     provider.submitted_address = addr;
                     ().into()
                 }
@@ -1233,6 +1239,7 @@ impl DanceInterpreter {
         }
     }
 
+    #[allow(clippy::too_many_lines)]
     pub fn subscription(&self) -> Subscription<Message> {
         let mut subscriptions = vec![
             window::close_events().map(Message::WindowClosed),
@@ -1270,7 +1277,7 @@ impl DanceInterpreter {
                     Key::Named(Named::Escape) => Some(Message::EscapePressed),
                     Key::Character("?") => Some(Message::OpenDialog(DialogState::Help)),
                     _ => match key {
-                        Key::Named(Named::ArrowRight) | Key::Named(Named::Space) => {
+                        Key::Named(Named::ArrowRight | Named::Space) => {
                             Some(Message::ItemChanged(ItemChange::Next))
                         }
                         Key::Named(Named::ArrowLeft) => {
@@ -1414,7 +1421,10 @@ fn settings_dir() -> Option<PathBuf> {
     }
 
     if let Some(dir) = &xdg {
-        println!("Cannot use {dir:?} for settings, falling back to ~/.config");
+        println!(
+            "Cannot use {} for settings, falling back to ~/.config",
+            dir.display()
+        );
     }
 
     dirs::home_dir().map(|home| home.join(".config").join(SETTINGS_DIR))
@@ -1429,7 +1439,11 @@ fn save_theme(theme: &Theme) {
     };
 
     if let Err(err) = std::fs::create_dir_all(&dir) {
-        println!("Could not create settings directory {dir:?}: {err}");
+        println!(
+            "Could not create settings directory {}: {}",
+            dir.display(),
+            err
+        );
         return;
     }
 

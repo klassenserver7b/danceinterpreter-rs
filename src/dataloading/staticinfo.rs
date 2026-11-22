@@ -22,9 +22,14 @@ impl StaticInfo {
 }
 
 mod color_format {
-    use super::*;
+    use super::Color;
     use serde::{Deserialize, Deserializer, Serializer};
 
+    #[allow(
+        clippy::ref_option,
+        clippy::cast_sign_loss,
+        clippy::cast_possible_truncation
+    )]
     pub fn serialize<S>(color: &Option<Color>, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: Serializer,
@@ -34,7 +39,7 @@ mod color_format {
                 let r = (c.r * 255.0) as u8;
                 let g = (c.g * 255.0) as u8;
                 let b = (c.b * 255.0) as u8;
-                let hex = format!("#{:02X}{:02X}{:02X}", r, g, b);
+                let hex = format!("#{r:02X}{g:02X}{b:02X}");
                 serializer.serialize_some(&hex)
             }
             None => serializer.serialize_none(),
@@ -93,7 +98,7 @@ mod tests {
 
     #[test]
     fn test_color_deserialization_invalid() {
-        let json = r##"{"name":"Tango","is_favorite":false,"color":"invalid"}"##;
+        let json = r#"{"name":"Tango","is_favorite":false,"color":"invalid"}"#;
         let static_info: StaticInfo = serde_json::from_str(json).unwrap();
 
         assert_eq!(static_info.color, None);

@@ -305,8 +305,8 @@ impl ConfigWindow {
         // Overlays: toast bubble, then modal dialog on top.
         let mut overlays = stack![main];
 
-        if let Some(toast_element) = toast::build(&self.toast) {
-            overlays = overlays.push(toast_element);
+        if let Some(toast) = &self.toast {
+            overlays = overlays.push(toast::build(toast));
         }
 
         if let Some(state) = &self.active_dialog {
@@ -349,7 +349,7 @@ impl ConfigWindow {
 pub fn source_tag(text: &str) -> Element<'_, Message> {
     container(text_micro(text).style(theme::text_style(|tk| tk.tag_text)))
         .padding([2, 5])
-        .style(|t: &Theme| theme::bordered(t, |tk| tk.tag_border, theme::r::XS))
+        .style(|t: &Theme| theme::bordered(t, |tk| tk.tag_border, theme::radius::XS))
         .into()
 }
 
@@ -371,7 +371,7 @@ pub mod search {
     /// one shared instance serves every keystroke of every search field.
     static MATCHER: LazyLock<Matcher> = LazyLock::new(Matcher::default);
 
-    pub fn data_matches_search_query(search_query: &str, data: DisplayableData) -> bool {
+    pub fn data_matches_search_query(search_query: &str, data: &DisplayableData) -> bool {
         let matcher = &*MATCHER;
 
         !search_query.is_empty()

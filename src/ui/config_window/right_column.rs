@@ -3,7 +3,7 @@
 use crate::dataloading::dataprovider::{ItemChange, ItemSource};
 use crate::ui::config_window::source_tag_right;
 use crate::ui::config_window::traktor_card;
-use crate::ui::theme::{self, pad4, sz};
+use crate::ui::theme::{self, pad4, text_size};
 use crate::ui::widgets::{EllipsisText, buttons, dot, kbd, material_symbol_sized};
 use crate::{ConfigWindow, DanceInterpreter, Message};
 use iced::widget::{button, column as col, container, row, scrollable, text};
@@ -55,13 +55,12 @@ fn build_now_playing(dance_interpreter: &DanceInterpreter) -> Element<'_, Messag
 
     let dance_name = displayable
         .as_ref()
-        .map(|d| d.headline.clone())
-        .unwrap_or_else(|| "Display is blank".to_string());
+        .map_or_else(|| "Display is blank".to_string(), |d| d.headline.clone());
 
     let (title, artist) = match (&current, &displayable) {
-        (ItemSource::Playlist(_), Some(d))
-        | (ItemSource::Traktor, Some(d))
-        | (ItemSource::Other(_), Some(d)) => (d.subline_upper.clone(), d.subline_lower.clone()),
+        (ItemSource::Playlist(_) | ItemSource::Traktor | ItemSource::Other(_), Some(d)) => {
+            (d.subline_upper.clone(), d.subline_lower.clone())
+        }
         _ => (
             "Ready when you are".to_string(),
             "Audience display".to_string(),
@@ -73,7 +72,7 @@ fn build_now_playing(dance_interpreter: &DanceInterpreter) -> Element<'_, Messag
     let kicker = row![
         dot(6.0, |t| theme::Tokens::of(t).dot_green),
         text("NOW PLAYING")
-            .size(sz::TINY)
+            .size(text_size::TINY)
             .style(theme::text_style(|tk| tk.muted)),
         source_tag_right(tag),
     ]
@@ -84,20 +83,20 @@ fn build_now_playing(dance_interpreter: &DanceInterpreter) -> Element<'_, Messag
     let playlist_len = provider.playlist().len();
     let position = match current {
         ItemSource::Playlist(i) => format!("{:02} / {} songs", i + 1, playlist_len),
-        _ => format!("{} songs", playlist_len),
+        _ => format!("{playlist_len} songs"),
     };
 
     let prev = buttons::ghost_icon(
         "skip_previous",
         false,
-        sz::ICON,
+        text_size::ICON,
         Message::ItemChanged(ItemChange::Previous),
     );
 
     let next_button = button(
         row![
-            material_symbol_sized("skip_next", false, sz::ICON_SM),
-            text("Next song").size(sz::SMALL),
+            material_symbol_sized("skip_next", false, text_size::ICON_SM),
+            text("Next song").size(text_size::SMALL),
             kbd("Space", theme::kbd_style),
         ]
         .spacing(6)
@@ -108,7 +107,7 @@ fn build_now_playing(dance_interpreter: &DanceInterpreter) -> Element<'_, Messag
     .on_press(Message::ItemChanged(ItemChange::Next));
 
     let position_text = text(position)
-        .size(sz::TINY)
+        .size(text_size::TINY)
         .style(theme::text_style(move |tk| {
             if is_blank { tk.faint } else { tk.muted }
         }));
@@ -125,7 +124,7 @@ fn build_now_playing(dance_interpreter: &DanceInterpreter) -> Element<'_, Messag
         col![
             kicker,
             EllipsisText::new(dance_name)
-                .size(sz::H2)
+                .size(text_size::H2)
                 .font(theme::head_font(iced::font::Weight::Semibold))
                 .style(theme::text_style(move |tk| {
                     if is_blank {
@@ -135,7 +134,7 @@ fn build_now_playing(dance_interpreter: &DanceInterpreter) -> Element<'_, Messag
                     }
                 })),
             EllipsisText::new(title)
-                .size(sz::BASE)
+                .size(text_size::BASE)
                 .font(theme::body_font(iced::font::Weight::Medium))
                 .style(theme::text_style(move |tk| if is_blank {
                     tk.muted
@@ -143,7 +142,7 @@ fn build_now_playing(dance_interpreter: &DanceInterpreter) -> Element<'_, Messag
                     tk.text
                 })),
             EllipsisText::new(artist)
-                .size(sz::CAPTION)
+                .size(text_size::CAPTION)
                 .style(theme::text_style(|tk| tk.muted)),
             transport,
         ]
@@ -186,10 +185,10 @@ fn build_up_next(dance_interpreter: &DanceInterpreter) -> Element<'_, Message> {
     let dance_color = provider.get_dance_color(&dance);
 
     let kicker = row![
-        material_symbol_sized("skip_next", false, sz::ICON_XXS)
+        material_symbol_sized("skip_next", false, text_size::ICON_XXS)
             .style(theme::text_style(|tk| tk.muted)),
         text("COMING UP NEXT")
-            .size(sz::TINY)
+            .size(text_size::TINY)
             .style(theme::text_style(|tk| tk.muted)),
         source_tag_right(tag),
     ]
@@ -198,8 +197,8 @@ fn build_up_next(dance_interpreter: &DanceInterpreter) -> Element<'_, Message> {
 
     let show_now = button(
         row![
-            text("Show now").size(sz::SMALL),
-            material_symbol_sized("chevron_right", false, sz::ICON_XXS),
+            text("Show now").size(text_size::SMALL),
+            material_symbol_sized("chevron_right", false, text_size::ICON_XXS),
         ]
         .spacing(5)
         .align_y(Alignment::Center),
@@ -212,15 +211,15 @@ fn build_up_next(dance_interpreter: &DanceInterpreter) -> Element<'_, Message> {
         col![
             kicker,
             EllipsisText::new(dance)
-                .size(sz::H2)
+                .size(text_size::H2)
                 .font(theme::head_font(iced::font::Weight::Semibold))
                 .style(theme::text_style(move |tk| dance_color.unwrap_or(tk.text),)),
             EllipsisText::new(title)
-                .size(sz::BASE)
+                .size(text_size::BASE)
                 .font(theme::body_font(iced::font::Weight::Medium))
                 .style(theme::text_style(|tk| tk.text)),
             EllipsisText::new(artist)
-                .size(sz::CAPTION)
+                .size(text_size::CAPTION)
                 .style(theme::text_style(|tk| tk.muted)),
             container(show_now).padding(pad4(4.0, 0.0, 0.0, 0.0)),
         ]
