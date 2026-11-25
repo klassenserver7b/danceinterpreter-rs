@@ -2,43 +2,47 @@
 name = "danceinterpreter-rs"
 description = "Danceinterpreter in Rust"
 license = "GPL-3.0-or-later"
-version = "0.8.4"
+version = "0.9.0"
 edition = "2024"
 authors = ["Klassenserver7b <klassenserver7bwin10@gmail.com>", "Konsl <82901383+Konsl@users.noreply.github.com>, Robocraft999 <59525378+Robocraft999@users.noreply.github.com>"]
 
+[workspace.dependencies]
+warp = "~0.4"
+tokio = "~1.54"
+
 [dependencies]
-id3 = "1.17"
-url = "2.5"
-percent-encoding = "2.3"
-iced = { version = "0.14.0", features = ["linux-theme-detection", "image", "wayland", "svg", "lazy", "canvas", "tokio", "advanced"] }
+id3 = "~1.17"
+url = "~2.5"
+percent-encoding = "~2.3"
+iced = { version = "0.14.0", features = ["image", "svg", "wayland", "canvas", "tokio", "advanced"] }
 iced_aw = { version = "0.14.1", features = ["default", "color_picker"] }
-#iced_anim = { version = "0.3.1", features = ["derive", "widgets"] }
-#iced_drop = { version = "0.2.39", features = ["helpers"] }
-rfd = "0.17"
-dirs = "7.0"
-warp = { version = "0.4", features = ["websocket", "server"] }
-tokio = { version = "1.53" }
-pin-project-lite = "0.2"
-serde = { version = "1.0", features = ["derive"] }
-serde_json = "1.0"
-indexmap = { version = "2.7", features = ["serde"] }
-uuid = { version = "1.24", features = ["v4"] }
-bytes = "1.11"
-network-interface = "2.0"
-fuzzy-matcher = "0.3"
-libmdns = { version = "0.10", optional = true }
-image = "0.25"
+rfd = "~0.18"
+dirs = "~7.0"
+warp = { workspace = true, features = ["websocket", "server"] }
+tokio = { workspace = true }
+pin-project-lite = "~0.2"
+serde = { version = "~1.0", features = ["derive"] }
+serde_json = "~1.0"
+indexmap = { version = "~2.14", features = ["serde"] }
+uuid = { version = "~1.29", features = ["v4"] }
+bytes = "~1.12"
+network-interface = "~2.0"
+fuzzy-matcher = "~0.3"
+libmdns = { version = "~0.10", optional = true }
+image = "~0.25"
 
 [dev-dependencies]
-warp = { version = "0.4", features = ["websocket", "server", "test"] }
-tokio = { version = "1.51", features = ["macros"] }
-tokio-tungstenite = "0.30.0"
-serde_json = "1.0"
-indexmap = { version = "2.7", features = ["serde"] }
-reqwest = { version = "0.13", features = ["json"] }
-futures-util = "0.3"
-tempfile = "3.18"
+warp = { workspace = true, features = ["websocket", "server", "test"] }
+tokio = { workspace = true, features = ["macros"] }
+tokio-tungstenite = "~0.30"
+reqwest = { version = "~0.13", features = ["json"] }
+futures-util = "~0.3"
 
+[lints.clippy]
+nursery = { level = "warn", priority = -1 }
+pedantic = { level = "warn", priority = -1 }
+cast_precision_loss = { level = "allow" }
+semicolon_if_nothing_returned = { level = "forbid", priority = 1 }
 
 [features]
 default = ["mdns"]

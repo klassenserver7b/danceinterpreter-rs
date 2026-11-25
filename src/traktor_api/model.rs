@@ -12,7 +12,7 @@ pub enum AppMessage {
 pub enum ServerMessage {
     Ready(mpsc::UnboundedSender<AppMessage>),
     Connect {
-        time_offset_ms: i64,
+        time_offset_ms: u64,
         initial_state: Box<State>,
     },
     Update(StateUpdate),
@@ -53,10 +53,10 @@ impl State {
             StateUpdate::Mixer(mixer) => self.mixer = mixer,
             StateUpdate::Channel(id, channel) => self.channels[id as usize] = channel,
             StateUpdate::DeckContent(id, deck_content) => {
-                self.decks[id as usize].content = *deck_content
+                self.decks[id as usize].content = *deck_content;
             }
             StateUpdate::DeckPlayState(id, deck_play_state) => {
-                self.decks[id as usize].play_state = deck_play_state
+                self.decks[id as usize].play_state = deck_play_state;
             }
         }
     }
@@ -86,7 +86,7 @@ impl<'de> Deserialize<'de> for State {
 
         let flattened_state: FlattenedState = Deserialize::deserialize(deserializer)?;
 
-        Ok(State {
+        Ok(Self {
             mixer: flattened_state.mixer,
             channels: [
                 flattened_state.channel0,

@@ -1,3 +1,4 @@
+use crate::dataloading::dataprovider::PlaylistItem;
 use crate::dataloading::songinfo::SongInfo;
 use crate::traktor_api::{
     AppMessage, ChannelState, DeckContentState, DeckState, MixerState, ServerMessage, State,
@@ -35,19 +36,13 @@ pub enum TraktorSyncAction {
 
 impl Display for TraktorNextMode {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{:?}", self)
+        write!(f, "{self:?}")
     }
 }
 
 impl Display for TraktorSyncMode {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{:?}", self)
-    }
-}
-
-impl Display for TraktorSyncAction {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{:?}", self)
+        write!(f, "{self:?}")
     }
 }
 
@@ -74,6 +69,20 @@ pub enum ConnectionState {
     Connected,
 }
 
+impl ConnectionState {
+    /// Short status text for the LED in the Traktor card; the LED color
+    /// carries the connected/disconnected nuance.
+    pub const fn summary(self) -> &'static str {
+        match self {
+            Self::Connected => "Traktor & Cover Loader",
+            Self::Traktor => "Traktor",
+            Self::CoverLoader => "Cover Loader",
+            Self::Disconnected => "No clients",
+        }
+    }
+}
+
+#[allow(clippy::struct_excessive_bools)]
 pub struct TraktorDataProvider {
     pub address: String,
     pub submitted_address: String,
@@ -86,7 +95,6 @@ pub struct TraktorDataProvider {
 
     channel: Option<UnboundedSender<AppMessage>>,
 
-    time_offset_ms: i64,
     pub state: Option<State>,
     covers: HashMap<String, image::Handle>,
     pub cover_loader_addr: Option<SocketAddr>,
@@ -99,7 +107,6 @@ pub struct TraktorDataProvider {
     should_scroll: bool,
 
     pub debug_logging: bool,
-    log: Vec<String>,
 }
 
 impl Default for TraktorDataProvider {
@@ -115,7 +122,6 @@ impl Default for TraktorDataProvider {
             sync: false,
             sync_mode: TraktorSyncMode::Relative,
 
-            time_offset_ms: 0,
             state: None,
             covers: HashMap::new(),
 
@@ -129,7 +135,6 @@ impl Default for TraktorDataProvider {
             cover_loader_addr: None,
 
             debug_logging: false,
-            log: Vec::new(),
         }
     }
 }
@@ -144,18 +149,7 @@ impl TraktorDataProvider {
         self.enabled && self.channel.as_ref().is_some_and(|c| !c.is_closed())
     }
 
-    #[allow(dead_code)]
-    pub fn get_log(&self) -> &[String] {
-        &self.log
-    }
-
-    #[allow(dead_code)]
-    pub fn clear_log(&mut self) {
-        self.log.clear();
-    }
-
     pub fn reconnect(&mut self) {
-        self.time_offset_ms = 0;
         self.state = None;
         self.sync_x_fader_is_left = true;
         self.update_song_info(&[]);
@@ -193,7 +187,7 @@ impl TraktorDataProvider {
         self.cached_next_song_info.as_ref()
     }
 
-    pub fn get_connection_state(&self) -> ConnectionState {
+    pub const fn get_connection_state(&self) -> ConnectionState {
         if !self.enabled {
             ConnectionState::Disconnected
         } else if self.cover_loader_addr.is_some() && self.state.is_some() {
@@ -207,7 +201,7 @@ impl TraktorDataProvider {
         }
     }
 
-    fn get_deck_score(&self, deck: &DeckState, channel: &ChannelState, mixer: &MixerState) -> f64 {
+    fn get_deck_score(deck: &DeckState, channel: &ChannelState, mixer: &MixerState) -> f64 {
         if !deck.content.is_loaded || deck.play_state.speed == 0.0 || channel.volume == 0.0 {
             return 0.0;
         }
@@ -221,7 +215,7 @@ impl TraktorDataProvider {
         }
     }
 
-    fn update_song_info(&mut self, playlist: &[SongInfo]) {
+    fn update_song_info(&mut self, playlist: &[PlaylistItem]) {
         let old_song_info = self.cached_song_info.take();
         self.cached_next_song_info = None;
 
@@ -234,7 +228,7 @@ impl TraktorDataProvider {
         };
 
         let scores = (0..4)
-            .map(|i| self.get_deck_score(&state.decks[i], &state.channels[i], &state.mixer))
+            .map(|i| Self::get_deck_score(&state.decks[i], &state.channels[i], &state.mixer))
             .collect::<Vec<f64>>();
 
         let Some(max) = scores
@@ -266,39 +260,35 @@ impl TraktorDataProvider {
 
         match self.sync_mode {
             TraktorSyncMode::AbsoluteByNumber => {
-                let current_index = playlist
-                    .iter()
-                    .position(|s| content.number == s.track_number);
+                let current_index = Self::find_by_number(playlist, content.number);
 
-                self.cached_sync_action = match current_index {
-                    None => TraktorSyncAction::Relative(0),
-                    Some(ci) => TraktorSyncAction::PlaylistAbsolute(ci),
-                };
+                self.cached_sync_action = current_index.map_or(
+                    TraktorSyncAction::Relative(0),
+                    TraktorSyncAction::PlaylistAbsolute,
+                );
             }
             TraktorSyncMode::AbsoluteByName => {
-                let current_index = playlist
-                    .iter()
-                    .position(|s| Self::songs_name_match(&current_song_info, s));
+                let current_index = Self::find_by_name(playlist, &current_song_info);
 
-                self.cached_sync_action = match current_index {
-                    None => TraktorSyncAction::Relative(0),
-                    Some(ci) => TraktorSyncAction::PlaylistAbsolute(ci),
-                };
+                self.cached_sync_action = current_index
+                    .map_or(TraktorSyncAction::Relative(0), |ci| {
+                        TraktorSyncAction::PlaylistAbsolute(ci)
+                    });
             }
-            _ => {}
-        };
+            TraktorSyncMode::Relative => {}
+        }
     }
 
     fn try_get_next_with_mode(
         &self,
         fallback: bool,
         current_channel: &ChannelState,
-        playlist: &[SongInfo],
+        playlist: &[PlaylistItem],
     ) -> Option<SongInfo> {
-        let mode = if !fallback {
-            self.next_mode
-        } else {
+        let mode = if fallback {
             self.next_mode_fallback
+        } else {
+            self.next_mode
         };
 
         if !self.is_ready() {
@@ -340,18 +330,14 @@ impl TraktorDataProvider {
                 deck.map(|d| self.copy_song_info_from_deck(&d.content, playlist))
             }
             TraktorNextMode::PlaylistByNumber => {
-                let current_index = playlist
-                    .iter()
-                    .position(|s| current_song_info.track_number == s.track_number);
+                let current_index = Self::find_by_number(playlist, current_song_info.track_number);
 
-                current_index.and_then(|ci| playlist.get(ci + 1).cloned())
+                current_index.and_then(|ci| playlist.get(ci + 1).map(|item| item.song.clone()))
             }
             TraktorNextMode::PlaylistByName => {
-                let current_index = playlist
-                    .iter()
-                    .position(|s| Self::songs_name_match(current_song_info, s));
+                let current_index = Self::find_by_name(playlist, current_song_info);
 
-                current_index.and_then(|ci| playlist.get(ci + 1).cloned())
+                current_index.and_then(|ci| playlist.get(ci + 1).map(|item| item.song.clone()))
             }
         }
     }
@@ -359,24 +345,37 @@ impl TraktorDataProvider {
     fn copy_song_info_from_deck(
         &self,
         content: &DeckContentState,
-        playlist: &[SongInfo],
+        playlist: &[PlaylistItem],
     ) -> SongInfo {
         let mut song_info = SongInfo::new(
             content.number,
-            content.title.to_owned(),
-            content.artist.to_owned(),
-            content.genre.to_owned(),
+            content.title.clone(),
+            content.artist.clone(),
+            content.genre.clone(),
             self.covers.get(&content.file_path).cloned(),
         );
 
         if song_info.album_art.is_none() {
-            song_info.album_art = playlist
-                .iter()
-                .find(|s| Self::songs_name_match(&song_info, s))
-                .and_then(|s| s.album_art.clone());
+            song_info.album_art = Self::find_by_name(playlist, &song_info)
+                .and_then(|ci| playlist.get(ci))
+                .and_then(|item| item.song.album_art.clone());
         }
 
         song_info
+    }
+
+    /// Index of the first playlist row carrying `number`, if any.
+    fn find_by_number(playlist: &[PlaylistItem], number: u32) -> Option<usize> {
+        playlist
+            .iter()
+            .position(|item| number == item.song.track_number)
+    }
+
+    /// Index of the first playlist row matching `song` by artist + title.
+    fn find_by_name(playlist: &[PlaylistItem], song: &SongInfo) -> Option<usize> {
+        playlist
+            .iter()
+            .position(|item| Self::songs_name_match(song, &item.song))
     }
 
     pub fn songs_name_match(a: &SongInfo, b: &SongInfo) -> bool {
@@ -394,30 +393,20 @@ impl TraktorDataProvider {
             .iter()
             .map(|d| &d.content.file_path)
             .filter(|&f| !f.is_empty())
-            .map(|f| f.to_owned())
+            .map(ToOwned::to_owned)
             .collect();
         files.dedup();
 
         files
     }
 
-    pub fn process_message(&mut self, message: ServerMessage, playlist: &[SongInfo]) {
+    pub fn process_message(&mut self, message: ServerMessage, playlist: &[PlaylistItem]) {
         match message {
             ServerMessage::Ready(channel) => {
                 self.channel = Some(channel);
-
-                self.time_offset_ms = 0;
-                self.state = None;
-                self.sync_x_fader_is_left = true;
-                self.update_song_info(playlist);
-
                 self.reconnect();
             }
-            ServerMessage::Connect {
-                time_offset_ms,
-                initial_state,
-            } => {
-                self.time_offset_ms = time_offset_ms;
+            ServerMessage::Connect { initial_state, .. } => {
                 self.sync_x_fader_is_left = initial_state.mixer.x_fader < 0.5;
                 self.state = Some(*initial_state);
                 self.update_song_info(playlist);
@@ -471,35 +460,26 @@ impl TraktorDataProvider {
                 let loaded_files = self.get_loaded_files();
                 self.covers.retain(|path, _| loaded_files.contains(path));
             }
-            ServerMessage::Log(msg) => {
-                if self.debug_logging {
-                    self.log.push(msg);
-                }
-            }
+            ServerMessage::Log(_) => {}
             ServerMessage::ClientChanged(addr) => {
                 self.cover_loader_addr = addr;
             }
         }
     }
 
-    pub fn take_sync_action(&mut self) -> TraktorSyncAction {
+    pub const fn take_sync_action(&mut self) -> TraktorSyncAction {
         mem::replace(&mut self.cached_sync_action, TraktorSyncAction::Relative(0))
     }
 
-    pub fn take_should_scroll(&mut self) -> bool {
+    pub const fn take_should_scroll(&mut self) -> bool {
         let should_scroll = self.should_scroll;
         self.should_scroll = false;
         should_scroll
     }
 
-    pub fn get_current_index(&self, playlist: &[SongInfo]) -> Option<usize> {
-        let traktor_song = self.get_song_info()?;
-
-        playlist
-            .iter()
-            .enumerate()
-            .find(|(_i, s)| TraktorDataProvider::songs_name_match(s, traktor_song))
-            .map(|(i, _s)| i)
+    pub fn get_current_index(&self, playlist: &[PlaylistItem]) -> Option<usize> {
+        self.get_song_info()
+            .and_then(|traktor_song| Self::find_by_name(playlist, traktor_song))
     }
 
     fn send_message(&mut self, message: AppMessage) {
@@ -510,7 +490,7 @@ impl TraktorDataProvider {
         }
     }
 
-    pub fn enabled(&self) -> bool {
+    pub const fn enabled(&self) -> bool {
         self.enabled
     }
 }

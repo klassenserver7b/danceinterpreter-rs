@@ -10,10 +10,10 @@ use iced::futures::{SinkExt, Stream, StreamExt};
 use iced::futures::{TryFutureExt, stream};
 use serde::de::DeserializeOwned;
 use std::collections::HashMap;
-use std::convert::Infallible;
+use std::convert::{Infallible, TryFrom};
 use std::net::SocketAddr;
 use std::sync::Arc;
-use std::time::{SystemTime, UNIX_EPOCH};
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use tokio::sync::Mutex;
 use uuid::Uuid;
 use warp::Filter;
@@ -39,12 +39,12 @@ struct TraktorServer {
 }
 
 impl TraktorServer {
-    pub fn new(output: UnboundedSender<ServerMessage>) -> Self {
-        TraktorServer {
+    fn new(output: UnboundedSender<ServerMessage>) -> Self {
+        Self {
             output,
 
             debug_logging: false,
-            session_id: "".to_owned(),
+            session_id: String::new(),
 
             is_initialized: false,
             queue: Vec::new(),
@@ -69,12 +69,12 @@ impl TraktorServer {
             .await;
     }
 
-    pub async fn send_ready(&mut self, app_input_sender: UnboundedSender<AppMessage>) {
+    async fn send_ready(&mut self, app_input_sender: UnboundedSender<AppMessage>) {
         self.send_message(ServerMessage::Ready(app_input_sender))
-            .await
+            .await;
     }
 
-    pub fn reconnect(&mut self, debug_logging: bool) {
+    fn reconnect(&mut self, debug_logging: bool) {
         self.session_id = Uuid::new_v4().to_string();
         self.debug_logging = debug_logging;
 
@@ -87,7 +87,7 @@ impl TraktorServer {
             .deck_files
             .iter()
             .filter(|&f| !f.is_empty())
-            .map(|f| f.to_owned())
+            .map(ToOwned::to_owned)
             .collect();
         required_images.dedup();
 
@@ -111,22 +111,26 @@ impl TraktorServer {
         }
     }
 
-    async fn handle_connect(&mut self) -> warp::reply::Json {
+    fn handle_connect(&self) -> warp::reply::Json {
         warp::reply::json(&ConnectionResponse {
-            session_id: self.session_id.to_owned(),
+            session_id: self.session_id.clone(),
             debug_logging: self.debug_logging,
         })
     }
 
     async fn handle_init(&mut self, request: InitializeRequest) -> impl warp::Reply + use<> {
         if request.session_id == self.session_id {
-            let time_offset_ms = SystemTime::now()
-                .duration_since(UNIX_EPOCH)
-                .map(|d| (request.timestamp as i64) - (d.as_millis() as i64))
-                .unwrap_or(0);
+            let time_offset_ms = SystemTime::now().duration_since(UNIX_EPOCH).map_or(0, |d| {
+                u64::try_from(
+                    Duration::from_millis(request.timestamp)
+                        .abs_diff(d)
+                        .as_millis(),
+                )
+                .unwrap_or(0)
+            });
 
             for i in 0..4 {
-                self.deck_files[i] = request.state.decks[i].content.file_path.clone();
+                self.deck_files[i].clone_from(&request.state.decks[i].content.file_path);
             }
             self.on_update_deck_files().await;
 
@@ -136,17 +140,17 @@ impl TraktorServer {
             })
             .await;
 
-            let mut messages = self
+            let messages = self
                 .queue
                 .drain(..)
                 .map(ServerMessage::Update)
                 .collect::<Vec<_>>();
-            self.send_messages(messages.drain(..)).await;
+            self.send_messages(messages).await;
 
             self.is_initialized = true;
         }
 
-        self.session_id.to_owned()
+        self.session_id.clone()
     }
 
     async fn handle_update(
@@ -156,7 +160,7 @@ impl TraktorServer {
     ) -> impl warp::Reply + use<> {
         if session_id == self.session_id {
             if let StateUpdate::DeckContent(id, content) = &update {
-                self.deck_files[*id as usize] = content.file_path.clone()
+                self.deck_files[*id as usize].clone_from(&content.file_path);
             }
             self.on_update_deck_files().await;
 
@@ -171,7 +175,7 @@ impl TraktorServer {
             }
         }
 
-        self.session_id.to_owned()
+        self.session_id.clone()
     }
 
     async fn handle_cover(&mut self, path: String, data: Bytes) -> StatusCode {
@@ -183,7 +187,7 @@ impl TraktorServer {
             return StatusCode::OK;
         }
 
-        println!("cover received for \"{}\"", path);
+        println!("cover received for \"{path}\"");
 
         self.pending_images.retain(|i| i != &path);
         if !self.loaded_images.contains(&path) {
@@ -225,7 +229,7 @@ impl TraktorServer {
 }
 
 impl TraktorServer {
-    pub fn routes(
+    fn routes(
         state: Arc<Mutex<Self>>,
     ) -> impl Filter<Extract = (impl warp::Reply,), Error = warp::Rejection> + Clone + use<> {
         Self::is_started(state.clone())
@@ -234,9 +238,9 @@ impl TraktorServer {
                     .or(Self::route_init(state.clone()))
                     .or(Self::route_update(state.clone()))
                     .or(Self::route_log(state.clone()))
-                    .or(Self::route_cover(state.clone())),
+                    .or(Self::route_cover(state)),
             )
-            .map(|_, reply| reply)
+            .map(|(), reply| reply)
     }
 
     fn with_state(
@@ -271,7 +275,7 @@ impl TraktorServer {
     ) -> impl Filter<Extract = (impl warp::Reply,), Error = warp::Rejection> + Clone {
         warp::path!("connect")
             .and(Self::with_state(state))
-            .then(async |state: Arc<Mutex<Self>>| state.lock().await.handle_connect().await)
+            .then(async |state: Arc<Mutex<Self>>| state.lock().await.handle_connect())
     }
 
     fn route_init(
@@ -384,9 +388,8 @@ impl TraktorServer {
     fn route_cover(
         state: Arc<Mutex<Self>>,
     ) -> impl Filter<Extract = (impl warp::Reply,), Error = warp::Rejection> + Clone {
-        warp::path!("cover").and(
-            Self::route_cover_upload(state.clone()).or(Self::route_cover_socket(state.clone())),
-        )
+        warp::path!("cover")
+            .and(Self::route_cover_upload(state.clone()).or(Self::route_cover_socket(state)))
     }
 
     fn route_cover_upload(
@@ -423,7 +426,7 @@ impl TraktorServer {
                                 ws_tx
                                     .send(message)
                                     .unwrap_or_else(|e| {
-                                        println!("websocket send error: {}", e);
+                                        println!("websocket send error: {e}");
                                     })
                                     .await;
                             }
@@ -436,10 +439,10 @@ impl TraktorServer {
                             match result {
                                 Ok(_) => {}
                                 Err(e) => {
-                                    println!("websocket error: {}", e);
+                                    println!("websocket error: {e}");
                                     break;
                                 }
-                            };
+                            }
                         }
 
                         state.lock().await.handle_socket_disconnect(socket_id).await;
@@ -476,10 +479,10 @@ async fn server_main(
     let state = Arc::new(Mutex::new(TraktorServer::new(output)));
     let routes = TraktorServer::routes(state.clone());
 
-    println!("starting traktor server on {}", addr);
+    println!("starting traktor server on {addr}");
 
     let Ok(listener) = tokio::net::TcpListener::bind(addr).await else {
-        println!("could not start traktor server on {}", addr);
+        println!("could not start traktor server on {addr}");
         return;
     };
 
@@ -499,7 +502,7 @@ async fn server_main(
     {
         service = advertise_server(addr);
         if service.is_err() {
-            drop(service)
+            drop(service);
         }
     }
 
@@ -513,10 +516,10 @@ async fn server_main(
 
 #[cfg(feature = "mdns")]
 fn advertise_server(addr: SocketAddr) -> Result<libmdns::Service, std::io::Error> {
-    let addr_vec = if !addr.ip().is_unspecified() {
-        [addr.ip()].to_vec()
-    } else {
+    let addr_vec = if addr.ip().is_unspecified() {
         Vec::new()
+    } else {
+        [addr.ip()].to_vec()
     };
     let responder = libmdns::Responder::new_with_ip_list(addr_vec)?;
     let svc = responder.register(
@@ -525,7 +528,7 @@ fn advertise_server(addr: SocketAddr) -> Result<libmdns::Service, std::io::Error
         addr.port(),
         &["path=/"],
     );
-    println!("advertising traktor server on {}", addr);
+    println!("advertising traktor server on {addr}");
     Ok(svc)
 }
 
@@ -537,11 +540,11 @@ pub fn run_server(addr: SocketAddr) -> impl Stream<Item = ServerMessage> {
     let runner = DroppingOnce::new(
         server_main(addr, output, input, input_send, cancelled),
         move || {
-            println!("stopping traktor server on {}", addr);
+            println!("stopping traktor server on {addr}");
             let _ = cancel.send(());
         },
     )
-    .filter_map(|_| async { None });
+    .filter_map(|()| async { None });
 
     stream::select(output_receive, runner)
 }

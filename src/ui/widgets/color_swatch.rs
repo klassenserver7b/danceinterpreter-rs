@@ -2,6 +2,7 @@ use iced::widget::button::Status;
 use iced::widget::button::Style;
 use iced::{Background, Color, Element, Length, Theme, widget::Button};
 
+/// A small button showing `color` as a filled rounded swatch.
 pub fn color_swatch<'a, Message: Clone + 'a>(
     color: Color,
     on_press: Message,
