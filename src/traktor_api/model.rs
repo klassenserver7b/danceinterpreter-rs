@@ -12,7 +12,7 @@ pub enum AppMessage {
 pub enum ServerMessage {
     Ready(mpsc::UnboundedSender<AppMessage>),
     Connect {
-        time_offset_ms: u128,
+        time_offset_ms: u64,
         initial_state: Box<State>,
     },
     Update(StateUpdate),
@@ -179,7 +179,7 @@ pub(in crate::traktor_api) struct ConnectionResponse {
 #[serde(rename_all = "camelCase")]
 pub(in crate::traktor_api) struct InitializeRequest {
     pub session_id: String,
-    pub timestamp: u128,
+    pub timestamp: u64,
     pub state: State,
 }
 

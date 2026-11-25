@@ -10,10 +10,10 @@ use iced::futures::{SinkExt, Stream, StreamExt};
 use iced::futures::{TryFutureExt, stream};
 use serde::de::DeserializeOwned;
 use std::collections::HashMap;
-use std::convert::Infallible;
+use std::convert::{Infallible, TryFrom};
 use std::net::SocketAddr;
 use std::sync::Arc;
-use std::time::{SystemTime, UNIX_EPOCH};
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use tokio::sync::Mutex;
 use uuid::Uuid;
 use warp::Filter;
@@ -120,9 +120,14 @@ impl TraktorServer {
 
     async fn handle_init(&mut self, request: InitializeRequest) -> impl warp::Reply + use<> {
         if request.session_id == self.session_id {
-            let time_offset_ms = SystemTime::now()
-                .duration_since(UNIX_EPOCH)
-                .map_or(0, |d| request.timestamp - d.as_millis());
+            let time_offset_ms = SystemTime::now().duration_since(UNIX_EPOCH).map_or(0, |d| {
+                u64::try_from(
+                    Duration::from_millis(request.timestamp)
+                        .abs_diff(d)
+                        .as_millis(),
+                )
+                .unwrap_or(0)
+            });
 
             for i in 0..4 {
                 self.deck_files[i].clone_from(&request.state.decks[i].content.file_path);
